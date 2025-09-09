@@ -1,0 +1,11 @@
+name: fuvekon BE CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production

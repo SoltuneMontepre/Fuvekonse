@@ -1,0 +1,34 @@
+name: Fuvekon Back CI
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up environment
+        run: echo "ENV SET UP"
+
+      - name: Build and Test
+        run: echo "BUILD AND TEST"
+
+      - name: Notify failure
+        if: failure()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: "🚨 CI build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }}"
+
+      - name: Notify success
+        if: success()
+        uses: Ilshidur/action-discord@master
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: "🎉 CI build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }}"
