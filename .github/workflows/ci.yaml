@@ -4,18 +4,42 @@ on:
   pull_request:
     branches:
       - "**"
+    paths:
+      - "services/**"
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [general-service, ticket-service]
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set up environment
-        run: echo "ENV SET UP"
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
 
-      - name: Build and Test
-        run: echo "BUILD AND TEST"
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.service }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Build service
+        working-directory: services/${{ matrix.service }}
+        run: |
+          go build ./...
+
+      # - name: Run tests
+      #   working-directory: services/${{ matrix.service }}
+      #   run: |
+      #     go test -v ./...
 
       - name: Notify failure
         if: failure()
@@ -23,7 +47,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          args: "🚨 CI build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }}"
+          args: "🚨 CI build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }} (service: ${{ matrix.service }})"
 
       - name: Notify success
         if: success()
@@ -31,4 +55,4 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          args: "🎉 CI build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }}"
+          args: "🎉 CI build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }} (service: ${{ matrix.service }})"

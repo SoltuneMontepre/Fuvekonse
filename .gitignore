@@ -1,0 +1,36 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+crash.log
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+
+# Go (web API service)
+# Binaries and build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+/bin/
+/build/
+/out/
+
+# Test & coverage
+coverage.out
+*.cover
+
+# Dependency vendoring (optional — remove if you commit vendor/)
+vendor/
+
+# Environment / secrets
+.env
+.env.*.local
+
+# Logs & misc
+*.log
