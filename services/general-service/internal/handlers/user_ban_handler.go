@@ -5,9 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"gin/internal/dto"
-	"gin/internal/services"
-
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/dto"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

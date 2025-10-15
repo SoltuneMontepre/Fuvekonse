@@ -2,14 +2,14 @@ package main
 
 import (
 	"context"
-	"gin/internal/config"
-	"gin/internal/database"
-	"gin/internal/handlers"
-	"gin/internal/repositories"
-	"gin/internal/services"
 	"log"
 	"time"
 
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/config"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/database"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/handlers"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/repositories"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

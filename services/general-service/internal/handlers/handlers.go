@@ -1,9 +1,6 @@
 package handlers
 
-import (
-	"gin/internal/services"
-)
-
+import "github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
 type Handlers struct {
 	Role       *RoleHandler
 	Permission *PermissionHandler

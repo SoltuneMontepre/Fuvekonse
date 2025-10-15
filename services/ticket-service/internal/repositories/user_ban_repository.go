@@ -1,9 +1,9 @@
 package repositories
 
 import (
-	"gin/internal/models"
 	"time"
 
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/models"
 	"gorm.io/gorm"
 )
 

@@ -2,8 +2,8 @@ package database
 
 import (
 	"fmt"
-	"gin/internal/config"
 
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
