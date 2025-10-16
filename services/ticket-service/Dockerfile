@@ -12,10 +12,10 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o /authorization-service ./cmd/main.go
+RUN go build -o /ticket-service ./cmd/main.go
 
 # Expose the port
 EXPOSE 8085
 
 # Run the application
-CMD [ "/authorization-service" ]
+CMD [ "/ticket-service" ]

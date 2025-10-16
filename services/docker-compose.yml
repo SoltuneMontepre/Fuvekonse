@@ -1,0 +1,33 @@
+name: authorization-service
+
+services:
+  fuvekon-db:
+    image: postgres:17
+    container_name: fuvekon-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: general
+    ports:
+      - "5432:5432"
+    restart: always
+    volumes:
+      - fuvekon-db-data:/var/lib/postgresql/data
+    networks:
+      - fuvekonse-network
+  fuvekon-cache:
+    image: redis:7-alpine
+    container_name: fuvekon-cache
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - fuvekon-redis-data:/data
+    networks:
+      - fuvekonse-network
+volumes:
+  fuvekon-db-data:
+  fuvekon-redis-data:
+networks:
+  fuvekonse-network:
+    driver: bridge
