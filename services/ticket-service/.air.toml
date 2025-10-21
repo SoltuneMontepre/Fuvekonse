@@ -4,10 +4,10 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "tmp\\main.exe"
-  cmd = "go build -o ./tmp/main.exe ./cmd"
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/main.go"
   delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor", "testdata"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
@@ -20,8 +20,8 @@ tmp_dir = "tmp"
   log = "build-errors.log"
   poll = false
   poll_interval = 0
-  post_cmd = []
-  pre_cmd = []
+  post_cmd = ["echo 'Swagger documentation updated'"]
+  pre_cmd = ["swag init -g cmd/main.go -o ./docs"]
   rerun = false
   rerun_delay = 500
   send_interrupt = false
