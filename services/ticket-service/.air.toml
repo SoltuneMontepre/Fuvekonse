@@ -27,6 +27,11 @@ tmp_dir = "tmp"
   send_interrupt = false
   stop_on_error = false
 
+# Windows-specific build configuration
+[build.windows]
+  cmd = "go build -o ./tmp/main.exe ./cmd/main.go"
+  bin = "./tmp/main.exe"
+
 [color]
   app = ""
   build = "yellow"
@@ -37,7 +42,7 @@ tmp_dir = "tmp"
 [log]
   main_only = false
   silent = false
-  time = false
+  time = true
 
 [misc]
   clean_on_exit = false
