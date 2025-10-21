@@ -60,3 +60,4 @@ services/*/swagger.yaml
 .Trashes
 ehthumbs.db
 Thumbs.db
+.cursor/
