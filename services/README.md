@@ -80,11 +80,21 @@ go run github.com/cosmtrek/air@latest
 
 ## CI/CD Integration
 
-The project includes GitHub Actions workflow (`.github/workflows/ci.yaml`) that:
+The project includes separate GitHub Actions workflows for each service:
+
+**General Service** (`.github/workflows/general-ci.yaml`):
+- Triggers on changes to `services/general-service/**`
 - Installs swag CLI
 - Generates Swagger documentation
-- Builds all services
-- Builds Docker images
+- Builds general-service and migrate tool
+
+**Ticket Service** (`.github/workflows/ticket-ci.yaml`):
+- Triggers on changes to `services/ticket-service/**`
+- Installs swag CLI
+- Generates Swagger documentation
+- Builds ticket-service and migrate tool
+
+Both workflows include Discord notifications for build success/failure.
 
 Notes:
 
