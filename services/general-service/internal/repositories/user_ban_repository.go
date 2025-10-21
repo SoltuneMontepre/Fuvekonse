@@ -111,15 +111,15 @@ func (u *UserBanRepository) UnbanUser(userID string, permID uint) error {
 func (u *UserBanRepository) GetRecentBans(limit int) ([]models.UserBan, error) {
 	var userBans []models.UserBan
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
-	
+
 	query := u.db.Where("created_at > ?", thirtyDaysAgo).
 		Preload("Permission").
 		Order("created_at DESC")
-	
+
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
-	
+
 	err := query.Find(&userBans).Error
 	return userBans, err
 }
