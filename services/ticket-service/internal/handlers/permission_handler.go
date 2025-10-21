@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/services"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/models"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/config"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/database"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/config"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/database"
 )
 
 func main() {

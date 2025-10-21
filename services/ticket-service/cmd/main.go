@@ -24,15 +24,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/config"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/database"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/handlers"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/repositories"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/services"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/config"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/database"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/handlers"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/repositories"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/services"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/docs"
+	_ "github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/docs"
 )
 
 func main() {

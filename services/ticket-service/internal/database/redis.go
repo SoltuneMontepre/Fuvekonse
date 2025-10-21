@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/config"
+	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
