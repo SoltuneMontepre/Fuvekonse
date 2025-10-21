@@ -2,6 +2,7 @@ Onboarding guide
 
 requirements:
 go >= 1.25
+swag CLI (for Swagger documentation generation)
 
 This document expands the basic steps to get the author-service running locally. Each step below preserves the original items and adds brief explanations and copy-paste commands where applicable.
 
@@ -14,7 +15,16 @@ This document expands the basic steps to get the author-service running locally.
 go mod tidy
 ```
 
-2. Docker compose up
+2. Install swag CLI
+
+- Installs the Swagger documentation generator CLI tool required for development builds.
+- Run:
+
+```
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+3. Docker compose up
 
 - Starts required infrastructure (databases, caches, etc.) as defined in the repository's docker-compose files. Running in detached mode is common for local development.
 - Example (detached):
@@ -29,7 +39,7 @@ docker compose up -d
 docker compose up
 ```
 
-3. clone .env.example to .env using command
+4. clone .env.example to .env using command
 
 - Copy the example environment file to a working .env file and update any values (DB credentials, ports, API keys) as needed.
 - Unix/macOS:
@@ -44,7 +54,7 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-4. migrate: go run ./cmd/migrate
+5. migrate: go run ./cmd/migrate
 
 - Applies database migrations so the service has the required schema/tables before running.
 - Run:
@@ -53,7 +63,7 @@ Copy-Item .env.example .env
 go run ./cmd/migrate
 ```
 
-5. run dev: air
+6. run dev: air
 
 - Starts the development server with live reload (using air). Ensure air is installed and configured for this project.
 - If air is installed globally:
@@ -68,9 +78,28 @@ air
 go run github.com/cosmtrek/air@latest
 ```
 
+## CI/CD Integration
+
+The project includes separate GitHub Actions workflows for each service:
+
+**General Service** (`.github/workflows/general-ci.yaml`):
+- Triggers on changes to `services/general-service/**`
+- Installs swag CLI
+- Generates Swagger documentation
+- Builds general-service and migrate tool
+
+**Ticket Service** (`.github/workflows/ticket-ci.yaml`):
+- Triggers on changes to `services/ticket-service/**`
+- Installs swag CLI
+- Generates Swagger documentation
+- Builds ticket-service and migrate tool
+
+Both workflows include Discord notifications for build success/failure.
+
 Notes:
 
-- Verify Docker and Docker Compose are installed and running before step 2.
+- Verify Docker and Docker Compose are installed and running before step 3.
 - Ensure your .env values match any requirements from the docker-compose services (ports, credentials).
 - If ports or services conflict, stop other local services or adjust the .env/docker-compose settings.
 - Follow repository README or docs for any additional environment-specific settings.
+- The swag CLI is required for development builds as it generates Swagger documentation automatically via air's pre_cmd hook.

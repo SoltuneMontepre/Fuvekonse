@@ -2,16 +2,34 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/main ./cmd"
-bin = "tmp/main"
-include_ext = ["go", "tpl", "tmpl", "html", "sql"]
-exclude_dir = ["assets", "tmp", "vendor", "testdata"]
-exclude_regex = ["_test.go"]
-delay = 1000 # Giữ lại delay 1s của bạn
+  args_bin = []
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/main.go"
+  delay = 1000
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs"]
+  exclude_file = []
+  exclude_regex = ["_test.go"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = []
+  include_ext = ["go", "tpl", "tmpl", "html", "sql"]
+  include_file = []
+  kill_delay = "0s"
+  log = "build-errors.log"
+  poll = false
+  poll_interval = 0
+  post_cmd = ["echo Swagger documentation updated"]
+  pre_cmd = ["swag init -g cmd/main.go -o ./docs"]
+  rerun = false
+  rerun_delay = 500
+  send_interrupt = false
+  stop_on_error = false
 
+# Windows-specific build configuration
 [build.windows]
-cmd = "go build -o ./tmp/main.exe ./cmd"
-bin = "main.exe"
+  cmd = "go build -o ./tmp/main.exe ./cmd/main.go"
+  bin = "./tmp/main.exe"
 
 [color]
 app = ""
@@ -21,9 +39,24 @@ runner = "green"
 watcher = "cyan"
 
 [log]
-main_only = false
-silent = false
-time = true # Bật time lên cho dễ debug
+  main_only = false
+  silent = false
+  time = true
 
 [misc]
-clean_on_exit = false
+  clean_on_exit = false
+
+[proxy]
+  app_port = 0
+  enabled = false
+  proxy_port = 0
+
+[screen]
+  clear_on_rebuild = false
+  keep_scroll = true
+
+# Cross-platform compatibility settings
+[build.env]
+  CGO_ENABLED = "0"
+  GOOS = ""
+  GOARCH = ""

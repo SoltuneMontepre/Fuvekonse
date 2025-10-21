@@ -34,3 +34,29 @@ vendor/
 
 # Logs & misc
 *.log
+
+# Air live reload
+tmp/
+build-errors.log
+
+# Swagger documentation (generated files)
+services/*/docs/
+services/*/docs.go
+services/*/swagger.json
+services/*/swagger.yaml
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

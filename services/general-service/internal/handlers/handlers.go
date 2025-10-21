@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
+import "github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/services"
 
 type Handlers struct {
 	Role       *RoleHandler

@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [general-service]
+        service: [ticket-service]
     steps:
       - uses: actions/checkout@v4
 
@@ -30,10 +30,34 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ matrix.service }}-${{ hashFiles('**/go.sum') }}
 
+      - name: Install swag CLI
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate Swagger docs
+        working-directory: services/${{ matrix.service }}
+        run: |
+          swag init -g cmd/main.go -o ./docs
+          echo "✅ Swagger docs generated for ${{ matrix.service }}"
+
+      - name: Download dependencies
+        working-directory: services/${{ matrix.service }}
+        run: go mod download
+
+      - name: Verify dependencies
+        working-directory: services/${{ matrix.service }}
+        run: go mod verify
+
       - name: Build service
         working-directory: services/${{ matrix.service }}
         run: |
-          go build ./...
+          go build -o ./tmp/main ./cmd/main.go
+          echo "✅ ${{ matrix.service }} built successfully"
+
+      - name: Build migrate tool
+        working-directory: services/${{ matrix.service }}
+        run: |
+          go build -o ./tmp/migrate ./cmd/migrate/main.go
+          echo "✅ ${{ matrix.service }} migrate tool built successfully"
 
       # - name: Run tests
       #   working-directory: services/${{ matrix.service }}

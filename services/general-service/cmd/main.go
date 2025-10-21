@@ -1,3 +1,22 @@
+// Package main General Service API
+// @title General Service API
+// @version 1.0
+// @description This is a general service API for managing roles, permissions, and user bans
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -5,12 +24,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/config"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/database"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/handlers"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/repositories"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
+	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/config"
+	_ "github.com/SoltuneMontepre/Fuvekonse/services/general-service/docs"
+	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/database"
+	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/handlers"
+	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/repositories"
+	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/services"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -37,6 +59,9 @@ func main() {
 	h := handlers.NewHandlers(svc)
 
 	router := gin.Default()
+
+	// Swagger documentation route
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.GET("/health/db", func(c *gin.Context) {
 		sqlDB, err := db.DB()
@@ -65,5 +90,6 @@ func main() {
 	config.SetupAPIRoutes(router, h)
 
 	log.Printf("🚀 Server starting on :%s", port)
+	log.Printf("📚 Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
 	router.Run(":" + port)
 }
