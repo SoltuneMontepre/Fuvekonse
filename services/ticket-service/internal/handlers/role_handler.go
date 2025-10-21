@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/dto"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/services"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/dto"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/models"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,6 +20,16 @@ func NewRoleHandler(roleService services.RoleServiceInterface) *RoleHandler {
 	}
 }
 
+// CreateRole godoc
+// @Summary Create a new role
+// @Description Create a new role with the given name
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param role body dto.CreateRoleRequest true "Role data"
+// @Success 201 {object} map[string]dto.RoleResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /roles [post]
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var req dto.CreateRoleRequest
 
@@ -42,6 +52,17 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"role": response})
 }
 
+// GetRole godoc
+// @Summary Get a role by ID
+// @Description Get a specific role by its ID
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param id path int true "Role ID"
+// @Success 200 {object} map[string]dto.RoleResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /roles/{id} [get]
 func (h *RoleHandler) GetRole(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -64,6 +85,15 @@ func (h *RoleHandler) GetRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"role": response})
 }
 
+// GetRoles godoc
+// @Summary Get all roles
+// @Description Get a list of all roles
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string][]dto.RoleResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /roles [get]
 func (h *RoleHandler) GetRoles(c *gin.Context) {
 	roles, err := h.roleService.GetAllRoles()
 	if err != nil {
@@ -82,6 +112,17 @@ func (h *RoleHandler) GetRoles(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"roles": response})
 }
 
+// UpdateRole godoc
+// @Summary Update a role
+// @Description Update an existing role
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param id path int true "Role ID"
+// @Param role body dto.UpdateRoleRequest true "Role data"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /roles/{id} [put]
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -109,6 +150,17 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.MessageResponse{Message: "Role updated successfully"})
 }
 
+// DeleteRole godoc
+// @Summary Delete a role
+// @Description Delete a role by its ID
+// @Tags roles
+// @Accept json
+// @Produce json
+// @Param id path int true "Role ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /roles/{id} [delete]
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)

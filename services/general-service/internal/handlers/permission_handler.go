@@ -19,6 +19,16 @@ func NewPermissionHandler(permissionService services.PermissionServiceInterface)
 	}
 }
 
+// CreatePermission godoc
+// @Summary Create a new permission
+// @Description Create a new permission with the given name
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Param permission body object{name=string} true "Permission data"
+// @Success 201 {object} map[string]models.Permission
+// @Failure 400 {object} map[string]string
+// @Router /permissions [post]
 func (h *PermissionHandler) CreatePermission(c *gin.Context) {
 	var req struct {
 		Name string `json:"name" binding:"required"`
@@ -38,6 +48,17 @@ func (h *PermissionHandler) CreatePermission(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"permission": permission})
 }
 
+// GetPermission godoc
+// @Summary Get a permission by ID
+// @Description Get a specific permission by its ID
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Param id path int true "Permission ID"
+// @Success 200 {object} map[string]models.Permission
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /permissions/{id} [get]
 func (h *PermissionHandler) GetPermission(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -55,6 +76,15 @@ func (h *PermissionHandler) GetPermission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"permission": permission})
 }
 
+// GetPermissions godoc
+// @Summary Get all permissions
+// @Description Get a list of all permissions
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string][]models.Permission
+// @Failure 500 {object} map[string]string
+// @Router /permissions [get]
 func (h *PermissionHandler) GetPermissions(c *gin.Context) {
 	permissions, err := h.permissionService.GetAllPermissions()
 	if err != nil {
@@ -65,6 +95,17 @@ func (h *PermissionHandler) GetPermissions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"permissions": permissions})
 }
 
+// UpdatePermission godoc
+// @Summary Update a permission
+// @Description Update an existing permission
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Param id path int true "Permission ID"
+// @Param permission body object{name=string} true "Permission data"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /permissions/{id} [put]
 func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -95,6 +136,17 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Permission updated successfully"})
 }
 
+// DeletePermission godoc
+// @Summary Delete a permission
+// @Description Delete a permission by its ID
+// @Tags permissions
+// @Accept json
+// @Produce json
+// @Param id path int true "Permission ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /permissions/{id} [delete]
 func (h *PermissionHandler) DeletePermission(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)

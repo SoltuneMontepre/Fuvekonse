@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 
-	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/general-service/internal/models"
+	"github.com/SoltuneMontepre/Fuvekonse/tree/main/services/ticket-service/internal/models"
 	"gorm.io/gorm"
 )
 
