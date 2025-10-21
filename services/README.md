@@ -78,56 +78,13 @@ air
 go run github.com/cosmtrek/air@latest
 ```
 
-## Build Tools
-
-The project includes several build tools to simplify development and CI/CD:
-
-### Makefile Commands
-
-```bash
-# Build all services (includes swag installation and docs generation)
-make build
-
-# Build specific service
-make build-general
-make build-ticket
-
-# Run tests
-make test
-
-# Generate Swagger docs only
-make generate-docs
-
-# Clean build artifacts
-make clean
-
-# Build Docker images
-make docker-build
-```
-
-### Build Script
-
-```bash
-# Run the comprehensive build script
-./build.sh
-
-# This script will:
-# - Install swag CLI if not present
-# - Generate Swagger docs for all services
-# - Build all services
-# - Run tests
-# - Check code formatting
-```
-
-### CI/CD Integration
+## CI/CD Integration
 
 The project includes GitHub Actions workflow (`.github/workflows/ci.yaml`) that:
 - Installs swag CLI
 - Generates Swagger documentation
 - Builds all services
-- Runs tests and linting
 - Builds Docker images
-- Performs security scans
 
 Notes:
 
