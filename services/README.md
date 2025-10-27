@@ -75,7 +75,7 @@ air
 - If using go run for air (if not installed globally):
 
 ```
-go run github.com/cosmtrek/air@latest
+go install github.com/air-verse/air@latest
 ```
 
 ## CI/CD Integration
