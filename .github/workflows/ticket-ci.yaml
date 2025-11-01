@@ -53,17 +53,6 @@ jobs:
           go build -o ./tmp/main ./cmd/main.go
           echo "✅ ${{ matrix.service }} built successfully"
 
-      - name: Build migrate tool
-        working-directory: services/${{ matrix.service }}
-        run: |
-          go build -o ./tmp/migrate ./cmd/migrate/main.go
-          echo "✅ ${{ matrix.service }} migrate tool built successfully"
-
-      # - name: Run tests
-      #   working-directory: services/${{ matrix.service }}
-      #   run: |
-      #     go test -v ./...
-
       - name: Notify failure
         if: failure()
         uses: Ilshidur/action-discord@master
