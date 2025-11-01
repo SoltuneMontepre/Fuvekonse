@@ -1,4 +1,4 @@
-name: Fuvekon Back CI
+name: ticket-service CI
 
 on:
   pull_request:

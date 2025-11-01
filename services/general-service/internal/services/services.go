@@ -1,6 +1,6 @@
 package services
 
-import "github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/repositories"
+import "general-service/internal/repositories"
 
 type Services struct {
 	Role       RoleServiceInterface

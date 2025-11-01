@@ -1,7 +1,8 @@
 package config
 
 import (
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/handlers"
+	"general-service/internal/handlers"
+
 	"github.com/gin-gonic/gin"
 )
 

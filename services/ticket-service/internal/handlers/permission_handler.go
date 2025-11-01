@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"ticket-service/internal/models"
+	"ticket-service/internal/services"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

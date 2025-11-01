@@ -1,4 +1,4 @@
-module github.com/SoltuneMontepre/Fuvekonse/services/ticket-service
+module ticket-service
 
 go 1.25.1
 

@@ -3,7 +3,8 @@ package database
 import (
 	"fmt"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/config"
+	"ticket-service/internal/config"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

@@ -1,4 +1,4 @@
-name: Fuvekon Back CI
+name: general-service CI
 
 on:
   pull_request:
