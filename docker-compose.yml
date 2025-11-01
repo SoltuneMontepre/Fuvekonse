@@ -1,4 +1,4 @@
-name: authorization-service
+name: Fuvekonse
 
 services:
   fuvekon-db:
@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: general
+      POSTGRES_DB: fuvekon
     ports:
       - "5432:5432"
     restart: always
