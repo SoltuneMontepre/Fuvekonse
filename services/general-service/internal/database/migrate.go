@@ -2,8 +2,8 @@ package database
 
 import (
 	"fmt"
+	"general-service/internal/models"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/models"
 	"gorm.io/gorm"
 )
 

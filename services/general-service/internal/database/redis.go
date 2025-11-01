@@ -3,10 +3,10 @@ package database
 import (
 	"context"
 	"fmt"
+	"general-service/internal/config"
 	"strconv"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 

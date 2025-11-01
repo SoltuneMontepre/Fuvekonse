@@ -2,10 +2,9 @@ package services
 
 import (
 	"fmt"
+	"ticket-service/internal/models"
+	"ticket-service/internal/repositories"
 	"time"
-
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/repositories"
 )
 
 type UserBanServiceInterface interface {

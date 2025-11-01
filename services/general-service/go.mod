@@ -1,4 +1,4 @@
-module github.com/SoltuneMontepre/Fuvekonse/services/general-service
+module general-service
 
 go 1.25.1
 

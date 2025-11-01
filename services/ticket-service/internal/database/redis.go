@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"ticket-service/internal/config"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 

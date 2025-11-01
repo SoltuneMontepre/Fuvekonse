@@ -1,7 +1,8 @@
 package repositories
 
 import (
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/models"
+	"general-service/internal/models"
+
 	"gorm.io/gorm"
 )
 

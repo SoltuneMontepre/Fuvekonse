@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"general-service/internal/models"
+	"general-service/internal/services"
 	"net/http"
 	"strconv"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
