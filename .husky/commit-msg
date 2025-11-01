@@ -1,7 +1,7 @@
-# Get the commit message from the file passed as argument
 commit_msg=$(cat "$1")
 
-# Commit message validation
+banned_words=("things" "stuff" "changes" "update" "fix" "test" "wip")
+
 commit_regex="^(fix|feat|chore|refactor): .+|^Merge.*|^Revert.*"
 FAIL_BADGE=$'\u001B[30;41m'  
 INFO='\033[97m'           
@@ -19,5 +19,22 @@ if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
   printf "\n%b\n" "Your message: '${commit_msg}'"
   exit 1
 fi
+
+message_only=$(echo "$commit_msg" | sed -E 's/^(fix|feat|chore|refactor): //i')
+
+if [ -z "$(echo "$message_only" | xargs)" ]; then
+  printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message cannot be empty"
+  printf "%b\n" "${INFO}Please provide a descriptive commit message after the prefix.${RESET}"
+  exit 1
+fi
+
+for banned in "${banned_words[@]}"; do
+  if [ "$(echo "$message_only" | tr '[:upper:]' '[:lower:]')" = "$(echo "$banned" | tr '[:upper:]' '[:lower:]')" ]; then
+    printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message contains banned word: '${message_only}'"
+    printf "%b\n" "${INFO}Please provide a more descriptive commit message.${RESET}"
+    printf "%b\n" "${INFO}Banned words: ${banned_words[*]}${RESET}"
+    exit 1
+  fi
+done
 
 printf "%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Commit message validation passed\n"
