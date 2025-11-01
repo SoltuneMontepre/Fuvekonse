@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"ticket-service/internal/dto"
+	"ticket-service/internal/services"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/dto"
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/services"
 	"github.com/gin-gonic/gin"
 )
 

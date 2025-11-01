@@ -1,10 +1,9 @@
 package main
 
 import (
+	"general-service/internal/config"
+	"general-service/internal/database"
 	"log"
-
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/config"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/database"
 )
 
 func main() {

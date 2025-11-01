@@ -3,8 +3,8 @@ package services
 import (
 	"fmt"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/repositories"
+	"general-service/internal/models"
+	"general-service/internal/repositories"
 )
 
 type PermissionServiceInterface interface {
