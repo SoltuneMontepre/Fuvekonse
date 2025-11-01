@@ -20,4 +20,4 @@ if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
   exit 1
 fi
 
-printf "%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Commit message validation passed"
+printf "%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Commit message validation passed\n"
