@@ -19,4 +19,4 @@ if ! echo "$branch" | grep -Eq "$branch_regex"; then
 fi
 
 SUCCESS_BADGE=$'\u001B[30;42m'  # black text on green background
-printf "\n%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Branch validation passed"
+printf "%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Branch validation passed"
