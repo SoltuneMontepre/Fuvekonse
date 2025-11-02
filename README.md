@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document expands the basic steps to get the author-service running locally. Each step below preserves the original items and adds brief explanations and copy-paste commands where applicable.
+This document expands the basic steps to get the fuvekonse app running locally. Each step below preserves the original items and adds brief explanations and copy-paste commands where applicable.
 
 ## Environment setup
 
