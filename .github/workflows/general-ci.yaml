@@ -55,16 +55,24 @@ jobs:
 
       - name: Notify failure
         if: failure()
-        uses: Ilshidur/action-discord@master
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: sarisia/actions-status-discord@v1
         with:
-          args: "🚨 CI build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }} (service: ${{ matrix.service }})"
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "🚨 CI Build Failed [${{ matrix.service }}]"
+          description: "Build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }} "
+          color: 0xff0000
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
 
       - name: Notify success
         if: success()
-        uses: Ilshidur/action-discord@master
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: sarisia/actions-status-discord@v1
         with:
-          args: "🎉 CI build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }} (service: ${{ matrix.service }})"
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "🎉 CI Build Succeeded [${{ matrix.service }}]"
+          description: "Build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }}"
+          color: 0x00ff00
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
