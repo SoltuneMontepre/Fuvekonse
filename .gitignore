@@ -36,6 +36,7 @@ vendor/
 *.log
 
 # Air live reload
+node_modules/
 tmp/
 build-errors.log
 
