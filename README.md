@@ -13,6 +13,7 @@ This document expands the basic steps to get the author-service running locally.
 
 - go >= 1.25 [[Download here]](https://go.dev/doc/install)
 - Docker Engine [[Download here]](https://www.docker.com/get-started/)
+- Node 18+ [[Download here]](https://nodejs.org/en/download)
 
 ### 1. Set up git convention linting
 
