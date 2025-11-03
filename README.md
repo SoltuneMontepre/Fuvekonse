@@ -1,33 +1,121 @@
-# Onboarding guide
+# Fuvekonse
 
 [![general-service CI](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/general-ci.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/general-ci.yaml)
 [![ticket-service CI](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ticket-ci.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ticket-ci.yaml)
 
 ## Overview
 
-This document expands the basic steps to get the fuvekonse app running locally. Each step below preserves the original items and adds brief explanations and copy-paste commands where applicable.
+Fuvekonse is a microservices-based application built with Go, featuring:
 
-## Environment setup
+- **General Service**: Core application functionality including user management, roles, and permissions
+- **Ticket Service**: Ticket management and processing system
 
-### Requirements
+The services use PostgreSQL for data persistence, Redis for caching, and LocalStack for local AWS services (S3, SQS, SES) development.
 
-- go >= 1.25 [[Download here]](https://go.dev/doc/install)
-- Docker Engine [[Download here]](https://www.docker.com/get-started/)
-- Node 18+ [[Download here]](https://nodejs.org/en/download)
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Environment Setup](#environment-setup)
+- [Running the Services](#running-the-services)
+- [Development Flow](#development-flow)
+- [LocalStack Guide](#localstack-guide)
+- [Troubleshooting](#troubleshooting)
+- [Testing](#testing)
+
+## Prerequisites
+
+## Prerequisites
+
+### Required Software
+
+- **Go >= 1.25** [[Download here]](https://go.dev/doc/install)
+- **Docker Engine** [[Download here]](https://www.docker.com/get-started/)
+- **Node.js 18+** [[Download here]](https://nodejs.org/en/download)
+
+### Verify Your Installation
+
+Before proceeding, verify that all prerequisites are installed correctly:
+
+```bash
+go version
+docker --version
+node --version
+npm --version
+```
+
+Expected output should show versions matching or exceeding the requirements above.
+
+## Quick Start
+
+For experienced developers, here's the TL;DR:
+
+```bash
+# Install dependencies
+npm i
+
+# Copy environment files
+cp .env.example ./services/general-service/.env
+cp .env.example ./services/ticket-service/.env
+
+# Install Go tools
+go install github.com/swaggo/swag/cmd/swag@latest
+go install github.com/air-verse/air@latest
+
+# Start infrastructure
+docker compose up -d
+
+# Run migrations
+cd services/general-service
+go mod tidy
+go run ./cmd/migrate
+
+# Start development server
+air
+```
+
+## Environment Setup
 
 ### Steps:
 
 #### 1. Set up git convention linting
 
-Run the command:
+Install the Node.js dependencies required for git commit/branch linting:
 
 ```bash
 npm i
 ```
 
-This will install the `node_modules` required for git commit/branch linting.
+This configures Husky hooks to enforce conventional commit messages.
 
-#### 2. Switch to your working directory
+---
+
+#### 2. Creating environment variables file
+
+Clone the example env into each service’s .env file.
+
+Unix / macOS (bash):
+
+```bash
+cp .env.example ./services/general-service/.env
+cp .env.example ./services/ticket-service/.env
+```
+
+Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .\services\general-service\.env -Force
+Copy-Item .env.example .\services\ticket-service\.env -Force
+```
+
+Windows (CMD):
+
+```cmd
+copy .env.example services\general-service\.env
+copy .env.example services\ticket-service\.env
+```
+
+#### 3. Switch to your working directory
 
 Go to either of the services in `src/services/` using these command:
 
@@ -45,7 +133,7 @@ cd .\services\ticket-service\
 
 ---
 
-#### 3. Install dependencies
+#### 4. Install dependencies
 
 After switching to the appropriate directory, ensures all Go module dependencies are downloaded and the go.mod/go.sum files are consistent.
 
@@ -57,7 +145,7 @@ go mod tidy
 
 ---
 
-#### 4. Install Documentation CLI & Hot reloading CLI
+#### 5. Install Documentation CLI & Hot reloading CLI
 
 Installs the Swagger documentation generator CLI tool required for development builds and `air-cli` globally to allow hot-reload.
 
@@ -96,33 +184,9 @@ Note:
 
 ---
 
-#### 5. Creating environment variables file
+#### 6. Start the required services via Docker
 
-Clone `.env.example` to `.env` using the following command:
-
-Unix/macOS:
-
-```bash
-cp .env.example .env
-```
-
-Windows (PowerShell):
-
-```pwsh
-Copy-Item .env.example .env
-```
-
-Windows (CMD):
-
-```cmd
-copy .env.example .env
-```
-
----
-
-#### 6. Start the databases via Docker
-
-Starts required infrastructure (databases, caches, etc.) as defined in the repository's docker-compose files. Running in detached mode is common for local development.
+Starts required infrastructure (databases, caches, etc.) as defined in the repository's `docker-compose` files. Running in detached mode is common for local development.
 
 First, go back to the root directory (where the `docker-compose.yml` file is) with the command:
 
@@ -141,6 +205,14 @@ Run normally:
 ```bash
 docker compose up
 ```
+
+Services being started up includes:
+
+- `Redis`
+- `PostgreSQL`
+- `S3 Bucket` (https://docs.localstack.cloud/aws/services/s3/)
+- `Simple Queue Service` (https://docs.localstack.cloud/aws/services/sqs/)
+- `Simple Message Service` (https://docs.localstack.cloud/aws/services/ses/)
 
 ---
 
@@ -203,3 +275,13 @@ Congratulations — onboarding complete.
 ```
 
 #### 3. Open a PR linking the relevant issue and follow the repo's review checklist.
+
+## LocalStack Guide
+
+After running `docker compose up`, one can go to:
+
+```
+http://localhost.localstack.cloud:4566/_localstack/swagger
+```
+
+to view what API for localstack is available
