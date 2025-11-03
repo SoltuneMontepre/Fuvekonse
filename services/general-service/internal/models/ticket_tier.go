@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type TicketTier struct {
-	Id          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Price       float64   `gorm:"type:decimal(10,2)"`
-	Description string    `gorm:"type:varchar(500)"`
-	TicketName  string    `gorm:"type:varchar(255)"`
+	Id          uuid.UUID       `gorm:"type:uuid;primaryKey"`
+	Price       decimal.Decimal `gorm:"type:decimal(10,2)"`
+	Description string          `gorm:"type:varchar(500)"`
+	TicketName  string          `gorm:"type:varchar(255)"`
 	Stock       int
 	IsActive    bool `gorm:"default:true"`
 

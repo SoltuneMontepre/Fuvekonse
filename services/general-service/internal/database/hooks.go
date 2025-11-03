@@ -32,9 +32,13 @@ func AutoGenerateUUID(db *gorm.DB) {
 			idValue = idValue.Elem()
 		}
 
-		// Nếu ID chưa có thì set UUID v7
+		// Set UUID v7 if ID is not yet assigned
 		if idValue.IsValid() && idValue.CanSet() && idValue.Interface() == uuid.Nil {
-			idValue.Set(reflect.ValueOf(uuid.Must(uuid.NewV7())))
+			newUUID, err := uuid.NewV7()
+			if err != nil {
+				return // or log error
+			}
+			idValue.Set(reflect.ValueOf(newUUID))
 		}
 	})
 }

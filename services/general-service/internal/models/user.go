@@ -13,7 +13,7 @@ type User struct {
 	FursonaName      string        `gorm:"type:varchar(255)" json:"fursona_name"`
 	LastName         string        `gorm:"type:varchar(255)" json:"last_name"`
 	FirstName        string        `gorm:"type:varchar(255)" json:"first_name"`
-	Password         string        `gorm:"type:varchar(255)" json:"password"`
+	Password         string        `gorm:"type:varchar(255)" json:"-"`
 	Country          string        `gorm:"type:varchar(255)" json:"country"`
 	Email            string        `gorm:"type:varchar(255);uniqueIndex" json:"email"`
 	Avatar           string        `gorm:"type:varchar(500)" json:"avatar"` // image url
