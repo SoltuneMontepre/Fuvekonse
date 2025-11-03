@@ -2,7 +2,7 @@
 branch=$(git symbolic-ref --short HEAD)
 
 # Branch name validation
-branch_regex="^(main$|revert-.+|(feature|fix|task|chore|task)\/.+(?:-.*)?)"
+branch_regex="^(main$|revert-.+|(feat|fix|docs|refactor|chore|task|feature)\/.+)"
 FAIL_BADGE=$'\u001B[30;41m'  
 INFO='\033[97m'           
 RESET='\033[0m'
@@ -11,10 +11,13 @@ if ! echo "$branch" | grep -Eq "$branch_regex"; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Branch name '${branch}' does not match the required pattern:"
   printf "%b\n" "${INFO}   - main${RESET}"
   printf "%b\n" "${INFO}   - revert-*${RESET}"
-  printf "%b\n" "${INFO}   - feature/*${RESET}"
+  printf "%b\n" "${INFO}   - feat/*${RESET}"
   printf "%b\n" "${INFO}   - fix/*${RESET}"
-  printf "%b\n" "${INFO}   - task/*${RESET}"
+  printf "%b\n" "${INFO}   - docs/*${RESET}"
+  printf "%b\n" "${INFO}   - refactor/*${RESET}"
   printf "%b\n" "${INFO}   - chore/*${RESET}"
+  printf "%b\n" "${INFO}   - task/*${RESET}"
+  printf "%b\n" "${INFO}   - feature/*${RESET}"
   exit 1
 fi
 
