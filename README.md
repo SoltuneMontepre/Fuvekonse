@@ -198,6 +198,53 @@ go install github.com/air-verse/air@latest
 
 ## Running the Services
 
+### Docker Compose Files
+
+The project provides two Docker Compose configurations:
+
+#### `docker-compose.yml` (Infrastructure Only)
+
+Runs only the infrastructure services:
+
+- PostgreSQL database
+- Redis cache
+- LocalStack (AWS services)
+
+Use this when you want to run services locally with hot-reload for development:
+
+```bash
+docker compose up -d
+```
+
+#### `docker-compose.full.yml` (Full Stack)
+
+Runs the complete stack including all microservices:
+
+- PostgreSQL database
+- Redis cache
+- LocalStack (AWS services)
+- **General Service** (port 8085)
+- **Ticket Service** (port 8081)
+
+Use this when you want to run everything in Docker:
+
+```bash
+docker compose -f docker-compose.full.yml up -d
+```
+
+**Important Notes:**
+
+- Both files use different project names to avoid container conflicts
+- You can run both simultaneously, but they will have separate instances
+- `docker-compose.full.yml` loads environment variables from `.env` file
+- Stop one before starting the other if you want to share the same database:
+  ```bash
+  docker compose down
+  docker compose -f docker-compose.full.yml up -d
+  ```
+
+---
+
 #### 5. Start infrastructure services
 
 Return to the project root directory:
