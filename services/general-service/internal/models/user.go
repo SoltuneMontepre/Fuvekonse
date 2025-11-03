@@ -21,9 +21,8 @@ type User struct {
 	IdentificationId string        `gorm:"type:varchar(255)" json:"identification_id"`
 	PassportId       string        `gorm:"type:varchar(255)" json:"passport_id"`
 	IsVerified       bool          `gorm:"default:false" json:"is_verified"`
-
-	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	ModifiedAt time.Time  `gorm:"autoUpdateTime" json:"modified_at"`
-	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-	IsDeleted  bool       `gorm:"default:false" json:"is_deleted"`
+	CreatedAt        time.Time     `gorm:"autoCreateTime" json:"created_at"`
+	ModifiedAt       time.Time     `gorm:"autoUpdateTime" json:"modified_at"`
+	DeletedAt        *time.Time    `gorm:"index" json:"deleted_at,omitempty"`
+	IsDeleted        bool          `gorm:"default:false" json:"is_deleted"`
 }

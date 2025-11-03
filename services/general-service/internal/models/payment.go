@@ -15,6 +15,5 @@ type Payment struct {
 	GatewayTransactionId string          `gorm:"type:varchar(255)"`
 	Provider             string          `gorm:"type:varchar(255)"`
 	RawResponse          string          `gorm:"type:varchar(1000)"`
-
-	UserTicket *UserTicket `gorm:"foreignKey:UserTicketId"`
+	UserTicket           *UserTicket     `gorm:"foreignKey:UserTicketId"`
 }
