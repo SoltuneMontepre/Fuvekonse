@@ -20,7 +20,7 @@ func AutoGenerateUUID(db *gorm.DB) {
 		}
 
 		rv := tx.Statement.ReflectValue
-		if rv.Kind() == reflect.Ptr {
+		if rv.Kind() == reflect.Pointer {
 			rv = rv.Elem()
 		}
 		if rv.Kind() != reflect.Struct {
@@ -28,7 +28,7 @@ func AutoGenerateUUID(db *gorm.DB) {
 		}
 
 		idValue := field.ReflectValueOf(context.Background(), rv)
-		if idValue.Kind() == reflect.Ptr {
+		if idValue.Kind() == reflect.Pointer {
 			idValue = idValue.Elem()
 		}
 
