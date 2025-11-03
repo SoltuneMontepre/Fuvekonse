@@ -13,7 +13,7 @@ import (
 // @Tags health
 // @Produce json
 // @Success 200 {object} dto.HealthResponse
-// @Router /api/v1/ping [get]
+// @Router /ping [get]
 func CheckHealth(c *gin.Context) {
 	c.JSON(200, dto.HealthResponse{
 		Message: "pong",
