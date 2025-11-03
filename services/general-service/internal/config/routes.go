@@ -8,11 +8,11 @@ import (
 
 // CheckHealth godoc
 // @Summary Check service health
-// @Description Returns healthy if service is running
-// @Tags Health
+// @Description Returns pong and service status
+// @Tags health
 // @Produce json
-// @Success 200 {object}
-// @Router /ping [get]
+// @Success 200 {object} HealthResponse
+// @Router /api/v1/ping [get]
 func CheckHealth(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "pong", "status": "healthy"})
 }
