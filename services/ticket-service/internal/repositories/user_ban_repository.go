@@ -1,9 +1,9 @@
 package repositories
 
 import (
+	"ticket-service/internal/models"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/models"
 	"gorm.io/gorm"
 )
 

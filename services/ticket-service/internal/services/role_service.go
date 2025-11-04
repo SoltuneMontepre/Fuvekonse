@@ -2,9 +2,8 @@ package services
 
 import (
 	"fmt"
-
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/models"
-	"github.com/SoltuneMontepre/Fuvekonse/services/ticket-service/internal/repositories"
+	"ticket-service/internal/models"
+	"ticket-service/internal/repositories"
 )
 
 type RoleServiceInterface interface {

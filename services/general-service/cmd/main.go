@@ -21,15 +21,15 @@ package main
 
 import (
 	"context"
+	_ "general-service/docs"
+	"general-service/internal/config"
+	"general-service/internal/database"
+	"general-service/internal/handlers"
+	"general-service/internal/repositories"
+	"general-service/internal/services"
 	"log"
 	"time"
 
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/config"
-	_ "github.com/SoltuneMontepre/Fuvekonse/services/general-service/docs"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/database"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/handlers"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/repositories"
-	"github.com/SoltuneMontepre/Fuvekonse/services/general-service/internal/services"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
