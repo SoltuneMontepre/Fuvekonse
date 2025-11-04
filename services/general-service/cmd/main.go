@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	_ "general-service/docs"
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/handlers"

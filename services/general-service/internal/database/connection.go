@@ -11,9 +11,11 @@ import (
 
 func Connect(connectionString string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{})
+
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %w", err)
 	}
+	AutoGenerateUUID(db)
 	return db, nil
 }
 
