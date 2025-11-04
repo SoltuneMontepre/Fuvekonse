@@ -1,4 +1,4 @@
-package dto
+package common
 
 // ApiResponse is a generic wrapper for all API responses
 type ApiResponse[T any] struct {
@@ -47,10 +47,4 @@ func ErrorApiResponse(errorCode string, message string, statusCode int) ApiRespo
 	}
 }
 
-// PaginationMeta represents pagination metadata
-type PaginationMeta struct {
-	CurrentPage int   `json:"currentPage"`
-	PageSize    int   `json:"pageSize"`
-	TotalPages  int   `json:"totalPages"`
-	TotalItems  int64 `json:"totalItems"`
-}
+// PaginationMeta is now in common package

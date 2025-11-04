@@ -23,10 +23,7 @@ func NewAuthHandler(services *services.Services) *AuthHandler {
 // @Accept json
 // @Produce json
 // @Param request body requests.LoginRequest true "Login credentials"
-// @Success 200 {object} dto.LoginApiResponse
-// @Failure 400 {object} dto.ApiErrorResponse
-// @Failure 401 {object} dto.ApiErrorResponse
-// @Failure 500 {object} dto.ApiErrorResponse
+// @Success 200 {object} responses.LoginResponse
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req requests.LoginRequest

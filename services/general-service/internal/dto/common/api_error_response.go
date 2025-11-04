@@ -1,4 +1,4 @@
-package dto
+package common
 
 type ApiErrorResponse struct {
 	IsSuccess  bool   `json:"isSuccess"`

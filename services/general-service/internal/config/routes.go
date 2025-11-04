@@ -1,7 +1,7 @@
 package config
 
 import (
-	"general-service/internal/dto"
+	"general-service/internal/dto/common"
 	"general-service/internal/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -12,14 +12,14 @@ import (
 // @Description Returns pong and service status
 // @Tags health
 // @Produce json
-// @Success 200 {object} dto.HealthApiResponse
+// @Success 200 {object} common.HealthResponse
 // @Router /ping [get]
 func CheckHealth(c *gin.Context) {
-	healthData := dto.HealthResponse{
+	healthData := common.HealthResponse{
 		Message: "pong",
 		Status:  "healthy",
 	}
-	c.JSON(200, dto.SuccessResponse(&healthData, "Service is healthy", 200))
+	c.JSON(200, common.SuccessResponse(&healthData, "Service is healthy", 200))
 }
 
 func SetupHealthRoutes(router *gin.RouterGroup) {

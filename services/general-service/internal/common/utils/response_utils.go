@@ -2,7 +2,7 @@ package utils
 
 import (
 	"general-service/internal/common/constants"
-	"general-service/internal/dto"
+	"general-service/internal/dto/common"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +13,7 @@ func RespondSuccess[T any](c *gin.Context, data *T, message string) {
 	if message == "" {
 		message = "Success"
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponse(data, message, http.StatusOK))
+	c.JSON(http.StatusOK, common.SuccessResponse(data, message, http.StatusOK))
 }
 
 // RespondCreated sends a successful response for resource creation
@@ -21,7 +21,7 @@ func RespondCreated[T any](c *gin.Context, data *T, message string) {
 	if message == "" {
 		message = "Resource created successfully"
 	}
-	c.JSON(http.StatusCreated, dto.SuccessResponse(data, message, http.StatusCreated))
+	c.JSON(http.StatusCreated, common.SuccessResponse(data, message, http.StatusCreated))
 }
 
 // RespondSuccessWithMeta sends a successful response with data and metadata
@@ -29,12 +29,12 @@ func RespondSuccessWithMeta[T any](c *gin.Context, data *T, meta interface{}, me
 	if message == "" {
 		message = "Success"
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMeta(data, meta, message, http.StatusOK))
+	c.JSON(http.StatusOK, common.SuccessResponseWithMeta(data, meta, message, http.StatusOK))
 }
 
 // RespondError sends an error response
 func RespondError(c *gin.Context, statusCode int, errorCode string, message string) {
-	c.JSON(statusCode, dto.ErrorApiResponse(errorCode, message, statusCode))
+	c.JSON(statusCode, common.ErrorApiResponse(errorCode, message, statusCode))
 }
 
 // RespondBadRequest sends a 400 Bad Request response
