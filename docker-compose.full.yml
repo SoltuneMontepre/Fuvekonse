@@ -37,6 +37,45 @@ services:
       - "./.aws/volume:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./.aws/init:/etc/localstack/init/ready.d"
+  general-service:
+    build:
+      context: ./services/general-service
+      dockerfile: Dockerfile
+    container_name: general-service
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env.example
+    environment:
+      - DB_HOST=fuvekon-db
+      - REDIS_HOST=fuvekon-cache
+      - S3_BUCKET_URL=http://localstack:4566/fuvekonse-bucket
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/fuvekon-queue
+    depends_on:
+      - fuvekon-db
+      - fuvekon-cache
+      - localstack
+    restart: always
+  ticket-service:
+    build:
+      context: ./services/ticket-service
+      dockerfile: Dockerfile
+    container_name: ticket-service
+    ports:
+      - "8081:8085"
+    env_file:
+      - .env.example
+    environment:
+      - PORT=8085
+      - DB_HOST=fuvekon-db
+      - REDIS_HOST=fuvekon-cache
+      - S3_BUCKET_URL=http://localstack:4566/fuvekonse-bucket
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/fuvekon-queue
+    depends_on:
+      - fuvekon-db
+      - fuvekon-cache
+      - localstack
+    restart: always
 volumes:
   fuvekon-db-data:
   fuvekon-redis-data:

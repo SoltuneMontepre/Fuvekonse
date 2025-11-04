@@ -2,7 +2,7 @@ commit_msg=$(cat "$1")
 
 banned_words=("things" "stuff" "changes" "update" "fix" "test" "wip")
 
-commit_regex="^(fix|feat|chore|refactor): .+|^Merge.*|^Revert.*"
+commit_regex="^(feat|fix|chore|docs|style|refactor|test|perf|build|ci)(\(.+\))?: .+|^Merge.*|^Revert.*"
 FAIL_BADGE=$'\u001B[30;41m'  
 INFO='\033[97m'           
 RESET='\033[0m'
@@ -10,17 +10,20 @@ SUCCESS_BADGE=$'\u001B[30;42m'
 
 if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message does not match the required pattern:"
-  printf "%b\n" "${INFO}   - fix: <message>${RESET}"
-  printf "%b\n" "${INFO}   - feat: <message>${RESET}"
+  printf "%b\n" "${INFO}   - feat: <message> or feat(scope): <message>${RESET}"
+  printf "%b\n" "${INFO}   - fix: <message> or fix(scope): <message>${RESET}"
   printf "%b\n" "${INFO}   - chore: <message>${RESET}"
+  printf "%b\n" "${INFO}   - docs: <message>${RESET}"
+  printf "%b\n" "${INFO}   - style: <message>${RESET}"
   printf "%b\n" "${INFO}   - refactor: <message>${RESET}"
+  printf "%b\n" "${INFO}   - test: <message>${RESET}"
   printf "%b\n" "${INFO}   - Merge.*${RESET}"
   printf "%b\n" "${INFO}   - Revert.*${RESET}"
   printf "\n%b\n" "Your message: '${commit_msg}'"
   exit 1
 fi
 
-message_only=$(echo "$commit_msg" | sed -E 's/^(fix|feat|chore|refactor): //i')
+message_only=$(echo "$commit_msg" | sed -E 's/^(feat|fix|chore|docs|style|refactor|test|perf|build|ci)(\(.+\))?: //i')
 
 if [ -z "$(echo "$message_only" | xargs)" ]; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message cannot be empty"
