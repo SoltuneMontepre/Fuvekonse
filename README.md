@@ -1,6 +1,7 @@
 # Fuvekonse
 
-[![CI](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci.yaml)
+[![CI - General Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml)
+[![CI - Ticket Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml)
 
 ## Overview
 
