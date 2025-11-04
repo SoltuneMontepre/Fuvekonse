@@ -12,23 +12,31 @@ import (
 // @Description Returns pong and service status
 // @Tags health
 // @Produce json
-// @Success 200 {object} dto.HealthResponse
+// @Success 200 {object} dto.HealthApiResponse
 // @Router /ping [get]
 func CheckHealth(c *gin.Context) {
-	c.JSON(200, dto.HealthResponse{
+	healthData := dto.HealthResponse{
 		Message: "pong",
 		Status:  "healthy",
-	})
+	}
+	c.JSON(200, dto.SuccessResponse(&healthData, "Service is healthy", 200))
 }
 
 func SetupHealthRoutes(router *gin.RouterGroup) {
 	router.GET("/ping", CheckHealth)
 }
 
+func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
+	auth := router.Group("/auth")
+	{
+		auth.POST("/login", h.Auth.Login)
+	}
+}
+
 func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers) {
 	v1 := router.Group("/api/v1")
 	{
 		SetupHealthRoutes(v1)
-		// Add other routes here later
+		SetupAuthRoutes(v1, h)
 	}
 }
