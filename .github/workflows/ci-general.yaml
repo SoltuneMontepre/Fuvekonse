@@ -22,10 +22,8 @@ jobs:
               git fetch origin ${{ github.base_ref }}
               if git diff --quiet origin/${{ github.base_ref }} HEAD -- services/general-service/; then
                 echo "changed=false" >> $GITHUB_OUTPUT
-                echo "No changes detected in general-service"
               else
                 echo "changed=true" >> $GITHUB_OUTPUT
-                echo "Changes detected in general-service"
               fi
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -58,7 +56,6 @@ jobs:
         working-directory: services/general-service
         run: |
           swag init -g cmd/main.go -o ./docs
-          echo "✅ Swagger docs generated for general-service"
 
       - name: Download dependencies
         if: steps.changes.outputs.changed == 'true'
@@ -75,11 +72,6 @@ jobs:
         working-directory: services/general-service
         run: |
           go build -o ./tmp/main ./cmd/main.go
-          echo "✅ general-service built successfully"
-
-      - name: No changes - Skip
-        if: steps.changes.outputs.changed == 'false'
-        run: echo "✅ No changes in general-service - skipping build"
 
       - name: Notify failure
         if: failure() && steps.changes.outputs.changed == 'true'

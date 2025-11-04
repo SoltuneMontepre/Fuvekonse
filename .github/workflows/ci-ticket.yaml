@@ -22,10 +22,8 @@ jobs:
               git fetch origin ${{ github.base_ref }}
               if git diff --quiet origin/${{ github.base_ref }} HEAD -- services/ticket-service/; then
                 echo "changed=false" >> $GITHUB_OUTPUT
-                echo "No changes detected in ticket-service"
               else
                 echo "changed=true" >> $GITHUB_OUTPUT
-                echo "Changes detected in ticket-service"
               fi
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -58,7 +56,6 @@ jobs:
         working-directory: services/ticket-service
         run: |
           swag init -g cmd/main.go -o ./docs
-          echo "✅ Swagger docs generated for ticket-service"
 
       - name: Download dependencies
         if: steps.changes.outputs.changed == 'true'
@@ -75,11 +72,6 @@ jobs:
         working-directory: services/ticket-service
         run: |
           go build -o ./tmp/main ./cmd/main.go
-          echo "✅ ticket-service built successfully"
-
-      - name: No changes - Skip
-        if: steps.changes.outputs.changed == 'false'
-        run: echo "✅ No changes in ticket-service - skipping build"
 
       - name: Notify failure
         if: failure() && steps.changes.outputs.changed == 'true'
