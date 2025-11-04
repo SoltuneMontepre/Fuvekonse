@@ -9,5 +9,6 @@ type ErrorResponse struct {
 }
 
 type HealthResponse struct {
-	Status string `json:"status"`
+	Message string `json:"message" example:"pong"`
+	Status  string `json:"status"  example:"healthy"`
 }
