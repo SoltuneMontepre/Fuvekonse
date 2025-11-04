@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	utils "general-service/internal/common/utils"
+	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
 

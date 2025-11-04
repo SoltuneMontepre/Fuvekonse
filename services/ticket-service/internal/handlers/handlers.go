@@ -2,7 +2,6 @@ package handlers
 
 import "ticket-service/internal/services"
 
-
 type Handlers struct {
 	Role       *RoleHandler
 	Permission *PermissionHandler
