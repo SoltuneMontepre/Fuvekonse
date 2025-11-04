@@ -1,0 +1,106 @@
+name: CI - Ticket Service
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  push:
+    branches:
+      - main
+
+jobs:
+  ci-ticket:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet HEAD^ HEAD -- services/ticket-service/ 2>/dev/null || [ "${{ github.event_name }}" == "pull_request" ]; then
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              git fetch origin ${{ github.base_ref }}
+              if git diff --quiet origin/${{ github.base_ref }} HEAD -- services/ticket-service/; then
+                echo "changed=false" >> $GITHUB_OUTPUT
+                echo "No changes detected in ticket-service"
+              else
+                echo "changed=true" >> $GITHUB_OUTPUT
+                echo "Changes detected in ticket-service"
+              fi
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Go
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.25
+
+      - name: Cache Go modules and build cache
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-ticket-service-${{ hashFiles('**/go.sum') }}
+
+      - name: Install swag CLI
+        if: steps.changes.outputs.changed == 'true'
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate Swagger docs
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: services/ticket-service
+        run: |
+          swag init -g cmd/main.go -o ./docs
+          echo "✅ Swagger docs generated for ticket-service"
+
+      - name: Download dependencies
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: services/ticket-service
+        run: go mod download
+
+      - name: Verify dependencies
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: services/ticket-service
+        run: go mod verify
+
+      - name: Build service
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: services/ticket-service
+        run: |
+          go build -o ./tmp/main ./cmd/main.go
+          echo "✅ ticket-service built successfully"
+
+      - name: No changes - Skip
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "✅ No changes in ticket-service - skipping build"
+
+      - name: Notify failure
+        if: failure() && steps.changes.outputs.changed == 'true'
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "🚨 CI Build Failed [ticket-service]"
+          description: "Build for **${{ github.repository }}** failed on commit `${{ github.sha }}` by ${{ github.actor }}"
+          color: 0xff0000
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+      - name: Notify success
+        if: success() && steps.changes.outputs.changed == 'true'
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "🎉 CI Build Succeeded [ticket-service]"
+          description: "Build for **${{ github.repository }}** succeeded on commit `${{ github.sha }}` by ${{ github.actor }}"
+          color: 0x00ff00
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
