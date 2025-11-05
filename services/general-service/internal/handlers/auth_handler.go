@@ -58,16 +58,52 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		true, // secure
 		true, // httpOnly
 	)
-
-	c.SetCookie(
-		"refresh_token",
-		response.RefreshToken,
-		int(7*24*60*60), // 7 days
-		"/",
-		"",
-		true,
-		true,
-	)
-
 	utils.RespondSuccess(c, response, "Login successful")
+}
+
+// ResetPassword godoc
+// @Summary Reset user password
+// @Description Allow authenticated users to reset their password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.ResetPasswordRequest true "Reset password request"
+// @Router /auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req requests.ResetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	// waiting for jwt middleware 
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.RespondUnauthorized(c, "Unauthorized: userId not found in context")
+		return
+	}
+
+	if err := h.services.Auth.ResetPassword(userID.(string), &req); err != nil {
+		switch err.Error() {
+		case "new password and confirm password do not match":
+			utils.RespondBadRequest(c, err.Error())
+			return
+		case "new password cannot be the same as the old password":
+			utils.RespondBadRequest(c, err.Error())
+			return
+		case "user not found":
+			utils.RespondNotFound(c, err.Error())
+			return
+		default:
+			utils.RespondInternalServerError(c, err.Error())
+			return
+		}
+	}
+
+	// response := map[string]string{
+	// 	"message": "Password reset successful",
+	// }
+	utils.RespondSuccess[any](c, nil, "Password reset successful")
 }

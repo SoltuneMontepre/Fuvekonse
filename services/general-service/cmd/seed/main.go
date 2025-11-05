@@ -2,6 +2,7 @@ package main
 
 import (
 	"general-service/internal/common/constants"
+	"general-service/internal/common/utils"
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/models"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -25,8 +25,8 @@ func main() {
 	}
 	log.Println("✅ Database connection established")
 
-	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	// Hash the password using centralized utility
+	hashedPassword, err := utils.HashPassword("password123")
 	if err != nil {
 		log.Fatal("Failed to hash password:", err)
 	}
@@ -85,7 +85,7 @@ func main() {
 	log.Printf("Name:        %s %s", testUser.FirstName, testUser.LastName)
 	log.Printf("Role:        %s", testUser.Role)
 	log.Printf("Is Verified: %v", testUser.IsVerified)
-	log.Println("========================\n")
+	log.Println("========================")
 
 	log.Println("🎉 Seeding completed! You can now login with:")
 	log.Println(`{

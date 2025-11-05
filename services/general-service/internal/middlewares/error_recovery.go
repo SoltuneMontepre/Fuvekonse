@@ -16,7 +16,7 @@ func ErrorRecoveryMiddleware() gin.HandlerFunc {
 				log.Printf("[PANIC RECOVERED] %v\n%s", err, debug.Stack())
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 					"error":   "Internal Server Error",
-					"message": err,
+					"message": "An unexpected error occurred",
 				})
 			}
 		}()

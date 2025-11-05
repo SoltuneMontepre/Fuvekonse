@@ -35,15 +35,14 @@ func (s *AuthService) Login(req *requests.LoginRequest) (*responses.LoginRespons
 	}
 
 	// Create tokens
-	tokenPair, err := utils.CreateTokenPair(user.Id, user.Email, user.FursonaName, string(user.Role))
+	AccessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, string(user.Role))
 	if err != nil {
 		return nil, err
 	}
 
 	// Build response
 	response := &responses.LoginResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
+		AccessToken: AccessToken,
 	}
 
 	return response, nil

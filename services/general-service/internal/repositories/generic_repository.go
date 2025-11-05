@@ -14,7 +14,7 @@ func NewGenericRepository[T any](db *gorm.DB) *GenericRepository[T] {
 	return &GenericRepository[T]{db: db}
 }
 
-// GetAll 
+// GetAll
 func (r *GenericRepository[T]) GetAll(ctx context.Context) ([]T, error) {
 	var entities []T
 	if err := r.db.WithContext(ctx).Find(&entities).Error; err != nil {
@@ -32,17 +32,17 @@ func (r *GenericRepository[T]) GetByID(ctx context.Context, id string) (*T, erro
 	return &entity, nil
 }
 
-// Create 
+// Create
 func (r *GenericRepository[T]) Create(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Create(entity).Error
 }
 
-// Update 
+// Update
 func (r *GenericRepository[T]) Update(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Save(entity).Error
 }
 
-// Delete 
+// Delete
 func (r *GenericRepository[T]) Delete(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Delete(entity).Error
 }
