@@ -1,4 +1,4 @@
-name: general-service CI
+name: ticket-service CI
 
 on:
   pull_request:
@@ -6,12 +6,12 @@ on:
       - "**"
 
 jobs:
-  build:
+  ci-ticket:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        service: [general-service]
+        service: [ticket-service]
     steps:
       - uses: actions/checkout@v4
         with:
