@@ -50,7 +50,7 @@ func main() {
 		log.Printf("Warning: Failed to connect to Redis: %v", err)
 	} else {
 		defer database.CloseRedis()
-		log.Println("✅ Redis connection established")
+		log.Println("✅ Redis connection established.")
 	}
 
 	repos := repositories.NewRepositories(db)
