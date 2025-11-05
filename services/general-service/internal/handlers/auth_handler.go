@@ -58,16 +58,5 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		true, // secure
 		true, // httpOnly
 	)
-
-	c.SetCookie(
-		"refresh_token",
-		response.RefreshToken,
-		int(7*24*60*60), // 7 days
-		"/",
-		"",
-		true,
-		true,
-	)
-
 	utils.RespondSuccess(c, response, "Login successful")
 }
