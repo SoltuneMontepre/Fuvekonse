@@ -22,7 +22,7 @@ func NewUserBanHandler(userBanService services.UserBanServiceInterface) *UserBan
 
 func (h *UserBanHandler) BanUser(c *gin.Context) {
 	userID := c.Param("user_id")
-	
+
 	var req dto.BanUserRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,12 +37,12 @@ func (h *UserBanHandler) BanUser(c *gin.Context) {
 	}
 
 	response := dto.UserBanResponse{
-		ID:         userBan.ID,
-		UserID:     userBan.UserID,
-		PermID:     userBan.PermID,
-		Reason:     userBan.Reason,
-		CreatedAt:  userBan.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:  userBan.UpdatedAt.Format(time.RFC3339),
+		ID:        userBan.ID,
+		UserID:    userBan.UserID,
+		PermID:    userBan.PermID,
+		Reason:    userBan.Reason,
+		CreatedAt: userBan.CreatedAt.Format(time.RFC3339),
+		UpdatedAt: userBan.UpdatedAt.Format(time.RFC3339),
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"user_ban": response})
@@ -51,7 +51,7 @@ func (h *UserBanHandler) BanUser(c *gin.Context) {
 func (h *UserBanHandler) UnbanUser(c *gin.Context) {
 	userID := c.Param("user_id")
 	permissionIDStr := c.Param("permission_id")
-	
+
 	permissionID, err := strconv.ParseUint(permissionIDStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Invalid permission ID"})
@@ -108,7 +108,7 @@ func (h *UserBanHandler) GetAllUserBans(c *gin.Context) {
 func (h *UserBanHandler) CheckUserBan(c *gin.Context) {
 	userID := c.Param("user_id")
 	permissionIDStr := c.Query("permission_id")
-	
+
 	if permissionIDStr == "" {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "permission_id query parameter is required"})
 		return
