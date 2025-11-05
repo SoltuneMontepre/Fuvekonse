@@ -366,14 +366,65 @@ git commit -m "docs(readme): update environment setup instructions"
 git push --set-upstream origin feat/short-description
 ```
 
-Then:
+### PR Naming Guide
 
-1. Open a PR on GitHub
-2. Link relevant issues using keywords (e.g., `Closes #123`)
-3. Fill out the PR template
-4. Request reviews from team members
-5. Address review feedback
-6. Wait for CI checks to pass
+Follow this rule for all pull request titles:
+
+`^\[(feat|fix|chore|docs|refactor|test|style|perf|build|ci)\](\s*\|\s*#\d+)?\s+[a-zA-Z].+`
+
+Meaning:
+
+- Title must start with one of the type tags in square brackets: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`, `build`, `ci`
+- Optionally include an issue reference immediately after the tag using a pipe and a number: ` | #123` (spaces around `|` allowed)
+- After that, require at least one space and a description that begins with an ASCII letter (A–Z or a–z). The first letter of the description should be capitalized.
+
+How to compose a valid PR title:
+
+1. Pick the type tag: e.g., `[feat]`, `[fix]`
+2. Optionally add ` | #<issue-number>` to close/link an issue
+3. Add a concise, capitalized description starting with a letter (no leading punctuation or digits)
+4. Keep it short (ideally 50–72 chars) and clear
+
+Valid examples:
+
+```text
+[feat] | #42 Add user settings endpoint
+[fix] Correct nil pointer in auth middleware
+[docs] | #10 Update README Quick Start
+[refactor] Simplify repository interfaces
+[ci] Add pipeline step for linting
+```
+
+Invalid examples and why:
+
+```text
+feat: Add X                # Missing required [] tag
+[feat]add feature          # Missing space after tag
+[fix] | #5 123-fix         # Description starts with a digit
+[docs] - update README     # Description starts with punctuation
+```
+
+Suggested short checklist when opening a PR:
+
+- [ ] Choose the correct tag and format the title to match the regex above
+- [ ] If applicable, add ` | #<issue-number>` to link/close an issue
+- [ ] Write a short, capitalized description beginning with a letter
+- [ ] Fill PR body with context, testing notes, and screenshots if relevant
+- [ ] Request reviewers and run CI checks
+
+Automation/CI:
+
+- CI may validate PR title format; fix the title if the check fails.
+- Use conventional tags to enable automated changelog generation and issue linking.
+
+Examples for common types:
+
+- Feature: `[feat] | #88 Add payments webhook handler`
+- Bugfix: `[fix] Prevent crash when session expires`
+- Docs: `[docs] Improve contribution guidelines`
+- Chore: `[chore] Update dependency versions`
+
+Keep titles consistent to improve readability, automation, and changelog quality.
 
 ---
 
