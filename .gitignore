@@ -123,3 +123,6 @@ Thumbs.db
 
 # LocalStack
 .aws/volume
+.aws/lambda
+*.zip
+build

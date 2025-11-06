@@ -1,9 +1,12 @@
 package config
 
 import (
+	"context"
 	"ticket-service/internal/handlers"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func SetupRoleRoutes(rg *gin.RouterGroup, h *handlers.RoleHandler) {
@@ -55,8 +58,32 @@ func SetupHealthRoutes(router *gin.Engine) {
 	})
 }
 
-func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers) {
+func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	SetupHealthRoutes(router)
+
+	router.GET("/health/db", func(c *gin.Context) {
+		sqlDB, err := db.DB()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Database connection error"})
+			return
+		}
+		if err := sqlDB.Ping(); err != nil {
+			c.JSON(500, gin.H{"error": "Database ping failed"})
+			return
+		}
+		c.JSON(200, gin.H{"status": "database healthy"})
+	})
+
+	router.GET("/health/redis", func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := redisSetFunc(ctx, "health_check", "ok", time.Minute); err != nil {
+			c.JSON(500, gin.H{"error": "Redis connection failed"})
+			return
+		}
+		c.JSON(200, gin.H{"status": "redis healthy"})
+	})
 
 	api := router.Group("/api/v1")
 	{

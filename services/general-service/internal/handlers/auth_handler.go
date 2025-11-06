@@ -18,12 +18,19 @@ func NewAuthHandler(services *services.Services) *AuthHandler {
 
 // Login godoc
 // @Summary Login to the system
-// @Description Authenticate user with email and password
+// @Description Authenticate user with email and password, returns access token and refresh token
+// @Description
+// @Description **Usage:**
+// @Description 1. Send POST request with email and password
+// @Description 2. Receive access_token and refresh_token
+// @Description 3. Use access_token in Authorization header: Bearer YOUR_ACCESS_TOKEN
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param request body requests.LoginRequest true "Login credentials"
-// @Success 200 {object} responses.LoginResponse
+// @Success 200 "Successfully logged in"
+// @Failure 400 "Bad request - validation error"
+// @Failure 401 "Unauthorized - invalid credentials"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req requests.LoginRequest
