@@ -22,22 +22,25 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"ticket-service/internal/config"
 	"ticket-service/internal/database"
 	"ticket-service/internal/handlers"
 	"ticket-service/internal/repositories"
 	"ticket-service/internal/services"
-	"time"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	ginadapter "github.com/awslabs/aws-lambda-go-api-proxy/gin"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func main() {
-	config.LoadEnv()
+var ginLambda *ginadapter.GinLambda
 
-	port := config.GetEnvOr("PORT", "8081")
+func setupRouter() *gin.Engine {
+	config.LoadEnv()
 
 	db, err := database.ConnectWithEnv()
 	if err != nil {
@@ -49,7 +52,6 @@ func main() {
 	if err := database.InitRedis(); err != nil {
 		log.Printf("Warning: Failed to connect to Redis: %v", err)
 	} else {
-		defer database.CloseRedis()
 		log.Println("✅ Redis connection established")
 	}
 
@@ -62,31 +64,31 @@ func main() {
 	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	router.GET("/health/db", func(c *gin.Context) {
-		sqlDB, err := db.DB()
-		if err != nil {
-			c.JSON(500, gin.H{"error": "Database connection error"})
-			return
-		}
-		if err := sqlDB.Ping(); err != nil {
-			c.JSON(500, gin.H{"error": "Database ping failed"})
-			return
-		}
-		c.JSON(200, gin.H{"status": "database healthy"})
-	})
+	config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
 
-	router.GET("/health/redis", func(c *gin.Context) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	return router
+}
 
-		if err := database.SetWithExpiration(ctx, "health_check", "ok", time.Minute); err != nil {
-			c.JSON(500, gin.H{"error": "Redis connection failed"})
-			return
-		}
-		c.JSON(200, gin.H{"status": "redis healthy"})
-	})
+//Lamdba handler
+func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	if ginLambda == nil {
+		ginLambda = ginadapter.New(setupRouter())
+	}
+	return ginLambda.ProxyWithContext(ctx, req)
+}
 
-	config.SetupAPIRoutes(router, h)
+func main() {
+	// Check if running in AWS Lambda
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+		lambda.Start(Handler)
+		return
+	}
+
+	// Running as HTTP server
+	router := setupRouter()
+	port := config.GetEnvOr("PORT", "8081")
+
+	defer database.CloseRedis()
 
 	log.Printf("🚀 Server starting on :%s", port)
 	log.Printf("📚 Swagger documentation available at: http://localhost:%s/swagger/index.html", port)

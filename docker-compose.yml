@@ -30,7 +30,7 @@ services:
     environment:
       - DEBUG=1
       - PERSISTENCE=${PERSISTENCE:-0}
-      - SERVICES=s3,sqs,ses,logs,cloudwatch
+      - SERVICES=s3,sqs,ses,logs,cloudwatch,iam,lambda
       - LOCALSTACK_HOST=localhost
       - AWS_DEFAULT_REGION=ap-southeast-1
     volumes:
