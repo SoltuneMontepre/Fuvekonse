@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"general-service/internal/common/utils"
 	"general-service/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
@@ -18,10 +20,11 @@ func NewUserHandler(services *services.Services) *UserHandler {
 // GetMe godoc
 // @Summary Get current user information
 // @Description Get the profile information of the currently authenticated user
+// @Description Returns detailed user information including email and identification details
 // @Description
 // @Description **Usage:**
 // @Description 1. Include JWT access token in Authorization header: Bearer YOUR_ACCESS_TOKEN
-// @Description 2. Receive your user profile information
+// @Description 2. Receive your user profile information with sensitive fields
 // @Tags user
 // @Accept json
 // @Produce json
@@ -39,10 +42,11 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 		return
 	}
 
-	// Call service to get user information
-	user, err := h.services.User.GetUserByID(userID.(string))
+	// Call service to get detailed user information (including sensitive PII)
+	// This is appropriate here since users are accessing their own data
+	user, err := h.services.User.GetUserDetailedByID(userID.(string))
 	if err != nil {
-		if err.Error() == "record not found" {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.RespondNotFound(c, "User not found")
 			return
 		}
