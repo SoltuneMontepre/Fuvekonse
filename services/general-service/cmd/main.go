@@ -87,7 +87,7 @@ func main() {
 
 	defer database.CloseRedis()
 
-	log.Printf("🚀 Server starting on :%s", port)
+	log.Printf("\n🚀 Server starting on : %s", port)
 	log.Printf("📚 Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
 	router.Run(":" + port)
 }
