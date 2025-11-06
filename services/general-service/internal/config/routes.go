@@ -31,7 +31,9 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Auth.Login)
-		auth.POST("/reset-password", h.Auth.ResetPassword)
+
+		//add jwt auth
+		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
 	}
 }
 

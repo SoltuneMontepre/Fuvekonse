@@ -74,7 +74,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body requests.ResetPasswordRequest true "Reset password request"
+// @Success 200 "Password reset successful"
+// @Failure 400 "Bad request - validation error"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
 // @Router /auth/reset-password [post]
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req requests.ResetPasswordRequest
@@ -84,20 +90,27 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// waiting for jwt middleware 
-
-	userID, exists := c.Get("userID")
+	userIDRaw, exists := c.Get("user_id")
 	if !exists {
-		utils.RespondUnauthorized(c, "Unauthorized: userId not found in context")
+		utils.RespondUnauthorized(c, "User ID not found in token")
 		return
 	}
 
-	if err := h.services.Auth.ResetPassword(userID.(string), &req); err != nil {
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
 		switch err.Error() {
 		case "new password and confirm password do not match":
 			utils.RespondBadRequest(c, err.Error())
 			return
 		case "new password cannot be the same as the old password":
+			utils.RespondBadRequest(c, err.Error())
+			return
+		case "current password is incorrect":
 			utils.RespondBadRequest(c, err.Error())
 			return
 		case "user not found":
@@ -109,8 +122,5 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		}
 	}
 
-	// response := map[string]string{
-	// 	"message": "Password reset successful",
-	// }
 	utils.RespondSuccess[any](c, nil, "Password reset successful")
 }
