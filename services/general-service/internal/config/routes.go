@@ -40,9 +40,11 @@ func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers) {
 		protected := v1.Group("")
 		protected.Use(middlewares.JWTAuthMiddleware())
 		{
-			// Example: Add your protected routes here
-			// protected.GET("/profile", h.User.GetProfile)
-			// protected.PUT("/profile", h.User.UpdateProfile)
+			// User routes
+			users := protected.Group("/users")
+			{
+				users.GET("/me", h.User.GetMe)
+			}
 		}
 
 		// Admin only routes - require JWT authentication and admin role
