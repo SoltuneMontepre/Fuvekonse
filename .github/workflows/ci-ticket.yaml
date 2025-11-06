@@ -1,4 +1,4 @@
-name: general-service CI
+name: ticket-service CI
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - "**"
 
 jobs:
-  ci-general:
+  ci-ticket:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
