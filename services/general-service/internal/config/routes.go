@@ -2,7 +2,7 @@ package config
 
 import (
 	"context"
-	"general-service/internal/dto"
+	"general-service/internal/dto/common"
 	"general-service/internal/handlers"
 	"time"
 
@@ -28,6 +28,14 @@ func CheckHealth(c *gin.Context) {
 func SetupHealthRoutes(router *gin.RouterGroup) {
 	router.GET("/ping", CheckHealth)
 }
+
+func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
+	auth := router.Group("/auth")
+	{
+		auth.POST("/login", h.Auth.Login)
+	}
+}
+
 
 func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	router.GET("/health/db", func(c *gin.Context) {
