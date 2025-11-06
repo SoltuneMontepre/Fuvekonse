@@ -36,15 +36,22 @@ func NewUserHandler(services *services.Services) *UserHandler {
 // @Router /users/me [get]
 func (h *UserHandler) GetMe(c *gin.Context) {
 	// Get user ID from JWT context (set by JWTAuthMiddleware)
-	userID, exists := c.Get("user_id")
+	userIDRaw, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "User ID not found in token")
 		return
 	}
 
+	// Safe type assertion to prevent panic
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
 	// Call service to get detailed user information (including sensitive PII)
 	// This is appropriate here since users are accessing their own data
-	user, err := h.services.User.GetUserDetailedByID(userID.(string))
+	user, err := h.services.User.GetUserDetailedByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.RespondNotFound(c, "User not found")
