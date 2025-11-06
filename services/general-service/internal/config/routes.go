@@ -3,6 +3,7 @@ package config
 import (
 	"general-service/internal/dto/common"
 	"general-service/internal/handlers"
+	"general-service/internal/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +23,6 @@ func CheckHealth(c *gin.Context) {
 	c.JSON(200, common.SuccessResponse(&healthData, "Service is healthy", 200))
 }
 
-func SetupHealthRoutes(router *gin.RouterGroup) {
-	router.GET("/ping", CheckHealth)
-}
-
 func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	auth := router.Group("/auth")
 	{
@@ -36,7 +33,26 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers) {
 	v1 := router.Group("/api/v1")
 	{
-		SetupHealthRoutes(v1)
+		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)
+
+		// Protected routes - require JWT authentication
+		protected := v1.Group("")
+		protected.Use(middlewares.JWTAuthMiddleware())
+		{
+			// Example: Add your protected routes here
+			// protected.GET("/profile", h.User.GetProfile)
+			// protected.PUT("/profile", h.User.UpdateProfile)
+		}
+
+		// Admin only routes - require JWT authentication and admin role
+		// admin := v1.Group("")
+		// admin.Use(middlewares.JWTAuthMiddleware())
+		// admin.Use(middlewares.RequireRole("admin", "superadmin"))
+		// {
+		// 	// Example: Add your admin-only routes here
+		// 	// admin.GET("/users", h.User.GetAllUsers)
+		// 	// admin.DELETE("/users/:id", h.User.DeleteUser)
+		// }
 	}
 }
