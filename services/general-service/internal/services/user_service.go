@@ -3,6 +3,8 @@ package services
 import (
 	"general-service/internal/dto/user/responses"
 	"general-service/internal/repositories"
+
+	"gorm.io/gorm"
 )
 
 type UserService struct {
@@ -19,6 +21,12 @@ func (s *UserService) GetUserByID(userID string) (*responses.UserResponse, error
 	user, err := s.repos.User.FindByID(userID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Additional check: ensure the user is not soft-deleted
+	// This provides defense in depth even though the repository filters by is_deleted
+	if user.IsDeleted || (user.DeletedAt != nil && !user.DeletedAt.IsZero()) {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	// Map model to public response DTO (without sensitive fields)
@@ -44,6 +52,12 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 	user, err := s.repos.User.FindByID(userID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Additional check: ensure the user is not soft-deleted
+	// This provides defense in depth even though the repository filters by is_deleted
+	if user.IsDeleted || (user.DeletedAt != nil && !user.DeletedAt.IsZero()) {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	// Map model to detailed response DTO (with sensitive fields)
