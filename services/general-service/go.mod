@@ -5,6 +5,7 @@ go 1.25.1
 require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/gin-gonic/gin v1.10.1
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/swaggo/files v1.0.1
@@ -26,7 +27,6 @@ require (
 	github.com/go-openapi/swag/stringutils v0.25.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.29.0 // indirect
