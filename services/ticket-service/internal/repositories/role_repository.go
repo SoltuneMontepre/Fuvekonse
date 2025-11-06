@@ -74,29 +74,29 @@ func (r *RoleRepository) GetWithPermissions(id uint) (*models.Role, error) {
 func (r *RoleRepository) AddPermission(roleID, permissionID uint) error {
 	var role models.Role
 	var permission models.Permission
-	
+
 	if err := r.db.First(&role, roleID).Error; err != nil {
 		return err
 	}
-	
+
 	if err := r.db.First(&permission, permissionID).Error; err != nil {
 		return err
 	}
-	
+
 	return r.db.Model(&role).Association("Permissions").Append(&permission)
 }
 
 func (r *RoleRepository) RemovePermission(roleID, permissionID uint) error {
 	var role models.Role
 	var permission models.Permission
-	
+
 	if err := r.db.First(&role, roleID).Error; err != nil {
 		return err
 	}
-	
+
 	if err := r.db.First(&permission, permissionID).Error; err != nil {
 		return err
 	}
-	
+
 	return r.db.Model(&role).Association("Permissions").Delete(&permission)
 }

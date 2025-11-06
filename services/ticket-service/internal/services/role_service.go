@@ -164,7 +164,7 @@ func (s *RoleService) AddPermissionToRole(roleID, permissionID uint) error {
 	// Since we removed AddPermission from repository, we'll use a different approach
 	permission, _ := s.permissionRepo.GetByID(permissionID)
 	roleWithPermissions.Permissions = append(roleWithPermissions.Permissions, *permission)
-	
+
 	return s.roleRepo.Update(roleWithPermissions)
 }
 

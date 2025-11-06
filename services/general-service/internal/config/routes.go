@@ -19,7 +19,15 @@ func CheckHealth(c *gin.Context) {
 	c.JSON(200, common.HealthResponse{
 		Message: "pong",
 		Status:  "healthy",
-	})
+	}
+	c.JSON(200, common.SuccessResponse(&healthData, "Service is healthy", 200))
+}
+
+func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
+	auth := router.Group("/auth")
+	{
+		auth.POST("/login", h.Auth.Login)
+	}
 }
 
 func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
