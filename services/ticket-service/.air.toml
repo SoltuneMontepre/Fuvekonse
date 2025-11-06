@@ -39,24 +39,24 @@ runner = "green"
 watcher = "cyan"
 
 [log]
-  main_only = false
-  silent = false
-  time = true
+main_only = false
+silent = false
+time = true
 
 [misc]
-  clean_on_exit = false
+clean_on_exit = false
 
 [proxy]
-  app_port = 0
-  enabled = false
-  proxy_port = 0
+app_port = 0
+enabled = false
+proxy_port = 0
 
 [screen]
-  clear_on_rebuild = false
-  keep_scroll = true
+clear_on_rebuild = false
+keep_scroll = true
 
 # Cross-platform compatibility settings
 [build.env]
-  CGO_ENABLED = "0"
-  GOOS = ""
-  GOARCH = ""
+CGO_ENABLED = "0"
+GOOS = ""
+GOARCH = ""

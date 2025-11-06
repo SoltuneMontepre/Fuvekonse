@@ -2,7 +2,6 @@ package services
 
 import "ticket-service/internal/repositories"
 
-
 type Services struct {
 	Role       RoleServiceInterface
 	Permission PermissionServiceInterface

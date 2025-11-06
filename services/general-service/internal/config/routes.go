@@ -15,13 +15,14 @@ import (
 // @Description Returns pong and service status
 // @Tags health
 // @Produce json
-// @Success 200 {object} dto.HealthResponse
+// @Success 200 {object} common.HealthResponse
 // @Router /ping [get]
 func CheckHealth(c *gin.Context) {
-	c.JSON(200, dto.HealthResponse{
+	healthData := common.HealthResponse{
 		Message: "pong",
 		Status:  "healthy",
-	})
+	}
+	c.JSON(200, common.SuccessResponse(&healthData, "Service is healthy", 200))
 }
 
 func SetupHealthRoutes(router *gin.RouterGroup) {
@@ -56,6 +57,6 @@ func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redis
 	v1 := router.Group("/api/v1")
 	{
 		SetupHealthRoutes(v1)
-		// Add other routes here later
+		SetupAuthRoutes(v1, h)
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/handlers"
+	"general-service/internal/middlewares"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
 	"log"
@@ -61,6 +62,7 @@ func setupRouter() *gin.Engine {
 	h := handlers.NewHandlers(svc)
 
 	router := gin.Default()
+	router.Use(middlewares.ErrorRecoveryMiddleware())
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
