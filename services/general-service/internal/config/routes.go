@@ -4,6 +4,7 @@ import (
 	"context"
 	"general-service/internal/dto/common"
 	"general-service/internal/handlers"
+	"general-service/internal/middlewares"
 	"time"
 
 	"github.com/gin-gonic/gin"
