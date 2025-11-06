@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-
 	"general-service/internal/config"
 
 	"gorm.io/driver/postgres"
@@ -15,7 +14,9 @@ func Connect(connectionString string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %w", err)
 	}
+
 	AutoGenerateUUID(db)
+	
 	return db, nil
 }
 
