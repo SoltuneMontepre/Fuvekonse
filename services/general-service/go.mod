@@ -4,8 +4,10 @@ go 1.25.1
 
 require (
 	github.com/aws/aws-lambda-go v1.41.0
+	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.17
 	github.com/aws/aws-sdk-go-v2/service/ses v1.34.9
+	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
@@ -47,8 +49,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.39.6 // indirect
-	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.1 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect

@@ -67,3 +67,56 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	)
 	utils.RespondSuccess(c, response, "Login successful")
 }
+
+// ResetPassword godoc
+// @Summary Reset user password
+// @Description Allow authenticated users to reset their password after logged in!
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.ResetPasswordRequest true "Reset password request"
+// @Success 200 "Password reset successful"
+// @Failure 400 "Bad request - validation error"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req requests.ResetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
+		errMsg := err.Error()
+
+		switch errMsg {
+		case "user not found":
+			utils.RespondNotFound(c, errMsg)
+		case
+			"failed to hash password",
+			"failed to update password":
+			utils.RespondInternalServerError(c, errMsg)
+		default:
+			utils.RespondBadRequest(c, errMsg)
+		}
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Password reset successful")
+}

@@ -12,12 +12,13 @@ import (
 )
 
 // CheckHealth godoc
-// @Summary Check service health
-// @Description Returns pong and service status
-// @Tags health
-// @Produce json
-// @Success 200 {object} common.HealthResponse
-// @Router /ping [get]
+//
+//	@Summary		Check service health
+//	@Description	Returns pong and service status
+//	@Tags			health
+//	@Produce		json
+//	@Success		200	{object}	common.HealthResponse
+//	@Router			/ping [get]
 func CheckHealth(c *gin.Context) {
 	healthData := common.HealthResponse{
 		Message: "pong",
@@ -30,6 +31,9 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Auth.Login)
+
+		//add jwt auth
+		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
 	}
 }
 
