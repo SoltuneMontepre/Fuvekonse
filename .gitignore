@@ -126,3 +126,4 @@ Thumbs.db
 .aws/lambda
 *.zip
 build
+instructions/
