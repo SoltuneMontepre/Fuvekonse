@@ -126,3 +126,6 @@ Thumbs.db
 .aws/lambda
 *.zip
 build
+services/general-service/instructions/quick-review-pr.md
+services/general-service/instructions/review-changes.md
+services/general-service/instructions/review-file.md
