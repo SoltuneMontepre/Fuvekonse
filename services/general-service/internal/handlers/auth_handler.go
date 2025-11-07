@@ -70,7 +70,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // ResetPassword godoc
 // @Summary Reset user password
-// @Description Allow authenticated users to reset their password
+// @Description Allow authenticated users to reset their password after logged in!
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -103,23 +103,19 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
-		switch err.Error() {
-		case "new password and confirm password do not match":
-			utils.RespondBadRequest(c, err.Error())
-			return
-		case "new password cannot be the same as the old password":
-			utils.RespondBadRequest(c, err.Error())
-			return
-		case "current password is incorrect":
-			utils.RespondBadRequest(c, err.Error())
-			return
+		errMsg := err.Error()
+
+		switch errMsg {
 		case "user not found":
-			utils.RespondNotFound(c, err.Error())
-			return
+			utils.RespondNotFound(c, errMsg)
+		case
+			"failed to hash password",
+			"failed to update password":
+			utils.RespondInternalServerError(c, errMsg)
 		default:
-			utils.RespondInternalServerError(c, err.Error())
-			return
+			utils.RespondBadRequest(c, errMsg)
 		}
+		return
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password reset successful")
