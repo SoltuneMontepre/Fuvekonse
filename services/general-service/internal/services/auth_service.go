@@ -50,11 +50,11 @@ func (s *AuthService) Login(req *requests.LoginRequest) (*responses.LoginRespons
 
 // ResetPassword allows a logged-in user to change their password
 func (s *AuthService) ResetPassword(userID string, req *requests.ResetPasswordRequest) error {
-	// check if passwords match
 	if req.NewPassword != req.ConfirmedPassword {
 		return errors.New("new password and confirm password do not match")
 	}
 
+	// Fetch user
 	user, err := s.repos.User.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -63,18 +63,19 @@ func (s *AuthService) ResetPassword(userID string, req *requests.ResetPasswordRe
 		return err
 	}
 
-	// check old password
-	if err := utils.ComparePassword(user.Password, req.NewPassword); err == nil {
+	if err := utils.ComparePassword(user.Password, req.CurrentPassword); err != nil {
+		return errors.New("current password is incorrect")
+	}
+
+	if req.CurrentPassword == req.NewPassword {
 		return errors.New("new password cannot be the same as the old password")
 	}
 
-	// hash the new password i'm not sure if this actually works lel
 	hashedPassword, err := utils.HashPassword(req.NewPassword)
 	if err != nil {
 		return errors.New("failed to hash password")
 	}
 
-	// update password
 	user.Password = hashedPassword
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
 		return errors.New("failed to update password")
