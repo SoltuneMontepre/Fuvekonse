@@ -23,9 +23,7 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 	}
 }
 
-func (s *MailService) SendEmail(fromEmail, toEmail, subject, body string, cc, bcc []string) error {
-	ctx := context.Background()
-
+func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to load SDK config: %w", err)
