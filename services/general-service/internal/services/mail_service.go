@@ -14,23 +14,27 @@ import (
 )
 
 type MailService struct {
-	repos *repositories.Repositories
+	repos     *repositories.Repositories
+	sesClient *ses.Client
 }
 
 func NewMailService(repos *repositories.Repositories) *MailService {
-	return &MailService{
-		repos: repos,
-	}
-}
+	ctx := context.Background()
 
-func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to load SDK config: %w", err)
+		log.Fatalf("unable to load AWS SDK config: %v", err)
 	}
 
 	client := ses.NewFromConfig(cfg)
 
+	return &MailService{
+		repos:     repos,
+		sesClient: client,
+	}
+}
+
+func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
@@ -60,7 +64,7 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 		},
 	}
 
-	resp, err := client.SendEmail(ctx, input)
+	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
