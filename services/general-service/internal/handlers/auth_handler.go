@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
@@ -40,7 +41,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondValidationError(c, err.Error())
 		return
 	}
-	
+
 	// Call service
 	response, err := h.services.Auth.Login(&req)
 	if err != nil {
@@ -103,17 +104,15 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
-		errMsg := err.Error()
-
-		switch errMsg {
-		case "user not found":
-			utils.RespondNotFound(c, errMsg)
-		case
-			"failed to hash password",
-			"failed to update password":
-			utils.RespondInternalServerError(c, errMsg)
+		switch err.Error() {
+		case constants.ErrCodeUnauthorized:
+			utils.RespondUnauthorized(c, err.Error())
+		case constants.ErrCodeForbidden:
+			utils.RespondForbidden(c, err.Error())
+		case constants.ErrCodeInternalServerError:
+			utils.RespondInternalServerError(c, err.Error())
 		default:
-			utils.RespondBadRequest(c, errMsg)
+			utils.RespondBadRequest(c, err.Error())
 		}
 		return
 	}
