@@ -21,45 +21,52 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 	return &MailService{
 		repos: repos,
 	}
-}	
+}
 
-func (s *MailService) SendEmail(fromEmail string) {
-    ctx := context.Background()
+func (s *MailService) SendEmail(fromEmail, toEmail, subject, body string, cc, bcc []string) error {
+	ctx := context.Background()
 
-    cfg, err := config.LoadDefaultConfig(ctx)
-    if err != nil {
-        log.Fatalf("unable to load SDK config: %v", err)
-    }
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to load SDK config: %w", err)
+	}
 
-    client := ses.NewFromConfig(cfg)
+	client := ses.NewFromConfig(cfg)
 
-    input := &ses.SendEmailInput{
-        Source: aws.String(fromEmail),
-        Destination: &types.Destination{
-            ToAddresses: []string{"recipient@example.com"},
-        },
-        Message: &types.Message{
-            Subject: &types.Content{
-                Data:    aws.String("Test email from AWS SES via Go SDK"),
-                Charset: aws.String("UTF-8"),
-            },
-            Body: &types.Body{
-                Text: &types.Content{
-                    Data:    aws.String("This is the plain-text portion of the email."),
-                    Charset: aws.String("UTF-8"),
-                },
-                Html: &types.Content{
-                    Data:    aws.String("<html><body><h1>Hello!</h1><p>This is a HTML email.</p></body></html>"),
-                    Charset: aws.String("UTF-8"),
-                },
-            },
-        },
-    }
+	destination := &types.Destination{
+		ToAddresses: []string{toEmail},
+	}
 
-    resp, err := client.SendEmail(ctx, input)
-    if err != nil {
-        log.Fatalf("failed to send email: %v", err)
-    }
+	if len(cc) > 0 {
+		destination.CcAddresses = cc
+	}
 
-    fmt.Printf("Email sent! Message ID: %s\n", *resp.MessageId)
+	if len(bcc) > 0 {
+		destination.BccAddresses = bcc
+	}
+
+	input := &ses.SendEmailInput{
+		Source:      aws.String(fromEmail),
+		Destination: destination,
+		Message: &types.Message{
+			Subject: &types.Content{
+				Data:    aws.String(subject),
+				Charset: aws.String("UTF-8"),
+			},
+			Body: &types.Body{
+				Html: &types.Content{
+					Data:    aws.String(body),
+					Charset: aws.String("UTF-8"),
+				},
+			},
+		},
+	}
+
+	resp, err := client.SendEmail(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	log.Printf("Email sent successfully! Message ID: %s\n", *resp.MessageId)
+	return nil
 }
