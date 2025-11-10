@@ -14,6 +14,7 @@ type UserTicket struct {
 	BadgeImage     string     `gorm:"type:varchar(500)"` // image url
 	IsFursuiter    bool       `gorm:"default:false"`
 	IsFursuitStaff bool       `gorm:"default:false"`
+	IsCheckedIn    bool       `gorm:"default:false"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime"`
 	ModifiedAt     time.Time  `gorm:"autoUpdateTime"`
 	DeletedAt      *time.Time `gorm:"index"`
