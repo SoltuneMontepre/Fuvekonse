@@ -71,24 +71,24 @@ func (s *UserService) UpdateProfile(userID string, req *requests.UpdateProfileRe
 		return nil, err
 	}
 
-	// Update only provided fields
-	if req.FursonaName != "" {
-		user.FursonaName = req.FursonaName
+	// Update only provided fields (nil = not provided, *string = explicitly set, even if empty)
+	if req.FursonaName != nil {
+		user.FursonaName = *req.FursonaName
 	}
-	if req.FirstName != "" {
-		user.FirstName = req.FirstName
+	if req.FirstName != nil {
+		user.FirstName = *req.FirstName
 	}
-	if req.LastName != "" {
-		user.LastName = req.LastName
+	if req.LastName != nil {
+		user.LastName = *req.LastName
 	}
-	if req.Country != "" {
-		user.Country = req.Country
+	if req.Country != nil {
+		user.Country = *req.Country
 	}
-	if req.IdentificationId != "" {
-		user.IdentificationId = req.IdentificationId
+	if req.IdentificationId != nil {
+		user.IdentificationId = *req.IdentificationId
 	}
-	if req.PassportId != "" {
-		user.PassportId = req.PassportId
+	if req.PassportId != nil {
+		user.PassportId = *req.PassportId
 	}
 
 	// Save updated user
@@ -180,38 +180,38 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 		return nil, err
 	}
 
-	// Update only provided fields
-	if req.FursonaName != "" {
-		user.FursonaName = req.FursonaName
+	// Update only provided fields (nil = not provided, *string = explicitly set, even if empty)
+	if req.FursonaName != nil {
+		user.FursonaName = *req.FursonaName
 	}
-	if req.FirstName != "" {
-		user.FirstName = req.FirstName
+	if req.FirstName != nil {
+		user.FirstName = *req.FirstName
 	}
-	if req.LastName != "" {
-		user.LastName = req.LastName
+	if req.LastName != nil {
+		user.LastName = *req.LastName
 	}
-	if req.Country != "" {
-		user.Country = req.Country
+	if req.Country != nil {
+		user.Country = *req.Country
 	}
-	if req.Email != "" {
+	if req.Email != nil {
 		// Check if email already exists for another user
-		existingUser, err := s.repos.User.FindByEmail(req.Email)
+		existingUser, err := s.repos.User.FindByEmail(*req.Email)
 		if err == nil && existingUser.Id != user.Id {
 			return nil, errors.New("email already exists")
 		}
-		user.Email = req.Email
+		user.Email = *req.Email
 	}
-	if req.Avatar != "" {
-		user.Avatar = req.Avatar
+	if req.Avatar != nil {
+		user.Avatar = *req.Avatar
 	}
 	if req.Role != nil {
 		user.Role = *req.Role
 	}
-	if req.IdentificationId != "" {
-		user.IdentificationId = req.IdentificationId
+	if req.IdentificationId != nil {
+		user.IdentificationId = *req.IdentificationId
 	}
-	if req.PassportId != "" {
-		user.PassportId = req.PassportId
+	if req.PassportId != nil {
+		user.PassportId = *req.PassportId
 	}
 	if req.IsVerified != nil {
 		user.IsVerified = *req.IsVerified

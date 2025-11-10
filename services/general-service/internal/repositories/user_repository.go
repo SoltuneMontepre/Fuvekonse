@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"general-service/internal/models"
 	"time"
 
@@ -41,6 +42,14 @@ func (r *UserRepository) UpdateUserProfile(user *models.User) error {
 
 // FindAll finds all users with pagination support
 func (r *UserRepository) FindAll(page, pageSize int) ([]*models.User, int64, error) {
+	// Validate pagination parameters
+	if page < 1 {
+		return nil, 0, errors.New("page must be >= 1")
+	}
+	if pageSize <= 0 {
+		return nil, 0, errors.New("pageSize must be > 0")
+	}
+
 	var users []*models.User
 	var total int64
 
