@@ -13,7 +13,7 @@ func RespondTooManyRequests(c *gin.Context, message string) {
 	if message == "" {
 		message = "Too many requests"
 	}
-	RespondError(c, http.StatusTooManyRequests, constants.ErrCodeUnauthorized, message)
+	RespondError(c, http.StatusTooManyRequests, constants.ErrCodeTooManyRequests, message)
 }
 
 // RespondSuccess sends a successful response with data

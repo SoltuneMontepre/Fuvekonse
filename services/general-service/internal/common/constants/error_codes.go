@@ -9,4 +9,5 @@ const (
 	ErrCodeValidationFailed    = "VALIDATION_FAILED"
 	ErrCodeInvalidCredentials  = "INVALID_CREDENTIALS"
 	ErrCodeUserNotVerified     = "USER_NOT_VERIFIED"
+	ErrCodeTooManyRequests     = "TOO_MANY_REQUESTS"
 )
