@@ -48,7 +48,12 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Increment failed attempts even if user doesn't exist to prevent email enumeration
-			_ = utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes)
+			if err := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes); err != nil {
+				// Log the error with context
+				fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, err)
+				// Security: do not reveal internal error, but fail closed
+				return nil, errors.New("internal server error")
+			}
 			return nil, errors.New("invalid email or password")
 		}
 		return nil, err
@@ -57,7 +62,10 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 	// Compare password
 	if err := utils.ComparePassword(user.Password, req.Password); err != nil {
 		// Increment failed login attempts
-		_ = utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes)
+		if incErr := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes); incErr != nil {
+			fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, incErr)
+			return nil, errors.New("internal server error")
+		}
 		return nil, errors.New("invalid email or password")
 	}
 
