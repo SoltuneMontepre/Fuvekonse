@@ -31,6 +31,7 @@ func NewAuthHandler(services *services.Services) *AuthHandler {
 // @Success 200 "Successfully logged in"
 // @Failure 400 "Bad request - validation error"
 // @Failure 401 "Unauthorized - invalid credentials"
+// @Failure 429 "Too many failed login attempts - account temporarily locked"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req requests.LoginRequest
@@ -40,18 +41,27 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.RespondValidationError(c, err.Error())
 		return
 	}
-	
+
 	// Call service
 	response, err := h.services.Auth.Login(&req)
 	if err != nil {
-		if err.Error() == "invalid email or password" {
-			utils.RespondUnauthorized(c, err.Error())
-			return
-		} else if err.Error() == "user is not verified" {
-			utils.RespondForbidden(c, err.Error())
+		errMsg := err.Error()
+
+		// Check if it's a rate limit error
+		if len(errMsg) > 40 && errMsg[:40] == "account temporarily locked due to too ma" {
+			utils.RespondTooManyRequests(c, "Too many failed login attempts")
 			return
 		}
-		utils.RespondInternalServerError(c, err.Error())
+
+		switch errMsg {
+		case "invalid email or password":
+			utils.RespondUnauthorized(c, errMsg)
+			return
+		case "user is not verified":
+			utils.RespondForbidden(c, errMsg)
+			return
+		}
+		utils.RespondInternalServerError(c, errMsg)
 		return
 	}
 
