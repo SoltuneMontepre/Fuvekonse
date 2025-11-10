@@ -27,6 +27,8 @@ import (
 	"os"
 	"strings"
 
+	"gorm.io/gorm"
+
 	_ "general-service/docs"
 	"general-service/internal/config"
 	"general-service/internal/database"
@@ -75,15 +77,16 @@ func validateRequiredEnvVars() error {
 
 // setupDatabase initializes the database connection and logs the result.
 // Fatal error if connection fails.
-func setupDatabase() {
+// setupDatabase initializes the database connection and logs the result.
+// Returns the opened *gorm.DB or fatal error if connection fails.
+func setupDatabase() *gorm.DB {
 	db, err := database.ConnectWithEnv()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	log.Println("Database connection established successfully")
-
-	// Store db for later use if needed
-	_ = db
+	database.GlobalDB = db
+	return db
 }
 
 // setupRedis initializes the Redis connection and logs the result.
@@ -113,7 +116,7 @@ func setupSwagger(router *gin.Engine) {
 
 // setupRouter configures and returns a new Gin router with all middleware,
 // handlers, and routes configured.
-func setupRouter() *gin.Engine {
+func setupRouter(db *gorm.DB) *gin.Engine {
 	// Load environment configuration
 	if err := config.LoadEnv(); err != nil {
 		log.Printf("WARNING: Error loading .env file: %v", err)
@@ -124,9 +127,7 @@ func setupRouter() *gin.Engine {
 		log.Fatalf("Configuration error: %v", err)
 	}
 
-	// Initialize database
-	setupDatabase()
-
+	// Database is already initialized and passed in
 	// Initialize Redis
 	setupRedis()
 
@@ -135,7 +136,6 @@ func setupRouter() *gin.Engine {
 	loginFailBlockMinutes := config.GetLoginFailBlockMinutes()
 
 	// Initialize repositories and services
-	db, _ := database.ConnectWithEnv()
 	repos := repositories.NewRepositories(db)
 	svc := services.NewServices(repos, database.RedisClient, loginMaxFail, loginFailBlockMinutes)
 	h := handlers.NewHandlers(svc)
@@ -156,9 +156,18 @@ func setupRouter() *gin.Engine {
 
 // Handler is the AWS Lambda handler function that proxies requests through Gin.
 // It initializes the Gin Lambda adapter on first invocation and reuses it.
+var globalDB *gorm.DB
+
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	if ginLambda == nil {
-		ginLambda = ginadapter.New(setupRouter())
+		if globalDB == nil {
+			var err error
+			globalDB, err = database.ConnectWithEnv()
+			if err != nil {
+				log.Fatalf("Failed to connect to database: %v", err)
+			}
+		}
+		ginLambda = ginadapter.New(setupRouter(globalDB))
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }
@@ -173,12 +182,21 @@ func main() {
 		return
 	}
 
-	// Setup HTTP server
-	router := setupRouter()
-	port := config.GetEnvOr("PORT", "8080")
-
-	// Ensure cleanup on exit
+	// Setup database once and reuse
+	db, err := database.ConnectWithEnv()
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer func() {
+		if err := database.CloseDB(); err != nil {
+			log.Printf("Error closing DB: %v", err)
+		}
+	}()
 	defer database.CloseRedis()
+
+	// Setup HTTP server
+	router := setupRouter(db)
+	port := config.GetEnvOr("PORT", "8080")
 
 	// Start server
 	log.Printf("Server starting on port %s", port)
