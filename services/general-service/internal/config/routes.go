@@ -76,17 +76,25 @@ func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redis
 			users := protected.Group("/users")
 			{
 				users.GET("/me", h.User.GetMe)
+				users.PUT("/me", h.User.UpdateProfile)
+				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
 		}
 
 		// Admin only routes - require JWT authentication and admin role
-		// admin := v1.Group("")
-		// admin.Use(middlewares.JWTAuthMiddleware())
-		// admin.Use(middlewares.RequireRole("admin", "superadmin"))
-		// {
-		// 	// Example: Add your admin-only routes here
-		// 	// admin.GET("/users", h.User.GetAllUsers)
-		// 	// admin.DELETE("/users/:id", h.User.DeleteUser)
-		// }
+		admin := v1.Group("/admin")
+		admin.Use(middlewares.JWTAuthMiddleware())
+		admin.Use(middlewares.RequireRole("admin"))
+		{
+			// Admin user management routes
+			adminUsers := admin.Group("/users")
+			{
+				adminUsers.GET("", h.User.GetAllUsers)
+				adminUsers.GET("/:id", h.User.GetUserByIDForAdmin)
+				adminUsers.PUT("/:id", h.User.UpdateUserByAdmin)
+				adminUsers.DELETE("/:id", h.User.DeleteUser)
+				adminUsers.PATCH("/:id/verify", h.User.VerifyUser)
+			}
+		}
 	}
 }
