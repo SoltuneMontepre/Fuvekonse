@@ -34,12 +34,18 @@ func IncrementLoginFailedAttempts(ctx context.Context, redisClient *redis.Client
 	key := fmt.Sprintf(loginFailedKeyPrefix, email)
 	expiration := time.Duration(blockMinutes) * time.Minute
 
-	// Increment the counter and set expiration
-	pipe := redisClient.Pipeline()
-	pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, expiration)
-	_, err := pipe.Exec(ctx)
-	return err
+	// Try to set the key with expiration if it does not exist
+	set, err := redisClient.SetNX(ctx, key, 1, expiration).Result()
+	if err != nil {
+		return err
+	}
+	if set {
+		// Key was created, value is 1, expiration is set
+		return nil
+	}
+
+	// Key exists, just increment (do not reset expiration)
+	return redisClient.Incr(ctx, key).Err()
 }
 
 // ResetLoginFailedAttempts removes the failed login attempts counter
