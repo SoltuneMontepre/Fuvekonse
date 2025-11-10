@@ -64,7 +64,10 @@ func IsLoginBlocked(ctx context.Context, redisClient *redis.Client, email string
 	if attempts >= maxFail {
 		// Get remaining TTL
 		key := fmt.Sprintf(loginFailedKeyPrefix, email)
-		ttl := redisClient.TTL(ctx, key).Val()
+		ttl, err := redisClient.TTL(ctx, key).Result()
+		if err != nil {
+			return false, 0, err
+		}
 		remainingMinutes := max(int(ttl.Minutes()), 0)
 		return true, remainingMinutes, nil
 	}
