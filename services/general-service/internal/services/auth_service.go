@@ -70,7 +70,14 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 	}
 
 	// Reset failed login attempts on successful login
-	_ = utils.ResetLoginFailedAttempts(ctx, s.redisClient, req.Email)
+	if err := utils.ResetLoginFailedAttempts(ctx, s.redisClient, req.Email); err != nil {
+		fmt.Printf("[ERROR] Failed to reset login attempts for email %s: %v\n", req.Email, err)
+		// Optionally retry once
+		if retryErr := utils.ResetLoginFailedAttempts(ctx, s.redisClient, req.Email); retryErr != nil {
+			fmt.Printf("[ERROR] Retry also failed to reset login attempts for email %s: %v\n", req.Email, retryErr)
+			// Here you could increment a metric, e.g. metrics.IncResetLoginFailError()
+		}
+	}
 
 	// Create tokens
 	AccessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, string(user.Role))
