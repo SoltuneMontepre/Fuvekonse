@@ -44,8 +44,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Call service
-	response, err := h.services.Auth.Login(&req)
+	// Call service with context
+	response, err := h.services.Auth.Login(c.Request.Context(), &req)
 	if err != nil {
 		errMsg := err.Error()
 

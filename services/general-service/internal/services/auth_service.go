@@ -31,8 +31,8 @@ func NewAuthService(repos *repositories.Repositories, redisClient *redis.Client,
 }
 
 // Login authenticates a user and returns tokens
-func (s *AuthService) Login(req *requests.LoginRequest) (*responses.LoginResponse, error) {
-	ctx := context.Background()
+
+func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*responses.LoginResponse, error) {
 
 	// Check if user is blocked due to too many failed login attempts
 	isBlocked, remainingMinutes, err := utils.IsLoginBlocked(ctx, s.redisClient, req.Email, s.loginMaxFail)
