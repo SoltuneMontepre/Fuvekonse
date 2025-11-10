@@ -22,14 +22,18 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os"
+	"slices"
+	"strings"
+
 	_ "general-service/docs"
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/handlers"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
-	"log"
-	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -41,39 +45,148 @@ import (
 
 var ginLambda *ginadapter.GinLambda
 
-func setupRouter() *gin.Engine {
-	config.LoadEnv()
+// validateRequiredEnvVars checks that all required environment variables are set at startup.
+// Returns an error if any required variable is missing.
+func validateRequiredEnvVars() error {
+	requiredVars := []string{
+		"DB_HOST",
+		"DB_PORT",
+		"DB_USER",
+		"DB_PASSWORD",
+		"DB_NAME",
+		"JWT_SECRET",
+		"REDIS_HOST",
+		"REDIS_PORT",
+	}
 
+	var missing []string
+	for _, v := range requiredVars {
+		if os.Getenv(v) == "" {
+			missing = append(missing, v)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
+// setupDatabase initializes the database connection and logs the result.
+// Fatal error if connection fails.
+func setupDatabase() {
 	db, err := database.ConnectWithEnv()
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	log.Println("Database connection established successfully")
 
-	log.Println("✅ Database connection established")
+	// Store db for later use if needed
+	_ = db
+}
 
+// setupRedis initializes the Redis connection and logs the result.
+// Non-fatal warning if connection fails.
+func setupRedis() {
 	if err := database.InitRedis(); err != nil {
-		log.Printf("Warning: Failed to connect to Redis: %v", err)
+		log.Printf("WARNING: Failed to connect to Redis: %v", err)
 	} else {
-		log.Println("✅ Redis connection established")
+		log.Println("Redis connection established successfully")
 	}
+}
+
+// corsMiddleware creates a CORS middleware with configurable allowed origins.
+// Origins are read from CORS_ALLOWED_ORIGINS environment variable (comma-separated).
+func corsMiddleware() gin.HandlerFunc {
+	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	origins := strings.Split(allowedOrigins, ",")
+
+	// Trim whitespace from origins
+	for i := range origins {
+		origins[i] = strings.TrimSpace(origins[i])
+	}
+
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+
+		// Check if origin is allowed
+		allowed := slices.Contains(origins, origin)
+
+		if allowed {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, Origin, X-Requested-With")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Max-Age", "43200")
+		}
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// setupSwagger conditionally enables Swagger documentation based on environment.
+// Swagger is only enabled in development and staging environments.
+func setupSwagger(router *gin.Engine) {
+	env := config.GetEnvOr("ENV", "development")
+	if env == "production" {
+		log.Println("Swagger documentation disabled in production")
+		return
+	}
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	log.Println("Swagger documentation enabled")
+}
+
+// setupRouter configures and returns a new Gin router with all middleware,
+// handlers, and routes configured.
+func setupRouter() *gin.Engine {
+	// Load environment configuration
+	if err := config.LoadEnv(); err != nil {
+		log.Printf("WARNING: Error loading .env file: %v", err)
+	}
+
+	// Validate required environment variables
+	if err := validateRequiredEnvVars(); err != nil {
+		log.Fatalf("Configuration error: %v", err)
+	}
+
+	// Initialize database
+	setupDatabase()
+
+	// Initialize Redis
+	setupRedis()
 
 	// Get rate limit configuration
 	loginMaxFail := config.GetLoginMaxFail()
 	loginFailBlockMinutes := config.GetLoginFailBlockMinutes()
 
+	// Initialize repositories and services
+	db, _ := database.ConnectWithEnv()
 	repos := repositories.NewRepositories(db)
 	svc := services.NewServices(repos, database.RedisClient, loginMaxFail, loginFailBlockMinutes)
 	h := handlers.NewHandlers(svc)
 
+	// Setup router with middleware
 	router := gin.Default()
+	router.Use(corsMiddleware())
 
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Setup Swagger (disabled in production)
+	setupSwagger(router)
 
+	// Setup API routes
 	config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
 
 	return router
 }
 
+// Handler is the AWS Lambda handler function that proxies requests through Gin.
+// It initializes the Gin Lambda adapter on first invocation and reuses it.
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	if ginLambda == nil {
 		ginLambda = ginadapter.New(setupRouter())
@@ -81,18 +194,32 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 	return ginLambda.ProxyWithContext(ctx, req)
 }
 
+// main is the entry point for the application.
+// It detects whether running in AWS Lambda or as a standalone HTTP server.
 func main() {
+	// Check if running in AWS Lambda
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+		log.Println("Running in AWS Lambda mode")
 		lambda.Start(Handler)
 		return
 	}
 
+	// Setup HTTP server
 	router := setupRouter()
 	port := config.GetEnvOr("PORT", "8080")
 
+	// Ensure cleanup on exit
 	defer database.CloseRedis()
 
-	log.Printf("\n🚀 Server starting on : %s", port)
-	log.Printf("📚 Swagger documentation available at: http://localhost:%s/swagger/index.html", port)
-	router.Run(":" + port)
+	// Start server
+	log.Printf("Server starting on port %s", port)
+
+	env := config.GetEnvOr("ENV", "development")
+	if env != "production" {
+		log.Printf("Swagger documentation: http://localhost:%s/swagger/index.html", port)
+	}
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
