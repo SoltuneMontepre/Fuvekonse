@@ -181,6 +181,7 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	}
 
 	// Update only provided fields (nil = not provided, *string = explicitly set, even if empty)
+	// Note: Email cannot be changed by admin for security reasons
 	if req.FursonaName != nil {
 		user.FursonaName = *req.FursonaName
 	}
@@ -192,14 +193,6 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	}
 	if req.Country != nil {
 		user.Country = *req.Country
-	}
-	if req.Email != nil {
-		// Check if email already exists for another user
-		existingUser, err := s.repos.User.FindByEmail(*req.Email)
-		if err == nil && existingUser.Id != user.Id {
-			return nil, errors.New("email already exists")
-		}
-		user.Email = *req.Email
 	}
 	if req.Avatar != nil {
 		user.Avatar = *req.Avatar
