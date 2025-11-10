@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
@@ -47,8 +49,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err != nil {
 		errMsg := err.Error()
 
-		// Check if it's a rate limit error
-		if len(errMsg) > 40 && errMsg[:40] == "account temporarily locked due to too ma" {
+		// Check if it's a rate limit error using sentinel
+		if errors.Is(err, constants.ErrAccountLocked) {
 			utils.RespondTooManyRequests(c, "Too many failed login attempts")
 			return
 		}

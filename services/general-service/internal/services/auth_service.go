@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/dto/auth/responses"
@@ -39,7 +40,7 @@ func (s *AuthService) Login(req *requests.LoginRequest) (*responses.LoginRespons
 		return nil, err
 	}
 	if isBlocked {
-		return nil, fmt.Errorf("account temporarily locked due to too many failed login attempts. please try again in %d minutes", remainingMinutes+1)
+		return nil, fmt.Errorf("%w: please try again in %d minutes", constants.ErrAccountLocked, remainingMinutes+1)
 	}
 
 	// Find user by email

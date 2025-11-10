@@ -1,5 +1,9 @@
 package constants
 
+import "errors"
+
+var ErrAccountLocked = errors.New("account temporarily locked due to too many failed login attempts")
+
 const (
 	ErrCodeBadRequest          = "BAD_REQUEST"
 	ErrCodeUnauthorized        = "UNAUTHORIZED"
