@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"general-service/internal/config"
 	"strconv"
@@ -11,6 +12,8 @@ import (
 )
 
 var RedisClient *redis.Client
+
+const errRedisClientNotInitialized = "redis client not initialized"
 
 func ConnectRedis(opts *redis.Options) (*redis.Client, error) {
 	client := redis.NewClient(opts)
@@ -66,30 +69,30 @@ func CloseRedis() error {
 	return nil
 }
 
-func SetWithExpiration(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func SetWithExpiration(ctx context.Context, key string, value any, expiration time.Duration) error {
 	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
+		return errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Set(ctx, key, value, expiration).Err()
 }
 
 func Get(ctx context.Context, key string) (string, error) {
 	if RedisClient == nil {
-		return "", fmt.Errorf("redis client not initialized")
+		return "", errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Get(ctx, key).Result()
 }
 
 func Delete(ctx context.Context, key string) error {
 	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
+		return errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Del(ctx, key).Err()
 }
 
 func Exists(ctx context.Context, key string) (bool, error) {
 	if RedisClient == nil {
-		return false, fmt.Errorf("redis client not initialized")
+		return false, errors.New(errRedisClientNotInitialized)
 	}
 	result, err := RedisClient.Exists(ctx, key).Result()
 	return result > 0, err

@@ -57,8 +57,12 @@ func setupRouter() *gin.Engine {
 		log.Println("✅ Redis connection established")
 	}
 
+	// Get rate limit configuration
+	loginMaxFail := config.GetLoginMaxFail()
+	loginFailBlockMinutes := config.GetLoginFailBlockMinutes()
+
 	repos := repositories.NewRepositories(db)
-	svc := services.NewServices(repos)
+	svc := services.NewServices(repos, database.RedisClient, loginMaxFail, loginFailBlockMinutes)
 	h := handlers.NewHandlers(svc)
 
 	router := gin.Default()
