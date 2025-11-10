@@ -25,13 +25,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strings"
 
 	_ "general-service/docs"
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/handlers"
+	"general-service/internal/middlewares"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
 
@@ -96,39 +96,7 @@ func setupRedis() {
 	}
 }
 
-// corsMiddleware creates a CORS middleware with configurable allowed origins.
-// Origins are read from CORS_ALLOWED_ORIGINS environment variable (comma-separated).
-func corsMiddleware() gin.HandlerFunc {
-	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-	origins := strings.Split(allowedOrigins, ",")
-
-	// Trim whitespace from origins
-	for i := range origins {
-		origins[i] = strings.TrimSpace(origins[i])
-	}
-
-	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-
-		// Check if origin is allowed
-		allowed := slices.Contains(origins, origin)
-
-		if allowed {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Credentials", "true")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, Origin, X-Requested-With")
-			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			c.Header("Access-Control-Max-Age", "43200")
-		}
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
-}
+// ...corsMiddleware moved to internal/middlewares/cors.go...
 
 // setupSwagger conditionally enables Swagger documentation based on environment.
 // Swagger is only enabled in development and staging environments.
@@ -174,7 +142,8 @@ func setupRouter() *gin.Engine {
 
 	// Setup router with middleware
 	router := gin.Default()
-	router.Use(corsMiddleware())
+	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	router.Use(middlewares.CorsMiddleware(allowedOrigins))
 
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)
