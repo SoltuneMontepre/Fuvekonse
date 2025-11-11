@@ -3,17 +3,34 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
 func LoadEnv() error {
-	err := godotenv.Load()
-	if err != nil {
-		return fmt.Errorf("error loading .env file: %w", err)
+	// Try to load .env from multiple locations
+	// 1. Current directory (services/general-service/.env)
+	// 2. Two levels up (project root: ../../.env)
+	envPaths := []string{
+		".env",
+		"../../.env",
 	}
-	return nil
+
+	var lastErr error
+	for _, envPath := range envPaths {
+		absPath, _ := filepath.Abs(envPath)
+		err := godotenv.Load(absPath)
+		if err == nil {
+			// Successfully loaded
+			return nil
+		}
+		lastErr = err
+	}
+
+	// If all paths failed, return the last error
+	return fmt.Errorf("error loading .env file from any location: %w", lastErr)
 }
 
 func GetEnvOr(key, defaultValue string) string {
