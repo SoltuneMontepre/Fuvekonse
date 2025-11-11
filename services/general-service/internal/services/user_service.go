@@ -110,12 +110,20 @@ func (s *UserService) UpdateAvatar(userID string, req *requests.UpdateAvatarRequ
 		return nil, err
 	}
 
+	// Additional check: ensure the user is not soft-deleted
+	// This provides defense in depth even though the repository filters by is_deleted
+	if isUserDeleted(user) {
+		return nil, gorm.ErrRecordNotFound
+	}
+
 	// Update avatar
 	user.Avatar = req.Avatar
 
 	// Save updated user
+	// Note: Consider implementing optimistic concurrency control using ModifiedAt
+	// to prevent race conditions in concurrent update scenarios
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
-		return nil, errors.New("failed to update avatar")
+		return nil, err
 	}
 
 	return mappers.MapUserToDetailedResponse(user), nil
