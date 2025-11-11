@@ -175,7 +175,11 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 // main is the entry point for the application.
 // It detects whether running in AWS Lambda or as a standalone HTTP server.
 func main() {
-	// Check if running in AWS Lambda
+	// Load environment configuration FIRST
+	if err := config.LoadEnv(); err != nil {
+		log.Printf("WARNING: Error loading .env file: %v", err)
+	}
+
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
 		log.Println("Running in AWS Lambda mode")
 		lambda.Start(Handler)
