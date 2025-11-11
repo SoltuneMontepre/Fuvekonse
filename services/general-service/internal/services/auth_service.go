@@ -79,8 +79,8 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 		}
 	}
 
-	// Create tokens
-	AccessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, string(user.Role))
+	// Create tokens (convert int role to string for JWT)
+	AccessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, user.Role.String())
 	if err != nil {
 		return nil, err
 	}
