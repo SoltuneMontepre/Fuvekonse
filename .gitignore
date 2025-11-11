@@ -127,3 +127,5 @@ Thumbs.db
 *.zip
 build
 instructions/
+.cursor
+.cursorrules

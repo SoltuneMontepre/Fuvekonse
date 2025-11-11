@@ -77,6 +77,8 @@ func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redis
 			users := protected.Group("/users")
 			{
 				users.GET("/me", h.User.GetMe)
+				users.PUT("/me", h.User.UpdateProfile)
+				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
 		}
 
