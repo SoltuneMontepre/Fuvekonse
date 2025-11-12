@@ -57,8 +57,7 @@ func validateRequiredEnvVars() error {
 		"DB_PASSWORD",
 		"DB_NAME",
 		"JWT_SECRET",
-		"REDIS_HOST",
-		"REDIS_PORT",
+		"REDIS_URL",	
 	}
 
 	var missing []string
