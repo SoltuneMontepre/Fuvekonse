@@ -8,6 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RespondTooManyRequests sends a 429 Too Many Requests response
+func RespondTooManyRequests(c *gin.Context, message string) {
+	if message == "" {
+		message = "Too many requests"
+	}
+	RespondError(c, http.StatusTooManyRequests, constants.ErrCodeTooManyRequests, message)
+}
+
 // RespondSuccess sends a successful response with data
 func RespondSuccess[T any](c *gin.Context, data *T, message string) {
 	if message == "" {

@@ -16,7 +16,7 @@ func Connect(connectionString string) (*gorm.DB, error) {
 	}
 
 	AutoGenerateUUID(db)
-	
+
 	return db, nil
 }
 
