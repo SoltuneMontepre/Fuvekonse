@@ -136,7 +136,9 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	// Setup router with middleware
 	router := gin.Default()
 	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	
 	router.Use(middlewares.CorsMiddleware(allowedOrigins))
+	log.Println("CORS middleware configured with allowed origins:", allowedOrigins)
 
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)
