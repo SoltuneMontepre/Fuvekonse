@@ -1,140 +1,158 @@
-# General Configuration
+# Provider Variables
+
 variable "aws_region" {
-  description = "AWS Region"
+  description = "AWS region for deploying fuvekon resources"
   type        = string
-  default     = "ap-east-1"
+  default     = "ap-southeast-1"
 }
 
 variable "project_name" {
-  description = "Project name for resource naming"
-  type        = string
-  default     = "fuvekonse"
+  type    = string
+  default = "fuvekon"
 }
 
-variable "environment" {
-  description = "Environment name"
+
+# S3 Bucket Variables
+variable "bucket_name" {
+  description = "Name of the S3 for fuvekon"
   type        = string
-  default     = "production"
 }
 
-# VPC Configuration
-variable "vpc_cidr" {
-  description = "VPC CIDR block"
+variable "bucket_acl" {
+  description = "Access control list for S3 bucket"
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "private"
 }
 
-variable "availability_zones" {
-  description = "List of availability zones"
+# IAM Variables
+
+variable "iam_bucket_access_username" {
+  description = "List of IAM user ARNs to grant read/list access to the S3 bucket"
+  type        = string
+}
+
+variable "iam_lambda_app_role_name" {
+  description = "The name of the IAM role for Lambda application"
+  type        = string
+}
+
+variable "s3_cors_allowed_origins" {
+  description = "List of allowed origins for CORS configuration"
   type        = list(string)
-  default     = ["ap-east-1a", "ap-east-1b"]
+  default     = []
 }
 
-variable "public_subnet_cidrs" {
-  description = "CIDR blocks for public subnets"
-  type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
-}
+# SES Variables
 
-variable "private_subnet_cidrs" {
-  description = "CIDR blocks for private subnets"
-  type        = list(string)
-  default     = ["10.0.10.0/24", "10.0.11.0/24"]
-}
-
-# Database Configuration
-variable "db_name" {
-  description = "Database name"
+variable "ses_sender_email" {
+  description = "Email address to verify and use as sender for SES"
   type        = string
-  default     = "fuvekonse_db"
 }
 
-variable "db_username" {
-  description = "Database master username"
+# Lambda Variables
+
+variable "general_service_zip_path" {
+  description = "Path to the general service deployment package (zip file)"
   type        = string
-  sensitive   = true
+}
+
+variable "ticket_service_zip_path" {
+  description = "Path to the ticket service deployment package (zip file)"
+  type        = string
+}
+
+# Database Variables
+
+variable "db_host" {
+  description = "Database host endpoint"
+  type        = string
+}
+
+variable "db_port" {
+  description = "Database port"
+  type        = string
+  default     = "5432"
+}
+
+variable "db_user" {
+  description = "Database username"
+  type        = string
 }
 
 variable "db_password" {
-  description = "Database master password"
+  description = "Database password"
   type        = string
   sensitive   = true
 }
 
-variable "db_instance_class" {
-  description = "RDS instance class"
+variable "db_name" {
+  description = "Database name"
   type        = string
-  default     = "db.t3.micro"
 }
 
-variable "db_allocated_storage" {
-  description = "Allocated storage in GB"
-  type        = number
-  default     = 20
-}
-
-variable "db_engine_version" {
-  description = "PostgreSQL engine version"
+variable "db_sslmode" {
+  description = "Database SSL mode (disable, require, verify-ca, verify-full)"
   type        = string
-  default     = "15.4"
+  default     = "disable"
 }
 
-# ElastiCache Configuration
-variable "redis_node_type" {
-  description = "ElastiCache node type"
+# Redis Variables
+
+variable "redis_host" {
+  description = "Redis host endpoint"
   type        = string
-  default     = "cache.t3.micro"
 }
 
-variable "redis_num_cache_nodes" {
-  description = "Number of cache nodes"
-  type        = number
-  default     = 2
-}
-
-variable "redis_engine_version" {
-  description = "Redis engine version"
+variable "redis_port" {
+  description = "Redis port"
   type        = string
-  default     = "7.0"
+  default     = "6379"
 }
 
-# Lambda Configuration
-variable "lambda_timeout" {
-  description = "Lambda function timeout in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "lambda_memory_size" {
-  description = "Lambda function memory in MB"
-  type        = number
-  default     = 256
-}
-
-# S3 Configuration
-variable "bucket_name" {
-  description = "S3 bucket name"
+variable "redis_url" {
+  description = "Full Redis connection URL"
   type        = string
-  default     = "fuvekonse-s3-bucket"
 }
 
-# SQS Configuration
-variable "sqs_visibility_timeout" {
-  description = "SQS visibility timeout in seconds"
-  type        = number
-  default     = 30
-}
+# Application Variables
 
-# Domain Configuration
-variable "domain_name" {
-  description = "Domain name for SES"
+variable "jwt_secret" {
+  description = "JWT secret key for token generation"
   type        = string
-  default     = "fuvekonse.com"
+  sensitive   = true
 }
 
-# Common Tags
-variable "tags" {
-  description = "Common tags for all resources"
-  type        = map(string)
-  default     = {}
+variable "jwt_access_token_expiry_minutes" {
+  description = "JWT access token expiry in minutes"
+  type        = string
+  default     = "15"
+}
+
+variable "jwt_refresh_token_expiry_days" {
+  description = "JWT refresh token expiry in days"
+  type        = string
+  default     = "7"
+}
+
+variable "login_max_fail" {
+  description = "Maximum failed login attempts before blocking"
+  type        = string
+  default     = "5"
+}
+
+variable "login_fail_block_minutes" {
+  description = "Duration in minutes to block after max failed attempts"
+  type        = string
+  default     = "15"
+}
+
+variable "frontend_url" {
+  description = "Frontend application URL"
+  type        = string
+}
+
+variable "gin_mode" {
+  description = "Gin framework mode (debug or release)"
+  type        = string
+  default     = "release"
 }

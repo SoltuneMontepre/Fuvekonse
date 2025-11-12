@@ -1,5 +1,6 @@
 # Local .terraform directories
 **/.terraform/*
+/.terraform/
 
 # .tfstate files
 *.tfstate
@@ -127,3 +128,4 @@ Thumbs.db
 *.zip
 build
 instructions/
+bootstrap
