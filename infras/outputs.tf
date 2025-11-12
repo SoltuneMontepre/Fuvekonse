@@ -24,6 +24,7 @@ output "lambda_app_role_arn" {
 output "ses_sender_email" {
   description = "Verified SES sender email"
   value       = module.ses.sender_email
+  sensitive   = true
 }
 
 # SQS Outputs
