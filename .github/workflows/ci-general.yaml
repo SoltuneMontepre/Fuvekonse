@@ -100,13 +100,13 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: services/${{ matrix.service }}/bootstrap.zip
-          key: ${{ matrix.service }}-lambda-${{ github.sha }}
+          key: ${{ matrix.service }}-lambda-${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Upload Lambda artifact
         if: steps.check_changes.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.service }}-lambda-${{ github.sha }}
+          name: ${{ matrix.service }}-lambda-${{ github.event.pull_request.head.sha || github.sha }}
           path: services/${{ matrix.service }}/bootstrap.zip
           retention-days: 7
           compression-level: 0
