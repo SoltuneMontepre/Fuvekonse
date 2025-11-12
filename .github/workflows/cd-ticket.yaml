@@ -84,20 +84,9 @@ jobs:
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
-          TF_VAR_doppler_project: ${{ vars.DOPPLER_PROJECT }}
-          TF_VAR_doppler_config: ${{ vars.DOPPLER_CONFIG }}
-          TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_bucket_name: ${{ vars.BUCKET_NAME }}
-          TF_VAR_bucket_acl: ${{ vars.BUCKET_ACL }}
-          TF_VAR_iam_bucket_access_username: ${{ vars.IAM_BUCKET_ACCESS_USERNAME }}
-          TF_VAR_iam_lambda_app_role_name: ${{ vars.IAM_LAMBDA_APP_ROLE_NAME }}
-          TF_VAR_s3_cors_allowed_origins: '["${{ vars.S3_CORS_ALLOWED_ORIGINS }}"]'
-          TF_VAR_general_service_zip_path: ../services/general-service/bootstrap.zip
-          TF_VAR_ticket_service_zip_path: ../services/ticket-service/bootstrap.zip
-          TF_VAR_gin_mode: release
         run: |
           terraform plan \
+            -var-file="./envs/prod.tfvars" \
             -target=module.lambda.aws_lambda_function.ticket_service \
             -target=module.lambda.aws_cloudwatch_log_group.ticket_service \
             -target=module.lambda.aws_lambda_function_url.ticket_service \
