@@ -7,8 +7,3 @@ variable "project_name" {
   description = "The name of the project"
   type        = string
 }
-
-variable "iam_lambda_app_username" {
-  description = "The name of the IAM user for Lambda application"
-  type        = string
-}

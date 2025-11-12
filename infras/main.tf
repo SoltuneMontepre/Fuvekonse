@@ -11,5 +11,54 @@ module "iam" {
   source                     = "./modules/iam"
   project_name               = var.project_name
   iam_bucket_access_username = var.iam_bucket_access_username
-  iam_lambda_app_username    = var.iam_lambda_app_username
+}
+
+module "ses" {
+  source       = "./modules/ses"
+  project_name = var.project_name
+  sender_email = var.ses_sender_email
+}
+
+module "sqs" {
+  source       = "./modules/sqs"
+  project_name = var.project_name
+}
+
+module "iam_role" {
+  source                   = "./modules/iam_role"
+  project_name             = var.project_name
+  iam_lambda_app_role_name = var.iam_lambda_app_role_name
+  s3_bucket_arn            = module.s3.bucket_arn
+  ses_identity_arn         = module.ses.sender_identity_arn
+  sqs_queue_arn            = module.sqs.queue_arn
+  sqs_dlq_arn              = module.sqs.dead_letter_queue_arn
+}
+
+module "lambda" {
+  source                           = "./modules/lambda"
+  project_name                     = var.project_name
+  lambda_role_arn                  = module.iam_role.lambda_app_role_arn
+  general_service_zip_path         = var.general_service_zip_path
+  ticket_service_zip_path          = var.ticket_service_zip_path
+  db_host                          = var.db_host
+  db_port                          = var.db_port
+  db_user                          = var.db_user
+  db_password                      = var.db_password
+  db_name                          = var.db_name
+  db_sslmode                       = var.db_sslmode
+  redis_host                       = var.redis_host
+  redis_port                       = var.redis_port
+  redis_url                        = var.redis_url
+  aws_region                       = var.aws_region
+  jwt_secret                       = var.jwt_secret
+  jwt_access_token_expiry_minutes  = var.jwt_access_token_expiry_minutes
+  jwt_refresh_token_expiry_days    = var.jwt_refresh_token_expiry_days
+  login_max_fail                   = var.login_max_fail
+  login_fail_block_minutes         = var.login_fail_block_minutes
+  frontend_url                     = var.frontend_url
+  gin_mode                         = var.gin_mode
+  s3_bucket_name                   = module.s3.bucket_name
+  ses_sender_email                 = module.ses.sender_email
+  sqs_queue_url                    = module.sqs.queue_url
+  cors_allowed_origins             = var.s3_cors_allowed_origins
 }

@@ -53,10 +53,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/go/bin/swag
-          key: ${{ runner.os }}-swag-v1.8.12
+          key: ${{ runner.os }}-swag-${{ hashFiles('**/go.mod') }}
+          restore-keys: |
+            ${{ runner.os }}-swag-
 
       - name: Install swag CLI
-        if: steps.check_changes.outputs.changed == 'true'
+        if: steps.check_changes.outputs.changed == 'true' && steps.cache-swag.outputs.cache-hit != 'true'
         run: go install github.com/swaggo/swag/cmd/swag@latest
 
       - name: Generate Swagger docs
@@ -80,6 +82,34 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: |
           go build -o ./tmp/main ./cmd/main.go
+
+      - name: Build Lambda deployment package
+        if: steps.check_changes.outputs.changed == 'true'
+        working-directory: services/${{ matrix.service }}
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap cmd/main.go
+          zip -j bootstrap.zip bootstrap
+          echo "Lambda package size: $(du -h bootstrap.zip | cut -f1)"
+
+      - name: Cache Lambda build
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: services/${{ matrix.service }}/bootstrap.zip
+          key: ${{ matrix.service }}-lambda-${{ github.sha }}
+
+      - name: Upload Lambda artifact
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-lambda-${{ github.sha }}
+          path: services/${{ matrix.service }}/bootstrap.zip
+          retention-days: 7
+          compression-level: 0
 
       - name: Notify failure
         if: failure() && steps.check_changes.outputs.changed == 'true'
