@@ -11,6 +11,13 @@ variable "project_name" {
   default = "fuvekon"
 }
 
+# Doppler Variable
+variable "doppler_token" {
+  description = "Doppler service token for accessing secrets"
+  type        = string
+  sensitive   = true
+}
+
 
 # S3 Bucket Variables
 variable "bucket_name" {
@@ -42,13 +49,6 @@ variable "s3_cors_allowed_origins" {
   default     = []
 }
 
-# SES Variables
-
-variable "ses_sender_email" {
-  description = "Email address to verify and use as sender for SES"
-  type        = string
-}
-
 # Lambda Variables
 
 variable "general_service_zip_path" {
@@ -61,98 +61,16 @@ variable "ticket_service_zip_path" {
   type        = string
 }
 
-# Database Variables
-
-variable "db_host" {
-  description = "Database host endpoint"
-  type        = string
-}
-
-variable "db_port" {
-  description = "Database port"
-  type        = string
-  default     = "5432"
-}
-
-variable "db_user" {
-  description = "Database username"
-  type        = string
-}
-
-variable "db_password" {
-  description = "Database password"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_name" {
-  description = "Database name"
-  type        = string
-}
-
-variable "db_sslmode" {
-  description = "Database SSL mode (disable, require, verify-ca, verify-full)"
-  type        = string
-  default     = "disable"
-}
-
-# Redis Variables
-
-variable "redis_host" {
-  description = "Redis host endpoint"
-  type        = string
-}
-
-variable "redis_port" {
-  description = "Redis port"
-  type        = string
-  default     = "6379"
-}
-
-variable "redis_url" {
-  description = "Full Redis connection URL"
-  type        = string
-}
-
-# Application Variables
-
-variable "jwt_secret" {
-  description = "JWT secret key for token generation"
-  type        = string
-  sensitive   = true
-}
-
-variable "jwt_access_token_expiry_minutes" {
-  description = "JWT access token expiry in minutes"
-  type        = string
-  default     = "15"
-}
-
-variable "jwt_refresh_token_expiry_days" {
-  description = "JWT refresh token expiry in days"
-  type        = string
-  default     = "7"
-}
-
-variable "login_max_fail" {
-  description = "Maximum failed login attempts before blocking"
-  type        = string
-  default     = "5"
-}
-
-variable "login_fail_block_minutes" {
-  description = "Duration in minutes to block after max failed attempts"
-  type        = string
-  default     = "15"
-}
-
-variable "frontend_url" {
-  description = "Frontend application URL"
-  type        = string
-}
-
 variable "gin_mode" {
   description = "Gin framework mode (debug or release)"
   type        = string
   default     = "release"
 }
+
+# NOTE: The following variables are now managed by Doppler and fetched via doppler.tf
+# - db_host, db_port, db_user, db_password, db_name, db_sslmode
+# - redis_host, redis_port, redis_url
+# - jwt_secret, jwt_access_token_expiry_minutes, jwt_refresh_token_expiry_days
+# - login_max_fail, login_fail_block_minutes
+# - frontend_url
+# - ses_sender_email
