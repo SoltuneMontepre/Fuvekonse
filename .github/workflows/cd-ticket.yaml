@@ -84,6 +84,8 @@ jobs:
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+          TF_VAR_doppler_project: ${{ vars.DOPPLER_PROJECT }}
+          TF_VAR_doppler_config: ${{ vars.DOPPLER_CONFIG }}
           TF_VAR_project_name: ${{ vars.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
           TF_VAR_bucket_name: ${{ vars.BUCKET_NAME }}

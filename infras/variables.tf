@@ -18,6 +18,16 @@ variable "doppler_token" {
   sensitive   = true
 }
 
+variable "doppler_project" {
+  description = "Doppler project name"
+  type        = string
+}
+
+variable "doppler_config" {
+  description = "Doppler config name (e.g., dev, stg, prd)"
+  type        = string
+}
+
 
 # S3 Bucket Variables
 variable "bucket_name" {

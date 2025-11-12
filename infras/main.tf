@@ -10,6 +10,7 @@ module "s3" {
 module "iam" {
   source                     = "./modules/iam"
   project_name               = var.project_name
+
   iam_bucket_access_username = var.iam_bucket_access_username
 }
 

@@ -1,4 +1,7 @@
-data "doppler_secrets" "this" {}
+data "doppler_secrets" "this" {
+  project = var.doppler_project
+  config  = var.doppler_config
+}
 
 locals {
   secrets = data.doppler_secrets.this.map
