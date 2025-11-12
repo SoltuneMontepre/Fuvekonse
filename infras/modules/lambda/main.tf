@@ -120,6 +120,15 @@ resource "aws_lambda_function_url" "general_service" {
   }
 }
 
+# Permission for Function URL to invoke General Service Lambda
+resource "aws_lambda_permission" "general_service_url" {
+  statement_id           = "AllowFunctionURLInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.general_service.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
 # Lambda Function URL for Ticket Service
 resource "aws_lambda_function_url" "ticket_service" {
   function_name      = aws_lambda_function.ticket_service.function_name
@@ -133,4 +142,13 @@ resource "aws_lambda_function_url" "ticket_service" {
     max_age           = 300
     allow_credentials = false
   }
+}
+
+# Permission for Function URL to invoke Ticket Service Lambda
+resource "aws_lambda_permission" "ticket_service_url" {
+  statement_id           = "AllowFunctionURLInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.ticket_service.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

@@ -57,7 +57,7 @@ func validateRequiredEnvVars() error {
 		"DB_PASSWORD",
 		"DB_NAME",
 		"JWT_SECRET",
-		"REDIS_URL",	
+		// Redis is optional - only warn if missing
 	}
 
 	var missing []string
@@ -67,25 +67,16 @@ func validateRequiredEnvVars() error {
 		}
 	}
 
+	// Check Redis separately - just warn, don't fail
+	if os.Getenv("REDIS_HOST") == "" && os.Getenv("REDIS_URL") == "" {
+		log.Println("WARNING: Neither REDIS_HOST nor REDIS_URL is set. Rate limiting may not work properly.")
+	}
+
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
 	}
 
 	return nil
-}
-
-// setupDatabase initializes the database connection and logs the result.
-// Fatal error if connection fails.
-// setupDatabase initializes the database connection and logs the result.
-// Returns the opened *gorm.DB or fatal error if connection fails.
-func setupDatabase() *gorm.DB {
-	db, err := database.ConnectWithEnv()
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	log.Println("Database connection established successfully")
-	database.GlobalDB = db
-	return db
 }
 
 // setupRedis initializes the Redis connection and logs the result.
@@ -127,6 +118,9 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	}
 
 	// Database is already initialized and passed in
+	// Set the global DB reference
+	database.GlobalDB = db
+	
 	// Initialize Redis
 	setupRedis()
 
@@ -159,14 +153,29 @@ var globalDB *gorm.DB
 
 func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	if ginLambda == nil {
+		// Load environment configuration FIRST
+		if err := config.LoadEnv(); err != nil {
+			log.Printf("WARNING: Error loading .env file: %v", err)
+		}
+
+		// Validate required environment variables
+		if err := validateRequiredEnvVars(); err != nil {
+			log.Fatalf("Configuration error: %v", err)
+		}
+
+		// Setup database connection
 		if globalDB == nil {
 			var err error
 			globalDB, err = database.ConnectWithEnv()
 			if err != nil {
 				log.Fatalf("Failed to connect to database: %v", err)
 			}
+			log.Println("Database connection established successfully")
 		}
+
+		// Initialize the Gin Lambda adapter
 		ginLambda = ginadapter.New(setupRouter(globalDB))
+		log.Println("Lambda handler initialized successfully")
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }
