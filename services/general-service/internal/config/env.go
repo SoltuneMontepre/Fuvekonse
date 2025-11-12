@@ -10,9 +10,14 @@ import (
 )
 
 func LoadEnv() error {
-	// Try to load .env from multiple locations
-	// 1. Current directory (services/general-service/.env)
-	// 2. Two levels up (project root: ../../.env)
+	// In AWS Lambda, environment variables are already set by the Lambda runtime
+	// Check if we're running in Lambda by looking for AWS_LAMBDA_FUNCTION_NAME
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+		// Running in Lambda - environment variables are already set, no need to load .env
+		return nil
+	}
+
+	// Running locally - try to load .env file
 	envPaths := []string{
 		".env",
 		"../../.env",
@@ -28,8 +33,6 @@ func LoadEnv() error {
 		}
 		lastErr = err
 	}
-
-	// If all paths failed, return the last error
 	return fmt.Errorf("error loading .env file from any location: %w", lastErr)
 }
 
