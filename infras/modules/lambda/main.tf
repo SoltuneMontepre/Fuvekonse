@@ -21,12 +21,14 @@ resource "aws_lambda_function" "general_service" {
       REDIS_HOST                       = var.redis_host
       REDIS_PORT                       = var.redis_port
       REDIS_URL                        = var.redis_url
+      REDIS_TLS                        = "true"
       JWT_SECRET                       = var.jwt_secret
       JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
       JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
       LOGIN_MAX_FAIL                   = var.login_max_fail
       LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
       FRONTEND_URL                     = var.frontend_url
+      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
       GIN_MODE                         = var.gin_mode
       S3_BUCKET                        = var.s3_bucket_name
       SES_SENDER                       = var.ses_sender_email
@@ -64,12 +66,14 @@ resource "aws_lambda_function" "ticket_service" {
       REDIS_HOST                       = var.redis_host
       REDIS_PORT                       = var.redis_port
       REDIS_URL                        = var.redis_url
+      REDIS_TLS                        = "true"
       JWT_SECRET                       = var.jwt_secret
       JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
       JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
       LOGIN_MAX_FAIL                   = var.login_max_fail
       LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
       FRONTEND_URL                     = var.frontend_url
+      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
       GIN_MODE                         = var.gin_mode
       S3_BUCKET                        = var.s3_bucket_name
       SES_SENDER                       = var.ses_sender_email
@@ -109,15 +113,6 @@ resource "aws_cloudwatch_log_group" "ticket_service" {
 resource "aws_lambda_function_url" "general_service" {
   function_name      = aws_lambda_function.general_service.function_name
   authorization_type = "NONE"
-
-  cors {
-    allow_origins     = var.cors_allowed_origins
-    allow_methods     = ["*"]
-    allow_headers     = ["*"]
-    expose_headers    = ["*"]
-    max_age           = 300
-    allow_credentials = false
-  }
 }
 
 # Permission for Function URL to invoke General Service Lambda
@@ -134,14 +129,8 @@ resource "aws_lambda_function_url" "ticket_service" {
   function_name      = aws_lambda_function.ticket_service.function_name
   authorization_type = "NONE"
 
-  cors {
-    allow_origins     = var.cors_allowed_origins
-    allow_methods     = ["*"]
-    allow_headers     = ["*"]
-    expose_headers    = ["*"]
-    max_age           = 300
-    allow_credentials = false
-  }
+  # CORS is handled by the application middleware, not by Lambda Function URL
+  # This prevents double CORS header issues
 }
 
 # Permission for Function URL to invoke Ticket Service Lambda
