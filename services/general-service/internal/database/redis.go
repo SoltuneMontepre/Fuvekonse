@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"general-service/internal/config"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -35,6 +37,13 @@ func ConnectRedisWithEnv() (*redis.Client, error) {
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid REDIS_URL value: %s: %w", redisURL, err)
+	}
+
+	// Enable TLS if running in AWS Lambda or if REDIS_TLS is explicitly set to "true"
+	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" || config.GetEnvOr("REDIS_TLS", "false") == "true" {
+		opts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
 	}
 
 	return ConnectRedis(opts)
