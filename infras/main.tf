@@ -47,8 +47,6 @@ module "lambda" {
   db_password                      = local.db_password
   db_name                          = local.db_name
   db_sslmode                       = local.db_sslmode
-  redis_host                       = local.redis_host
-  redis_port                       = local.redis_port
   redis_url                        = local.redis_url
   aws_region                       = var.aws_region
   jwt_secret                       = local.jwt_secret

@@ -51,17 +51,6 @@ variable "db_sslmode" {
   default     = "disable"
 }
 
-variable "redis_host" {
-  description = "Redis host"
-  type        = string
-}
-
-variable "redis_port" {
-  description = "Redis port"
-  type        = string
-  default     = "6379"
-}
-
 variable "redis_url" {
   description = "Full Redis URL"
   type        = string

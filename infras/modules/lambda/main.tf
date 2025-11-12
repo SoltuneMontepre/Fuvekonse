@@ -18,8 +18,6 @@ resource "aws_lambda_function" "general_service" {
       DB_PASSWORD                      = var.db_password
       DB_NAME                          = var.db_name
       DB_SSLMODE                       = var.db_sslmode
-      REDIS_HOST                       = var.redis_host
-      REDIS_PORT                       = var.redis_port
       REDIS_URL                        = var.redis_url
       REDIS_TLS                        = "true"
       JWT_SECRET                       = var.jwt_secret
@@ -63,8 +61,6 @@ resource "aws_lambda_function" "ticket_service" {
       DB_PASSWORD                      = var.db_password
       DB_NAME                          = var.db_name
       DB_SSLMODE                       = var.db_sslmode
-      REDIS_HOST                       = var.redis_host
-      REDIS_PORT                       = var.redis_port
       REDIS_URL                        = var.redis_url
       REDIS_TLS                        = "true"
       JWT_SECRET                       = var.jwt_secret
@@ -113,6 +109,7 @@ resource "aws_cloudwatch_log_group" "ticket_service" {
 resource "aws_lambda_function_url" "general_service" {
   function_name      = aws_lambda_function.general_service.function_name
   authorization_type = "NONE"
+  invoke_mode        = "BUFFERED"
 }
 
 # Permission for Function URL to invoke General Service Lambda
