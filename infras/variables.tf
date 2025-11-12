@@ -24,7 +24,20 @@ variable "bucket_acl" {
   default     = "private"
 }
 
+# IAM Variables
+
 variable "iam_bucket_access_username" {
   description = "List of IAM user ARNs to grant read/list access to the S3 bucket"
   type        = string
+}
+
+variable "iam_lambda_app_username" {
+  description = "The name of the IAM user for Lambda application"
+  type        = string
+}
+
+variable "s3_cors_allowed_origins" {
+  description = "List of allowed origins for CORS configuration"
+  type        = list(string)
+  default     = []
 }

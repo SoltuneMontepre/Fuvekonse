@@ -18,3 +18,9 @@ variable "read_only_principal_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "s3_cors_allowed_origins" {
+  description = "List of allowed origins for CORS configuration"
+  type        = list(string)
+  default     = []
+}

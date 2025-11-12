@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"general-service/internal/config"
-	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -31,21 +30,11 @@ func ConnectRedis(opts *redis.Options) (*redis.Client, error) {
 }
 
 func ConnectRedisWithEnv() (*redis.Client, error) {
-	host := config.GetEnvOr("REDIS_HOST", "localhost")
-	port := config.GetEnvOr("REDIS_PORT", "6379")
-	password := config.GetEnvOr("REDIS_PASSWORD", "")
-	dbStr := config.GetEnvOr("REDIS_DB", "0")
+	redisURL := config.GetEnvOr("REDIS_URL", "redis://localhost:6379/0")
 
-	db, err := strconv.Atoi(dbStr)
-
+	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid REDIS_DB value: %s", dbStr)
-	}
-
-	opts := &redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", host, port),
-		Password: password,
-		DB:       db,
+		return nil, fmt.Errorf("invalid REDIS_URL value: %s: %w", redisURL, err)
 	}
 
 	return ConnectRedis(opts)
