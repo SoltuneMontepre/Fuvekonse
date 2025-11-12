@@ -74,11 +74,6 @@ jobs:
           go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap cmd/main.go
           zip -j bootstrap.zip bootstrap
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: latest
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -86,8 +81,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
       - name: Terraform Init
         working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: terraform init
 
       - name: Terraform Plan
@@ -104,14 +106,20 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: terraform apply tfplan
 
       - name: Get Lambda URL
+        id: get-lambda-url
         working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           URL=$(terraform output -raw ticket_service_url)
           echo "🚀 Deployed ticket-service to: $URL"
           echo "LAMBDA_URL=$URL" >> $GITHUB_ENV
+          echo "lambda_url=$URL" >> $GITHUB_OUTPUT
 
       - name: Notify deployment success
         if: success()
@@ -123,7 +131,7 @@ jobs:
           description: |
             **Repository:** ${{ github.repository }}
             **Commit:** `${{ github.sha }}`
-            **URL:** ${{ env.LAMBDA_URL }}
+            **URL:** ${{ steps.get-lambda-url.outputs.lambda_url }}
             **Deployed by:** ${{ github.actor }}
           color: 0x00ff00
           username: GitHub Actions

@@ -11,6 +11,14 @@ terraform {
       version = "~> 1.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "fuvekon-terraform-state"
+    key            = "fuvekon/terraform.tfstate"
+    region         = "ap-southeast-1"
+    encrypt        = true
+    use_lockfile   = true
+  }
 }
 
 provider "aws" {
