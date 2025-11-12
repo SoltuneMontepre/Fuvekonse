@@ -31,6 +31,12 @@ func CorsMiddleware(allowedOrigins string) gin.HandlerFunc {
 			return
 		}
 		origin := c.Request.Header.Get("Origin")
+		
+		if origin == "" {
+			c.Next()
+			return
+		}
+		
 		allowed := slices.Contains(trimmedOrigins, origin)
 		if !allowed {
 			c.AbortWithStatus(403)
