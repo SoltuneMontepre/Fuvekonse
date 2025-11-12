@@ -16,24 +16,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore Lambda build from cache
-        id: cache-lambda
-        uses: actions/cache/restore@v4
+      - name: Try to download Lambda artifact from CI
+        id: download-artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4
         with:
-          path: services/general-service/bootstrap.zip
-          key: general-service-lambda-${{ github.sha }}
-          restore-keys: |
-            general-service-lambda-
+          name: general-service-lambda-${{ github.sha }}
+          path: services/general-service/
 
-      - name: Setup Golang (if cache miss)
-        if: steps.cache-lambda.outputs.cache-hit != 'true'
+      - name: Check if Lambda package exists
+        id: check-lambda
+        run: |
+          if [ -f "services/general-service/bootstrap.zip" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Lambda package found from CI artifacts"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Lambda package not found, will build from source"
+          fi
+
+      - name: Setup Golang (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
         uses: actions/setup-go@v5
         with:
           go-version-file: "services/general-service/go.mod"
           cache: true
 
-      - name: Cache Swagger CLI (if cache miss)
-        if: steps.cache-lambda.outputs.cache-hit != 'true'
+      - name: Cache Swagger CLI (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
         id: cache-swag
         uses: actions/cache@v4
         with:
@@ -42,18 +52,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-swag-
 
-      - name: Install swag CLI (if cache miss)
-        if: steps.cache-lambda.outputs.cache-hit != 'true' && steps.cache-swag.outputs.cache-hit != 'true'
+      - name: Install swag CLI (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true' && steps.cache-swag.outputs.cache-hit != 'true'
         run: go install github.com/swaggo/swag/cmd/swag@latest
 
-      - name: Generate Swagger docs (if cache miss)
-        if: steps.cache-lambda.outputs.cache-hit != 'true'
+      - name: Generate Swagger docs (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
         working-directory: services/general-service
         run: |
           swag init -g cmd/main.go -o ./docs
 
-      - name: Build Lambda package (if cache miss)
-        if: steps.cache-lambda.outputs.cache-hit != 'true'
+      - name: Build Lambda package (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
         working-directory: services/general-service
         env:
           GOOS: linux
