@@ -1,6 +1,8 @@
 package utils
 
 import (
+	role "general-service/internal/common/constants"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -36,18 +38,27 @@ func GetEmailFromContext(c *gin.Context) string {
 }
 
 // GetRoleFromContext retrieves the role from the gin context
-func GetRoleFromContext(c *gin.Context) string {
-	role, exists := c.Get("role")
+func GetRoleFromContext(c *gin.Context) role.UserRole {
+	roleValue, exists := c.Get("role")
 	if !exists {
-		return ""
+		return 0
 	}
 
-	roleStr, ok := role.(string)
-	if !ok {
-		return ""
+	// Try to get as UserRole first
+	if userRole, ok := roleValue.(role.UserRole); ok {
+		return userRole
 	}
 
-	return roleStr
+	// Fallback: try to parse from string (for backward compatibility)
+	if roleStr, ok := roleValue.(string); ok {
+		userRole, err := role.ParseUserRole(roleStr)
+		if err != nil {
+			return 0
+		}
+		return userRole
+	}
+
+	return 0
 }
 
 // GetFursonaNameFromContext retrieves the fursona name from the gin context

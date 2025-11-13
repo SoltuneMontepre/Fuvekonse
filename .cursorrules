@@ -1,0 +1,281 @@
+# Cursor Rules for Fuvekonse Project
+
+## Project Overview
+This is a Go microservices project using:
+- **Framework**: Gin (HTTP router)
+- **Database**: PostgreSQL with GORM
+- **Cache**: Redis
+- **Deployment**: AWS Lambda (with local development support)
+- **Documentation**: Swagger/OpenAPI
+- **Architecture**: Clean Architecture (Handlers → Services → Repositories)
+
+## Architecture Patterns
+
+### Service Structure
+Each service follows this structure:
+```
+services/{service-name}/
+├── cmd/
+│   └── main.go              # Entry point, router setup
+├── internal/
+│   ├── config/              # Configuration (env, routes)
+│   ├── handlers/            # HTTP handlers (thin layer)
+│   ├── services/            # Business logic
+│   ├── repositories/        # Data access layer
+│   ├── models/              # Database models (GORM)
+│   ├── dto/                 # Data Transfer Objects (requests/responses)
+│   ├── middlewares/         # HTTP middlewares (JWT, role-based auth)
+│   ├── common/              # Shared utilities and constants
+│   └── database/            # DB connection and Redis setup
+└── docs/                    # Swagger generated docs (gitignored)
+```
+
+### Layer Responsibilities
+
+**Handlers (HTTP Layer)**
+- Handle HTTP requests/responses only
+- Validate request DTOs using `c.ShouldBindJSON()`
+- Call services with context
+- Use utility functions from `utils` package for standardized responses:
+  - `utils.RespondSuccess()`
+  - `utils.RespondValidationError()`
+  - `utils.RespondUnauthorized()`
+  - `utils.RespondNotFound()`
+  - `utils.RespondInternalServerError()`
+  - `utils.RespondTooManyRequests()`
+- Extract user context from JWT middleware: `c.Get("user_id")`
+- Always include Swagger annotations for API documentation
+
+**Services (Business Logic)**
+- Contain all business logic
+- Accept `context.Context` as first parameter
+- Use repositories for data access
+- Handle errors and return domain-specific errors
+- Use Redis client for caching/rate limiting when needed
+- Never access database directly (use repositories)
+
+**Repositories (Data Access)**
+- Only database operations
+- Accept `*gorm.DB` or repository-specific DB connection
+- Return models or errors
+- Always filter by `is_deleted = false` for soft-deleted records
+- Use GORM query methods: `Where()`, `First()`, `Find()`, `Save()`, `Create()`, `Update()`
+
+**Models (Database Schema)**
+- Use GORM tags for database mapping
+- Include soft delete support: `DeletedAt *time.Time` and `IsDeleted bool`
+- Use `uuid.UUID` for primary keys
+- Include timestamps: `CreatedAt`, `ModifiedAt`
+- Use custom types from `common/constants` for enums (e.g., `role.UserRole`)
+
+## Code Style & Conventions
+
+### Naming Conventions
+- **Packages**: lowercase, single word (e.g., `handlers`, `services`, `repositories`)
+- **Files**: snake_case (e.g., `auth_handler.go`, `user_repository.go`)
+- **Types**: PascalCase (e.g., `UserRepository`, `AuthService`)
+- **Functions**: PascalCase for exported, camelCase for private
+- **Variables**: camelCase
+- **Constants**: PascalCase for exported constants
+
+### Error Handling
+- Use `errors.New()` for simple error messages
+- Use `errors.Is(err, gorm.ErrRecordNotFound)` to check for not found
+- Use sentinel errors from `common/constants` for domain errors (e.g., `constants.ErrAccountLocked`)
+- Return descriptive error messages that can be shown to users
+- Log errors with context: `fmt.Printf("[ERROR] Failed to ...: %v\n", err)`
+- Never expose internal implementation details in error messages
+
+### API Response Format
+Always use the standardized `ApiResponse[T]` format:
+```go
+utils.RespondSuccess(c, data, "Success message")
+utils.RespondError(c, errorCode, "Error message", statusCode)
+```
+
+### Context Usage
+- Always pass `context.Context` as the first parameter in service methods
+- Use context for cancellation, timeouts, and request-scoped values
+- Extract context from Gin: `c.Request.Context()`
+
+### Database Patterns
+- Use soft deletes: always check `is_deleted = false` in queries
+- Use transactions for multi-step operations
+- Use GORM hooks for automatic timestamp management
+- Use `gorm:"type:uuid"` for UUID fields
+- Use `gorm:"index"` for frequently queried fields
+
+## Authentication & Authorization
+
+### JWT Authentication
+- Use `middlewares.JWTAuthMiddleware()` for protected routes
+- Extract user info from context: `c.Get("user_id")`, `c.Get("email")`, `c.Get("role")`
+- Store user ID as string in JWT claims
+- Use `utils.CreateAccessToken()` to generate tokens
+- Access token expiry configured via `utils.GetAccessTokenExpiry()`
+
+### Role-Based Access Control
+- Use `middlewares.RequireRole()` for role-based routes
+- Roles defined in `common/constants/user_roles.go`
+- Check roles in middleware before handler execution
+
+### Rate Limiting
+- Use Redis for rate limiting (login attempts, API calls)
+- Implement rate limiting utilities in `common/utils/rate_limiter.go`
+- Use `utils.IsLoginBlocked()` and `utils.IncrementLoginFailedAttempts()` for login protection
+
+## Swagger Documentation
+
+### Annotations
+Every handler function must include Swagger annotations:
+```go
+// FunctionName godoc
+// @Summary Brief summary
+// @Description Detailed description
+// @Tags tag-name
+// @Accept json
+// @Produce json
+// @Security BearerAuth (if protected)
+// @Param request body requests.RequestType true "Request description"
+// @Success 200 {object} responses.ResponseType "Success description"
+// @Failure 400 "Bad request"
+// @Router /path [method]
+```
+
+### Generating Swagger Docs
+- Run `swag init -g cmd/main.go -o ./docs` before building
+- Swagger docs are auto-generated and gitignored
+- Access docs at `/swagger/index.html`
+
+## AWS Lambda Support
+
+### Lambda Handler Pattern
+- Check for Lambda environment: `os.Getenv("AWS_LAMBDA_FUNCTION_NAME")`
+- Use `ginadapter.GinLambda` for Lambda integration
+- Same router works for both local and Lambda deployment
+- Handler function signature: `func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)`
+
+## Environment Configuration
+
+### Environment Variables
+- Use `config.LoadEnv()` to load environment variables
+- Use `config.GetEnvOr(key, defaultValue)` for optional vars
+- Store env config in `internal/config/env.go`
+- Never commit `.env` files
+
+### Database Connection
+- Use `database.ConnectWithEnv()` for database connection
+- Use `database.InitRedis()` for Redis connection
+- Always close connections: `defer database.CloseRedis()`
+
+## Testing Guidelines
+
+### Test Structure
+- Create `*_test.go` files alongside source files
+- Use table-driven tests for multiple scenarios
+- Mock repositories for service tests
+- Use test database for integration tests
+
+### Test Naming
+- Test functions: `TestFunctionName_Scenario`
+- Example: `TestLogin_InvalidCredentials`, `TestLogin_Success`
+
+## Code Quality
+
+### Imports
+- Group imports: standard library, third-party, local
+- Use `gofmt` or `goimports` for formatting
+- Remove unused imports
+
+### Comments
+- Export all public functions, types, and constants
+- Use `//` for comments, `/* */` for package documentation
+- Include usage examples in complex functions
+
+### Dependencies
+- Use Go modules (`go.mod`)
+- Pin specific versions in `go.mod`
+- Run `go mod tidy` regularly
+- Keep dependencies up to date
+
+## Service-Specific Patterns
+
+### General Service
+- Handles authentication, user management
+- Uses JWT for authentication
+- Implements rate limiting for login attempts
+- Uses email service for notifications
+
+### Ticket Service
+- Handles ticket-related operations
+- Similar architecture to general-service
+- May have different models and business logic
+
+## Common Utilities
+
+### Response Utils (`common/utils/response_utils.go`)
+- Standardized API responses
+- Consistent error formatting
+- Status code management
+
+### Auth Utils (`common/utils/auth_utils.go`)
+- JWT token creation and validation
+- Password hashing with bcrypt
+- Token expiry management
+
+### Bcrypt Utils (`common/utils/bcrypt_utils.go`)
+- Password hashing: `utils.HashPassword()`
+- Password comparison: `utils.ComparePassword()`
+
+### Rate Limiter (`common/utils/rate_limiter.go`)
+- Redis-based rate limiting
+- Login attempt tracking
+- Account lockout management
+
+## When Adding New Features
+
+1. **Create/Update Models**: Add GORM model in `internal/models/`
+2. **Create DTOs**: Add request/response DTOs in `internal/dto/`
+3. **Create Repository**: Add repository methods in `internal/repositories/`
+4. **Create Service**: Add business logic in `internal/services/`
+5. **Create Handler**: Add HTTP handler in `internal/handlers/`
+6. **Add Routes**: Register routes in `internal/config/routes.go`
+7. **Add Swagger Docs**: Annotate handler with Swagger comments
+8. **Update Services Constructor**: Add new service to `NewServices()` in `services.go`
+9. **Update Handlers Constructor**: Add new handler to `NewHandlers()` in `handlers.go`
+
+## Best Practices
+
+1. **Never commit secrets**: Use environment variables
+2. **Always validate input**: Use DTOs with validation tags
+3. **Handle errors gracefully**: Return user-friendly error messages
+4. **Use context**: Pass context through all service calls
+5. **Log appropriately**: Log errors with context, not sensitive data
+6. **Follow DRY**: Reuse utilities and common functions
+7. **Keep handlers thin**: Move logic to services
+8. **Use transactions**: For multi-step database operations
+9. **Test edge cases**: Handle nil, empty, and error cases
+10. **Document APIs**: Always include Swagger annotations
+
+## Common Mistakes to Avoid
+
+- ❌ Accessing database directly from handlers or services
+- ❌ Returning raw database errors to users
+- ❌ Forgetting to check `is_deleted` in queries
+- ❌ Not using context in service methods
+- ❌ Hardcoding configuration values
+- ❌ Missing Swagger documentation
+- ❌ Not handling soft deletes properly
+- ❌ Exposing internal errors to API consumers
+- ❌ Not closing database/Redis connections
+- ❌ Missing input validation
+
+## When in Doubt
+
+- Follow existing patterns in the codebase
+- Check similar implementations in other services
+- Use the utility functions from `common/utils`
+- Refer to Swagger docs for API contract
+- Keep code simple and readable
+- Prioritize security and error handling
+

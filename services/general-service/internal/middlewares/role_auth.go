@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	role "general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"slices"
 
@@ -8,7 +9,7 @@ import (
 )
 
 // RequireRole creates a middleware that checks if the user has the required role
-func RequireRole(allowedRoles ...string) gin.HandlerFunc {
+func RequireRole(allowedRoles ...role.UserRole) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check if user is authenticated
 		if !utils.IsAuthenticated(c) {
@@ -19,8 +20,10 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 
 		// Get user role from context
 		userRole := utils.GetRoleFromContext(c)
-		if userRole == "" {
-			utils.RespondForbidden(c, "Unable to determine user role")
+
+		// Validate the user role (RoleUser is 0, so we check validity)
+		if !userRole.IsValid() {
+			utils.RespondForbidden(c, "Unable to determine user role or invalid role")
 			c.Abort()
 			return
 		}

@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	role "general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"strings"
 
@@ -43,11 +44,19 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Parse role from string to UserRole int
+		userRole, err := role.ParseUserRole(claims.Role)
+		if err != nil {
+			utils.RespondUnauthorized(c, "Invalid role in token")
+			c.Abort()
+			return
+		}
+
 		// Store user information in the context for use in handlers
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("fursona_name", claims.FursonaName)
-		c.Set("role", claims.Role)
+		c.Set("role", userRole) // Store as UserRole int
 		c.Set("claims", claims)
 
 		c.Next()
@@ -86,12 +95,16 @@ func OptionalJWTAuthMiddleware() gin.HandlerFunc {
 
 		// Check if it's an access token
 		if claims.TokenType == "access" {
-			// Store user information in the context for use in handlers
-			c.Set("user_id", claims.UserID)
-			c.Set("email", claims.Email)
-			c.Set("fursona_name", claims.FursonaName)
-			c.Set("role", claims.Role)
-			c.Set("claims", claims)
+			// Parse role from string to UserRole int
+			userRole, err := role.ParseUserRole(claims.Role)
+			if err == nil {
+				// Store user information in the context for use in handlers
+				c.Set("user_id", claims.UserID)
+				c.Set("email", claims.Email)
+				c.Set("fursona_name", claims.FursonaName)
+				c.Set("role", userRole) // Store as UserRole int
+				c.Set("claims", claims)
+			}
 		}
 
 		c.Next()
