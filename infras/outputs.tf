@@ -40,12 +40,22 @@ output "sqs_queue_arn" {
 
 output "general_service_url" {
   description = "HTTPS URL for the general service (use this in your frontend)"
-  value       = module.lambda.general_service_url
+  value       = module.networking.general_service_url
 }
 
 output "ticket_service_url" {
   description = "HTTPS URL for the ticket service (use this in your frontend)"
-  value       = module.lambda.ticket_service_url
+  value       = module.networking.ticket_service_url
+}
+
+output "api_gateway_url" {
+  description = "Base URL of the HTTP API Gateway"
+  value       = module.networking.api_gateway_url
+}
+
+output "api_gateway_id" {
+  description = "ID of the HTTP API Gateway"
+  value       = module.networking.api_gateway_id
 }
 
 output "general_service_function_name" {

@@ -61,3 +61,13 @@ module "lambda" {
   sqs_queue_url                    = module.sqs.queue_url
   cors_allowed_origins             = var.s3_cors_allowed_origins
 }
+
+module "networking" {
+  source                          = "./modules/networking"
+  project_name                    = var.project_name
+  cors_allowed_origins            = var.s3_cors_allowed_origins
+  general_service_function_name   = module.lambda.general_service_function_name
+  general_service_invoke_arn      = module.lambda.general_service_invoke_arn
+  ticket_service_function_name    = module.lambda.ticket_service_function_name
+  ticket_service_invoke_arn       = module.lambda.ticket_service_invoke_arn
+}

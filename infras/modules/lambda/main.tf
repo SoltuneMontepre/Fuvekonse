@@ -104,37 +104,3 @@ resource "aws_cloudwatch_log_group" "ticket_service" {
     Environment = "Production"
   }
 }
-
-# Lambda Function URL for General Service
-resource "aws_lambda_function_url" "general_service" {
-  function_name      = aws_lambda_function.general_service.function_name
-  authorization_type = "NONE"
-  invoke_mode        = "BUFFERED"
-}
-
-# Permission for Function URL to invoke General Service Lambda
-resource "aws_lambda_permission" "general_service_url" {
-  statement_id           = "AllowFunctionURLInvoke"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.general_service.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-
-# Lambda Function URL for Ticket Service
-resource "aws_lambda_function_url" "ticket_service" {
-  function_name      = aws_lambda_function.ticket_service.function_name
-  authorization_type = "NONE"
-
-  # CORS is handled by the application middleware, not by Lambda Function URL
-  # This prevents double CORS header issues
-}
-
-# Permission for Function URL to invoke Ticket Service Lambda
-resource "aws_lambda_permission" "ticket_service_url" {
-  statement_id           = "AllowFunctionURLInvoke"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.ticket_service.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
