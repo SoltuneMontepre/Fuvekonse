@@ -4,16 +4,7 @@ resource "aws_s3_bucket_policy" "this" {
 }
 
 data "aws_iam_policy_document" "this" {
-  statement {
-    sid = "PublicReadGetObject"
-    principals {
-      type        = "AWS"
-      identifiers = ["*"]
-    }
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.this.arn}/*"]
-  }
-
+  # Removed public access statement - using specific principals only
   statement {
     sid = "SpecificPrincipalsRead"
     actions = ["s3:GetObject", "s3:ListBucket"]

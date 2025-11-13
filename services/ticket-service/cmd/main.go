@@ -37,7 +37,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var ginLambda *ginadapter.GinLambda
+var ginLambda *ginadapter.GinLambdaV2
 
 func setupRouter() *gin.Engine {
 	config.LoadEnv()
@@ -70,9 +70,9 @@ func setupRouter() *gin.Engine {
 }
 
 //Lamdba handler
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if ginLambda == nil {
-		ginLambda = ginadapter.New(setupRouter())
+		ginLambda = ginadapter.NewV2(setupRouter())
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }

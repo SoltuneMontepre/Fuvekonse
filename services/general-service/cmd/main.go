@@ -45,7 +45,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var ginLambda *ginadapter.GinLambda
+var ginLambda *ginadapter.GinLambdaV2
 
 // validateRequiredEnvVars checks that all required environment variables are set at startup.
 // Returns an error if any required variable is missing.
@@ -153,7 +153,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 // It initializes the Gin Lambda adapter on first invocation and reuses it.
 var globalDB *gorm.DB
 
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if ginLambda == nil {
 		// Load environment configuration FIRST
 		if err := config.LoadEnv(); err != nil {
@@ -176,7 +176,7 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 		}
 
 		// Initialize the Gin Lambda adapter
-		ginLambda = ginadapter.New(setupRouter(globalDB))
+		ginLambda = ginadapter.NewV2(setupRouter(globalDB))
 		log.Println("Lambda handler initialized successfully")
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
