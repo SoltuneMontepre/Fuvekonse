@@ -30,17 +30,27 @@ resource "aws_apigatewayv2_stage" "default" {
 
 # General Service Integration
 resource "aws_apigatewayv2_integration" "general_service" {
-  api_id           = aws_apigatewayv2_api.main.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = var.general_service_invoke_arn
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = var.general_service_invoke_arn
   payload_format_version = "2.0"
+  timeout_milliseconds   = 30000
 }
 
 # General Service Routes - catch all paths
 resource "aws_apigatewayv2_route" "general_service" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "ANY api/general/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.general_service.id}"
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "ANY /api/general/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.general_service.id}"
+  authorization_type = "NONE"
+}
+
+# General Service root route
+resource "aws_apigatewayv2_route" "general_service_root" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "ANY /api/general"
+  target             = "integrations/${aws_apigatewayv2_integration.general_service.id}"
+  authorization_type = "NONE"
 }
 
 # Lambda permission for API Gateway to invoke general service
@@ -54,17 +64,27 @@ resource "aws_lambda_permission" "general_service_api" {
 
 # Ticket Service Integration
 resource "aws_apigatewayv2_integration" "ticket_service" {
-  api_id           = aws_apigatewayv2_api.main.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = var.ticket_service_invoke_arn
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = var.ticket_service_invoke_arn
   payload_format_version = "2.0"
+  timeout_milliseconds   = 30000
 }
 
 # Ticket Service Routes - catch all paths
 resource "aws_apigatewayv2_route" "ticket_service" {
-  api_id    = aws_apigatewayv2_api.main.id
-  route_key = "ANY api/ticket/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.ticket_service.id}"
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "ANY /api/ticket/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.ticket_service.id}"
+  authorization_type = "NONE"
+}
+
+# Ticket Service root route
+resource "aws_apigatewayv2_route" "ticket_service_root" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "ANY /api/ticket"
+  target             = "integrations/${aws_apigatewayv2_integration.ticket_service.id}"
+  authorization_type = "NONE"
 }
 
 # Lambda permission for API Gateway to invoke ticket service
