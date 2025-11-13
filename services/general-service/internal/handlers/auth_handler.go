@@ -115,17 +115,15 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
-		errMsg := err.Error()
-
-		switch errMsg {
-		case "user not found":
-			utils.RespondNotFound(c, errMsg)
-		case
-			"failed to hash password",
-			"failed to update password":
-			utils.RespondInternalServerError(c, errMsg)
+		switch err.Error() {
+		case constants.ErrCodeUnauthorized:
+			utils.RespondUnauthorized(c, err.Error())
+		case constants.ErrCodeForbidden:
+			utils.RespondForbidden(c, err.Error())
+		case constants.ErrCodeInternalServerError:
+			utils.RespondInternalServerError(c, err.Error())
 		default:
-			utils.RespondBadRequest(c, errMsg)
+			utils.RespondBadRequest(c, err.Error())
 		}
 		return
 	}
