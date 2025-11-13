@@ -1,55 +1,46 @@
 # SQS Queue
-resource "aws_sqs_queue" "this" {
-  name                       = var.name
-  delay_seconds              = var.delay_seconds
-  max_message_size           = var.max_message_size
-  message_retention_seconds  = var.message_retention_seconds
-  receive_wait_time_seconds  = var.receive_wait_time_seconds
-  visibility_timeout_seconds = var.visibility_timeout_seconds
-  fifo_queue                 = var.fifo_queue
-  content_based_deduplication = var.content_based_deduplication
-  kms_master_key_id          = var.kms_master_key_id
-  kms_data_key_reuse_period_seconds = var.kms_data_key_reuse_period_seconds
+resource "aws_sqs_queue" "main" {
+  name                       = "${var.project_name}-queue"
+  delay_seconds              = 0
+  max_message_size           = 262144
+  message_retention_seconds  = 345600  # 4 days
+  receive_wait_time_seconds  = 0
+  visibility_timeout_seconds = 30
 
-  tags = merge(
-    var.tags,
-    {
-      Name = var.name
-    }
-  )
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+  }
 }
 
-# Dead Letter Queue (optional)
-resource "aws_sqs_queue" "dlq" {
-  count = var.create_dlq ? 1 : 0
+# SQS Dead Letter Queue
+resource "aws_sqs_queue" "dead_letter" {
+  name                       = "${var.project_name}-dlq"
+  delay_seconds              = 0
+  max_message_size           = 262144
+  message_retention_seconds  = 1209600  # 14 days
+  receive_wait_time_seconds  = 0
 
-  name                       = "${var.name}-dlq"
-  message_retention_seconds  = var.dlq_message_retention_seconds
-  kms_master_key_id          = var.kms_master_key_id
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.name}-dlq"
-    }
-  )
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+  }
 }
 
-# Redrive Policy
-resource "aws_sqs_queue_redrive_policy" "this" {
-  count = var.create_dlq ? 1 : 0
-
-  queue_url = aws_sqs_queue.this.id
+# Redrive Policy - Send failed messages to DLQ
+resource "aws_sqs_queue_redrive_policy" "main" {
+  queue_url = aws_sqs_queue.main.id
   redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.dlq[0].arn
-    maxReceiveCount     = var.max_receive_count
+    deadLetterTargetArn = aws_sqs_queue.dead_letter.arn
+    maxReceiveCount     = 3
   })
 }
 
-# Queue Policy
-resource "aws_sqs_queue_policy" "this" {
-  count = var.queue_policy != null ? 1 : 0
-
-  queue_url = aws_sqs_queue.this.id
-  policy    = var.queue_policy
+# Allow DLQ to be used as dead letter queue
+resource "aws_sqs_queue_redrive_allow_policy" "dead_letter" {
+  queue_url = aws_sqs_queue.dead_letter.id
+  redrive_allow_policy = jsonencode({
+    redrivePermission = "byQueue",
+    sourceQueueArns   = [aws_sqs_queue.main.arn]
+  })
 }

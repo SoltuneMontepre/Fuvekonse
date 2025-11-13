@@ -1,39 +1,29 @@
-output "function_arn" {
-  description = "ARN of the Lambda function"
-  value       = aws_lambda_function.this.arn
+output "general_service_function_name" {
+  description = "Name of the general service Lambda function"
+  value       = aws_lambda_function.general_service.function_name
 }
 
-output "function_name" {
-  description = "Name of the Lambda function"
-  value       = aws_lambda_function.this.function_name
+output "general_service_function_arn" {
+  description = "ARN of the general service Lambda function"
+  value       = aws_lambda_function.general_service.arn
 }
 
-output "function_invoke_arn" {
-  description = "Invoke ARN of the Lambda function"
-  value       = aws_lambda_function.this.invoke_arn
+output "general_service_invoke_arn" {
+  description = "Invoke ARN of the general service Lambda function"
+  value       = aws_lambda_function.general_service.invoke_arn
 }
 
-output "function_qualified_arn" {
-  description = "Qualified ARN with version"
-  value       = aws_lambda_function.this.qualified_arn
+output "ticket_service_function_name" {
+  description = "Name of the ticket service Lambda function"
+  value       = aws_lambda_function.ticket_service.function_name
 }
 
-output "function_version" {
-  description = "Latest published version"
-  value       = aws_lambda_function.this.version
+output "ticket_service_function_arn" {
+  description = "ARN of the ticket service Lambda function"
+  value       = aws_lambda_function.ticket_service.arn
 }
 
-output "function_url" {
-  description = "Function URL (if created)"
-  value       = var.create_function_url ? aws_lambda_function_url.this[0].function_url : null
-}
-
-output "log_group_name" {
-  description = "Name of the CloudWatch Log Group"
-  value       = var.create_log_group ? aws_cloudwatch_log_group.this[0].name : null
-}
-
-output "event_source_mapping_uuid" {
-  description = "UUID of the event source mapping"
-  value       = var.event_source_arn != null ? aws_lambda_event_source_mapping.this[0].uuid : null
+output "ticket_service_invoke_arn" {
+  description = "Invoke ARN of the ticket service Lambda function"
+  value       = aws_lambda_function.ticket_service.invoke_arn
 }

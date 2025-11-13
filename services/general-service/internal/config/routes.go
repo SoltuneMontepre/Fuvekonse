@@ -39,7 +39,16 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 }
 
 
-func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
+func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
+	// Root endpoint
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"service": "General Service API",
+			"version": "1.0",
+			"status":  "running",
+		})
+	})
+
 	router.GET("/health/db", func(c *gin.Context) {
 		sqlDB, err := db.DB()
 		if err != nil {

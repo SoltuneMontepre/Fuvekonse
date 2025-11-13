@@ -45,7 +45,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var ginLambda *ginadapter.GinLambda
+var ginLambda *ginadapter.GinLambdaV2
 
 // validateRequiredEnvVars checks that all required environment variables are set at startup.
 // Returns an error if any required variable is missing.
@@ -57,8 +57,7 @@ func validateRequiredEnvVars() error {
 		"DB_PASSWORD",
 		"DB_NAME",
 		"JWT_SECRET",
-		"REDIS_HOST",
-		"REDIS_PORT",
+		// Redis is optional - only warn if missing
 	}
 
 	var missing []string
@@ -68,25 +67,16 @@ func validateRequiredEnvVars() error {
 		}
 	}
 
+	// Check Redis separately - just warn, don't fail
+	if os.Getenv("REDIS_HOST") == "" && os.Getenv("REDIS_URL") == "" {
+		log.Println("WARNING: Neither REDIS_HOST nor REDIS_URL is set. Rate limiting may not work properly.")
+	}
+
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
 	}
 
 	return nil
-}
-
-// setupDatabase initializes the database connection and logs the result.
-// Fatal error if connection fails.
-// setupDatabase initializes the database connection and logs the result.
-// Returns the opened *gorm.DB or fatal error if connection fails.
-func setupDatabase() *gorm.DB {
-	db, err := database.ConnectWithEnv()
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	log.Println("Database connection established successfully")
-	database.GlobalDB = db
-	return db
 }
 
 // setupRedis initializes the Redis connection and logs the result.
@@ -128,6 +118,9 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	}
 
 	// Database is already initialized and passed in
+	// Set the global DB reference
+	database.GlobalDB = db
+	
 	// Initialize Redis
 	setupRedis()
 
@@ -143,13 +136,24 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	// Setup router with middleware
 	router := gin.Default()
 	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	
 	router.Use(middlewares.CorsMiddleware(allowedOrigins))
+	log.Println("CORS middleware configured with allowed origins:", allowedOrigins)
 
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)
 
-	// Setup API routes
-	config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
+	// Check if running in Lambda - if so, API Gateway includes /api/general in the path
+	isLambda := os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
+	if isLambda {
+		generalGroup := router.Group("/api/general")
+		config.SetupAPIRoutes(generalGroup, h, db, database.SetWithExpiration)
+		log.Println("Routes configured with /api/general prefix for Lambda deployment")
+	} else {
+		// In local development mode, routes start from root
+		config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
+		log.Println("Routes configured without prefix for local development")
+	}
 
 	return router
 }
@@ -158,16 +162,31 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 // It initializes the Gin Lambda adapter on first invocation and reuses it.
 var globalDB *gorm.DB
 
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if ginLambda == nil {
+		// Load environment configuration FIRST
+		if err := config.LoadEnv(); err != nil {
+			log.Printf("WARNING: Error loading .env file: %v", err)
+		}
+
+		// Validate required environment variables
+		if err := validateRequiredEnvVars(); err != nil {
+			log.Fatalf("Configuration error: %v", err)
+		}
+
+		// Setup database connection
 		if globalDB == nil {
 			var err error
 			globalDB, err = database.ConnectWithEnv()
 			if err != nil {
 				log.Fatalf("Failed to connect to database: %v", err)
 			}
+			log.Println("Database connection established successfully")
 		}
-		ginLambda = ginadapter.New(setupRouter(globalDB))
+
+		// Initialize the Gin Lambda adapter
+		ginLambda = ginadapter.NewV2(setupRouter(globalDB))
+		log.Println("Lambda handler initialized successfully")
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }

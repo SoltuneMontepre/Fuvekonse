@@ -52,14 +52,11 @@ func SetupUserBanRoutes(rg *gin.RouterGroup, h *handlers.UserBanHandler) {
 	}
 }
 
-func SetupHealthRoutes(router *gin.Engine) {
+func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
+	// Health endpoints
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong", "status": "healthy"})
 	})
-}
-
-func SetupAPIRoutes(router *gin.Engine, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
-	SetupHealthRoutes(router)
 
 	router.GET("/health/db", func(c *gin.Context) {
 		sqlDB, err := db.DB()

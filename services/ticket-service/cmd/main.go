@@ -37,7 +37,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var ginLambda *ginadapter.GinLambda
+var ginLambda *ginadapter.GinLambdaV2
 
 func setupRouter() *gin.Engine {
 	config.LoadEnv()
@@ -64,15 +64,27 @@ func setupRouter() *gin.Engine {
 	// Swagger documentation route
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
+	// Check if running in Lambda - if so, API Gateway includes /api/ticket in the path
+	isLambda := os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
+	if isLambda {
+		// In Lambda with API Gateway HTTP API v2, the full path including route prefix is passed
+		// Route: /api/ticket/{proxy+} means Lambda receives /api/ticket/...
+		ticketGroup := router.Group("/api/ticket")
+		config.SetupAPIRoutes(ticketGroup, h, db, database.SetWithExpiration)
+		log.Println("Routes configured with /api/ticket prefix for Lambda deployment")
+	} else {
+		// In local development mode, routes start from root
+		config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
+		log.Println("Routes configured without prefix for local development")
+	}
 
 	return router
 }
 
 //Lamdba handler
-func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	if ginLambda == nil {
-		ginLambda = ginadapter.New(setupRouter())
+		ginLambda = ginadapter.NewV2(setupRouter())
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }

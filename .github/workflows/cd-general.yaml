@@ -1,0 +1,157 @@
+name: general-service CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/general-service/**"
+      - "infras/**"
+      - ".github/workflows/cd-general.yaml"
+
+concurrency:
+  group: terraform-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Try to download Lambda artifact from CI
+        id: download-artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: general-service-lambda-${{ github.sha }}
+          path: services/general-service/
+
+      - name: Check if Lambda package exists
+        id: check-lambda
+        run: |
+          if [ -f "services/general-service/bootstrap.zip" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Lambda package found from CI artifacts"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Lambda package not found, will build from source"
+          fi
+
+      - name: Setup Golang (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "services/general-service/go.mod"
+          cache: true
+
+      - name: Cache Swagger CLI (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
+        id: cache-swag
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/swag
+          key: ${{ runner.os }}-swag-${{ hashFiles('**/go.mod') }}
+          restore-keys: |
+            ${{ runner.os }}-swag-
+
+      - name: Install swag CLI (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true' && steps.cache-swag.outputs.cache-hit != 'true'
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate Swagger docs (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
+        working-directory: services/general-service
+        run: |
+          swag init -g cmd/main.go -o ./docs
+
+      - name: Build Lambda package (if build needed)
+        if: steps.check-lambda.outputs.exists != 'true'
+        working-directory: services/general-service
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          go mod download
+          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap cmd/main.go
+          zip -j bootstrap.zip bootstrap
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
+      - name: Terraform Init
+        working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          terraform plan \
+            -var-file="./envs/prod.tfvars" \
+            -target=module.lambda.aws_lambda_function.general_service \
+            -target=module.lambda.aws_cloudwatch_log_group.general_service \
+            -target=module.lambda.aws_lambda_function_url.general_service \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        run: terraform apply tfplan
+
+      - name: Get Lambda URL
+        id: get-lambda-url
+        working-directory: infras
+        env:
+          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          URL=$(terraform output -raw general_service_url)
+          echo "🚀 Deployed general-service to: $URL"
+          echo "LAMBDA_URL=$URL" >> $GITHUB_ENV
+          echo "lambda_url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Notify deployment success
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: "✅ Deployment Successful [general-service]"
+          description: |
+            **Repository:** ${{ github.repository }}
+            **Commit:** `${{ github.sha }}`
+            **URL:** ${{ steps.get-lambda-url.outputs.lambda_url }}
+            **Deployed by:** ${{ github.actor }}
+          color: 0x00ff00
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: "❌ Deployment Failed [general-service]"
+          description: |
+            **Repository:** ${{ github.repository }}
+            **Commit:** `${{ github.sha }}`
+            **Deployed by:** ${{ github.actor }}
+          color: 0xff0000
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
