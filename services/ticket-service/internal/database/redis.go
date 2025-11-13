@@ -2,8 +2,8 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strconv"
 	"ticket-service/internal/config"
 	"time"
 
@@ -11,6 +11,8 @@ import (
 )
 
 var RedisClient *redis.Client
+
+const errRedisClientNotInitialized = "redis client not initialized"
 
 func ConnectRedis(opts *redis.Options) (*redis.Client, error) {
 	client := redis.NewClient(opts)
@@ -28,21 +30,11 @@ func ConnectRedis(opts *redis.Options) (*redis.Client, error) {
 }
 
 func ConnectRedisWithEnv() (*redis.Client, error) {
-	host := config.GetEnvOr("REDIS_HOST", "localhost")
-	port := config.GetEnvOr("REDIS_PORT", "6379")
-	password := config.GetEnvOr("REDIS_PASSWORD", "")
-	dbStr := config.GetEnvOr("REDIS_DB", "0")
+	redisURL := config.GetEnvOr("REDIS_URL", "redis://localhost:6379/0")
 
-	db, err := strconv.Atoi(dbStr)
-
+	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid REDIS_DB value: %s", dbStr)
-	}
-
-	opts := &redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", host, port),
-		Password: password,
-		DB:       db,
+		return nil, fmt.Errorf("invalid REDIS_URL value: %s: %w", redisURL, err)
 	}
 
 	return ConnectRedis(opts)
@@ -66,30 +58,30 @@ func CloseRedis() error {
 	return nil
 }
 
-func SetWithExpiration(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func SetWithExpiration(ctx context.Context, key string, value any, expiration time.Duration) error {
 	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
+		return errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Set(ctx, key, value, expiration).Err()
 }
 
 func Get(ctx context.Context, key string) (string, error) {
 	if RedisClient == nil {
-		return "", fmt.Errorf("redis client not initialized")
+		return "", errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Get(ctx, key).Result()
 }
 
 func Delete(ctx context.Context, key string) error {
 	if RedisClient == nil {
-		return fmt.Errorf("redis client not initialized")
+		return errors.New(errRedisClientNotInitialized)
 	}
 	return RedisClient.Del(ctx, key).Err()
 }
 
 func Exists(ctx context.Context, key string) (bool, error) {
 	if RedisClient == nil {
-		return false, fmt.Errorf("redis client not initialized")
+		return false, errors.New(errRedisClientNotInitialized)
 	}
 	result, err := RedisClient.Exists(ctx, key).Result()
 	return result > 0, err

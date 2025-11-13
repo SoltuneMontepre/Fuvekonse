@@ -1,163 +1,124 @@
-variable "function_name" {
-  description = "Name of the Lambda function"
+variable "project_name" {
+  description = "The name of the project"
   type        = string
 }
 
-variable "filename" {
-  description = "Path to the deployment package"
-  type        = string
-  default     = null
-}
-
-variable "role_arn" {
-  description = "ARN of the IAM role for Lambda execution"
+variable "lambda_role_arn" {
+  description = "ARN of the IAM role for Lambda functions"
   type        = string
 }
 
-variable "handler" {
-  description = "Function entrypoint"
+variable "general_service_zip_path" {
+  description = "Path to the general service deployment package"
   type        = string
 }
 
-variable "source_code_hash" {
-  description = "Base64-encoded SHA256 hash of the package"
-  type        = string
-  default     = null
-}
-
-variable "runtime" {
-  description = "Runtime identifier"
+variable "ticket_service_zip_path" {
+  description = "Path to the ticket service deployment package"
   type        = string
 }
 
-variable "timeout" {
-  description = "Function timeout in seconds"
-  type        = number
-  default     = 30
+variable "db_host" {
+  description = "Database host"
+  type        = string
 }
 
-variable "memory_size" {
-  description = "Amount of memory in MB"
-  type        = number
-  default     = 128
+variable "db_port" {
+  description = "Database port"
+  type        = string
+  default     = "5432"
 }
 
-variable "publish" {
-  description = "Publish a version"
-  type        = bool
-  default     = false
+variable "db_user" {
+  description = "Database user"
+  type        = string
 }
 
-variable "layers" {
-  description = "List of Lambda Layer ARNs"
-  type        = list(string)
-  default     = []
-}
-
-variable "architectures" {
-  description = "Instruction set architectures (x86_64 or arm64)"
-  type        = list(string)
-  default     = ["x86_64"]
-}
-
-variable "vpc_config" {
-  description = "VPC configuration for the Lambda function"
-  type = object({
-    subnet_ids         = list(string)
-    security_group_ids = list(string)
-  })
-  default = null
-}
-
-variable "environment_variables" {
-  description = "Environment variables"
-  type        = map(string)
-  default     = null
+variable "db_password" {
+  description = "Database password"
+  type        = string
   sensitive   = true
 }
 
-variable "dead_letter_config" {
-  description = "Dead letter queue configuration"
-  type = object({
-    target_arn = string
-  })
-  default = null
-}
-
-variable "tracing_mode" {
-  description = "X-Ray tracing mode (Active or PassThrough)"
+variable "db_name" {
+  description = "Database name"
   type        = string
-  default     = null
 }
 
-variable "reserved_concurrent_executions" {
-  description = "Reserved concurrent executions"
-  type        = number
-  default     = -1
-}
-
-variable "create_log_group" {
-  description = "Create CloudWatch Log Group"
-  type        = bool
-  default     = true
-}
-
-variable "log_retention_days" {
-  description = "Log retention in days"
-  type        = number
-  default     = 7
-}
-
-variable "log_kms_key_id" {
-  description = "KMS key ID for log encryption"
+variable "db_sslmode" {
+  description = "Database SSL mode"
   type        = string
-  default     = null
+  default     = "disable"
 }
 
-variable "create_function_url" {
-  description = "Create Lambda Function URL"
-  type        = bool
-  default     = false
-}
-
-variable "function_url_auth_type" {
-  description = "Authorization type for Function URL (AWS_IAM or NONE)"
+variable "redis_url" {
+  description = "Full Redis URL"
   type        = string
-  default     = "AWS_IAM"
 }
 
-variable "function_url_cors" {
-  description = "CORS configuration for Function URL"
-  type        = any
-  default     = null
-}
-
-variable "event_source_arn" {
-  description = "ARN of the event source (SQS, Kinesis, DynamoDB)"
+variable "jwt_secret" {
+  description = "JWT secret key"
   type        = string
-  default     = null
+  sensitive   = true
 }
 
-variable "event_source_batch_size" {
-  description = "Batch size for event source"
-  type        = number
-  default     = 10
-}
-
-variable "event_source_starting_position" {
-  description = "Starting position for stream sources (LATEST or TRIM_HORIZON)"
+variable "jwt_access_token_expiry_minutes" {
+  description = "JWT access token expiry in minutes"
   type        = string
-  default     = "LATEST"
+  default     = "15"
 }
 
-variable "event_source_filter_criteria" {
-  description = "Filter criteria for event source"
-  type        = any
-  default     = null
+variable "jwt_refresh_token_expiry_days" {
+  description = "JWT refresh token expiry in days"
+  type        = string
+  default     = "7"
 }
 
-variable "tags" {
-  description = "Additional tags for the function"
-  type        = map(string)
-  default     = {}
+variable "login_max_fail" {
+  description = "Maximum failed login attempts"
+  type        = string
+  default     = "5"
+}
+
+variable "login_fail_block_minutes" {
+  description = "Login fail block duration in minutes"
+  type        = string
+  default     = "15"
+}
+
+variable "frontend_url" {
+  description = "Frontend URL for CORS"
+  type        = string
+}
+
+variable "gin_mode" {
+  description = "Gin framework mode (debug or release)"
+  type        = string
+  default     = "release"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "s3_bucket_name" {
+  description = "S3 bucket name"
+  type        = string
+}
+
+variable "ses_sender_email" {
+  description = "SES sender email address"
+  type        = string
+}
+
+variable "sqs_queue_url" {
+  description = "SQS queue URL"
+  type        = string
+}
+
+variable "cors_allowed_origins" {
+  description = "List of allowed origins for CORS"
+  type        = list(string)
+  default     = []
 }

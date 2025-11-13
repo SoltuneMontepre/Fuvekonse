@@ -1,121 +1,140 @@
-# Lambda Function
-resource "aws_lambda_function" "this" {
-  filename         = var.filename
-  function_name    = var.function_name
-  role             = var.role_arn
-  handler          = var.handler
-  source_code_hash = var.source_code_hash
-  runtime          = var.runtime
-  timeout          = var.timeout
-  memory_size      = var.memory_size
-  publish          = var.publish
-  layers           = var.layers
-  architectures    = var.architectures
+# General Service Lambda Function
+resource "aws_lambda_function" "general_service" {
+  function_name = "${var.project_name}-general-service"
+  role          = var.lambda_role_arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  timeout       = 30
+  memory_size   = 512
 
-  dynamic "vpc_config" {
-    for_each = var.vpc_config != null ? [var.vpc_config] : []
-    content {
-      subnet_ids         = vpc_config.value.subnet_ids
-      security_group_ids = vpc_config.value.security_group_ids
+  filename         = var.general_service_zip_path
+  source_code_hash = filebase64sha256(var.general_service_zip_path)
+
+  environment {
+    variables = {
+      DB_HOST                          = var.db_host
+      DB_PORT                          = var.db_port
+      DB_USER                          = var.db_user
+      DB_PASSWORD                      = var.db_password
+      DB_NAME                          = var.db_name
+      DB_SSLMODE                       = var.db_sslmode
+      REDIS_URL                        = var.redis_url
+      REDIS_TLS                        = "true"
+      JWT_SECRET                       = var.jwt_secret
+      JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
+      JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
+      LOGIN_MAX_FAIL                   = var.login_max_fail
+      LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
+      FRONTEND_URL                     = var.frontend_url
+      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
+      GIN_MODE                         = var.gin_mode
+      S3_BUCKET                        = var.s3_bucket_name
+      SES_SENDER                       = var.ses_sender_email
+      SQS_QUEUE                        = var.sqs_queue_url
     }
   }
 
-  dynamic "environment" {
-    for_each = var.environment_variables != null ? [var.environment_variables] : []
-    content {
-      variables = environment.value
-    }
-  }
-
-  dynamic "dead_letter_config" {
-    for_each = var.dead_letter_config != null ? [var.dead_letter_config] : []
-    content {
-      target_arn = dead_letter_config.value.target_arn
-    }
-  }
-
-  dynamic "tracing_config" {
-    for_each = var.tracing_mode != null ? [var.tracing_mode] : []
-    content {
-      mode = tracing_config.value
-    }
-  }
-
-  reserved_concurrent_executions = var.reserved_concurrent_executions
-
-  tags = merge(
-    var.tags,
-    {
-      Name = var.function_name
-    }
-  )
-}
-
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "this" {
-  count = var.create_log_group ? 1 : 0
-
-  name              = "/aws/lambda/${var.function_name}"
-  retention_in_days = var.log_retention_days
-  kms_key_id        = var.log_kms_key_id
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "/aws/lambda/${var.function_name}"
-    }
-  )
-}
-
-# Lambda Function URL (optional)
-resource "aws_lambda_function_url" "this" {
-  count = var.create_function_url ? 1 : 0
-
-  function_name      = aws_lambda_function.this.function_name
-  authorization_type = var.function_url_auth_type
-
-  dynamic "cors" {
-    for_each = var.function_url_cors != null ? [var.function_url_cors] : []
-    content {
-      allow_credentials = lookup(cors.value, "allow_credentials", null)
-      allow_headers     = lookup(cors.value, "allow_headers", null)
-      allow_methods     = lookup(cors.value, "allow_methods", null)
-      allow_origins     = lookup(cors.value, "allow_origins", null)
-      expose_headers    = lookup(cors.value, "expose_headers", null)
-      max_age           = lookup(cors.value, "max_age", null)
-    }
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+    Service     = "general-service"
   }
 }
 
-# Lambda Permission for Function URL (if public)
-resource "aws_lambda_permission" "function_url" {
-  count = var.create_function_url && var.function_url_auth_type == "NONE" ? 1 : 0
+# Ticket Service Lambda Function
+resource "aws_lambda_function" "ticket_service" {
+  function_name = "${var.project_name}-ticket-service"
+  role          = var.lambda_role_arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  timeout       = 30
+  memory_size   = 512
 
-  statement_id           = "AllowPublicAccess"
+  filename         = var.ticket_service_zip_path
+  source_code_hash = filebase64sha256(var.ticket_service_zip_path)
+
+  environment {
+    variables = {
+      DB_HOST                          = var.db_host
+      DB_PORT                          = var.db_port
+      DB_USER                          = var.db_user
+      DB_PASSWORD                      = var.db_password
+      DB_NAME                          = var.db_name
+      DB_SSLMODE                       = var.db_sslmode
+      REDIS_URL                        = var.redis_url
+      REDIS_TLS                        = "true"
+      JWT_SECRET                       = var.jwt_secret
+      JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
+      JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
+      LOGIN_MAX_FAIL                   = var.login_max_fail
+      LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
+      FRONTEND_URL                     = var.frontend_url
+      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
+      GIN_MODE                         = var.gin_mode
+      S3_BUCKET                        = var.s3_bucket_name
+      SES_SENDER                       = var.ses_sender_email
+      SQS_QUEUE                        = var.sqs_queue_url
+    }
+  }
+
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+    Service     = "ticket-service"
+  }
+}
+
+# CloudWatch Log Groups
+resource "aws_cloudwatch_log_group" "general_service" {
+  name              = "/aws/lambda/${aws_lambda_function.general_service.function_name}"
+  retention_in_days = 14
+
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "ticket_service" {
+  name              = "/aws/lambda/${aws_lambda_function.ticket_service.function_name}"
+  retention_in_days = 14
+
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+  }
+}
+
+# Lambda Function URL for General Service
+resource "aws_lambda_function_url" "general_service" {
+  function_name      = aws_lambda_function.general_service.function_name
+  authorization_type = "NONE"
+  invoke_mode        = "BUFFERED"
+}
+
+# Permission for Function URL to invoke General Service Lambda
+resource "aws_lambda_permission" "general_service_url" {
+  statement_id           = "AllowFunctionURLInvoke"
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.this.function_name
+  function_name          = aws_lambda_function.general_service.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
 }
 
-# Event Source Mapping (for SQS, Kinesis, DynamoDB Streams)
-resource "aws_lambda_event_source_mapping" "this" {
-  count = var.event_source_arn != null ? 1 : 0
+# Lambda Function URL for Ticket Service
+resource "aws_lambda_function_url" "ticket_service" {
+  function_name      = aws_lambda_function.ticket_service.function_name
+  authorization_type = "NONE"
 
-  event_source_arn  = var.event_source_arn
-  function_name     = aws_lambda_function.this.arn
-  batch_size        = var.event_source_batch_size
-  starting_position = var.event_source_starting_position
+  # CORS is handled by the application middleware, not by Lambda Function URL
+  # This prevents double CORS header issues
+}
 
-  dynamic "filter_criteria" {
-    for_each = var.event_source_filter_criteria != null ? [var.event_source_filter_criteria] : []
-    content {
-      dynamic "filter" {
-        for_each = filter_criteria.value.filters
-        content {
-          pattern = filter.value.pattern
-        }
-      }
-    }
-  }
+# Permission for Function URL to invoke Ticket Service Lambda
+resource "aws_lambda_permission" "ticket_service_url" {
+  statement_id           = "AllowFunctionURLInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.ticket_service.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
 }

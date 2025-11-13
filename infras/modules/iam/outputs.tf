@@ -1,14 +1,14 @@
-output "lambda_execution_role_arn" {
-  description = "ARN of the Lambda execution role"
-  value       = aws_iam_role.lambda_execution.arn
+output "read_only_user_arn" {
+	description = "ARN of the read-only IAM user created for S3 access"
+	value       = aws_iam_user.read_only_user.arn
 }
 
-output "lambda_execution_role_name" {
-  description = "Name of the Lambda execution role"
-  value       = aws_iam_role.lambda_execution.name
+output "read_only_user_name" {
+	description = "Name of the read-only IAM user"
+	value       = aws_iam_user.read_only_user.name
 }
 
-output "lambda_execution_role_id" {
-  description = "ID of the Lambda execution role"
-  value       = aws_iam_role.lambda_execution.id
+output "read_only_password" {
+  description = "Password of the read-only IAM user"
+  value       = aws_iam_user_login_profile.read_only_user_login.encrypted_password
 }
