@@ -72,3 +72,25 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 	log.Printf("Email sent successfully! Message ID: %s\n", *resp.MessageId)
 	return nil
 }
+
+// SendOtpEmail sends an OTP verification email to the specified email address
+func (s *MailService) SendOtpEmail(ctx context.Context, fromEmail, toEmail, otp string) error {
+	subject := "Email Verification OTP"
+	body := fmt.Sprintf(`
+		<html>
+			<body style="font-family: Arial, sans-serif; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #f5f5f5; padding: 30px; border-radius: 10px;">
+					<h2 style="color: #333; text-align: center;">Email Verification</h2>
+					<p style="color: #666; font-size: 16px;">Your OTP for email verification is:</p>
+					<div style="background-color: #fff; padding: 20px; text-align: center; border-radius: 5px; margin: 20px 0;">
+						<h1 style="color: #007bff; letter-spacing: 5px; margin: 0;">%s</h1>
+					</div>
+					<p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+					<p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't request this code, please ignore this email.</p>
+				</div>
+			</body>
+		</html>
+	`, otp)
+
+	return s.SendEmail(ctx, fromEmail, toEmail, subject, body, nil, nil)
+}
