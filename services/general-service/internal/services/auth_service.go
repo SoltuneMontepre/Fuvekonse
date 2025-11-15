@@ -9,6 +9,7 @@ import (
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/dto/auth/responses"
 	"general-service/internal/repositories"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -127,4 +128,99 @@ func (s *AuthService) ResetPassword(userID string, req *requests.ResetPasswordRe
 	}
 
 	return nil
+}
+
+// VerifyOtpAsync verifies OTP and updates user status to Active (IsVerified = true)
+func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (bool, error) {
+	// Find user by email
+	user, err := s.repos.User.FindByEmail(email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, fmt.Errorf("user not found")
+		}
+		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
+	}
+
+	// Verify OTP and check expiry
+	if user.Otp != otp || user.OtpExpiryTime == nil || user.OtpExpiryTime.Before(time.Now()) {
+		return false, nil
+	}
+
+	// Update user verification status
+	user.IsVerified = true
+	user.Otp = ""
+	user.OtpExpiryTime = nil
+
+	// Update user in database
+	if err := s.repos.User.UpdateUserProfile(user); err != nil {
+		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
+	}
+
+	return true, nil
+}
+
+// I write this out if you need to do the regiter func later 🥀
+// VerifyOtpAndCompleteRegistrationAsync verifies OTP and completes registration
+func (s *AuthService) VerifyOtpAndCompleteRegistration(ctx context.Context, email string, otp string) (bool, error) {
+	// Find user by email
+	user, err := s.repos.User.FindByEmail(email)
+	if err != nil {
+		return false, nil
+	}
+
+	// Verify OTP and check expiry
+	if user.Otp != otp || user.OtpExpiryTime == nil || user.OtpExpiryTime.Before(time.Now()) {
+		return false, nil
+	}
+
+	// Update user verification status
+	user.IsVerified = true
+	user.Otp = ""
+	user.OtpExpiryTime = nil
+
+	if err := s.repos.User.UpdateUserProfile(user); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// ResendOtp resends OTP to user's email
+func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *MailService, fromEmail string) (bool, error) {
+	// Find user by email
+	user, err := s.repos.User.FindByEmail(email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, fmt.Errorf("user not found")
+		}
+		return false, err
+	}
+
+	// Check if user is already verified
+	if user.IsVerified {
+		return false, fmt.Errorf("account is already verified")
+	}
+
+	// Generate new OTP
+	newOtp, err := utils.GenerateOtp()
+	if err != nil {
+		return false, fmt.Errorf("failed to generate OTP")
+	}
+
+	// 10 mins expire
+	expiryTime := time.Now().Add(10 * time.Minute)
+	user.Otp = newOtp
+	user.OtpExpiryTime = &expiryTime
+
+	// Update user in database
+	if err := s.repos.User.UpdateUserProfile(user); err != nil {
+		return false, fmt.Errorf("failed to update OTP")
+	}
+
+	// Send OTP email
+	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp); err != nil {
+		return false, fmt.Errorf("failed to send OTP email: %w", err)
+	}
+
+	return true, nil
 }

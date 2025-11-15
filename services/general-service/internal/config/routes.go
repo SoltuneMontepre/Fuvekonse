@@ -35,9 +35,9 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 
 		//add jwt auth
 		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
+		auth.POST("/verify-otp", h.Auth.VerifyOtp)
 	}
 }
-
 
 func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	// Root endpoint
