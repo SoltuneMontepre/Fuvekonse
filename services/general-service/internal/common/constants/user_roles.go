@@ -1,6 +1,7 @@
 package constants
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 )
@@ -64,4 +65,92 @@ func ParseUserRole(s string) (UserRole, error) {
 // IsValid checks if the UserRole is a valid enum value
 func (r UserRole) IsValid() bool {
 	return r >= RoleUser && r <= RoleDealer
+}
+
+// Value implements driver.Valuer to convert UserRole to integer for database storage
+func (r UserRole) Value() (driver.Value, error) {
+	return int64(r), nil
+}
+
+// Scan implements sql.Scanner to convert database integer to UserRole
+func (r *UserRole) Scan(value interface{}) error {
+	if value == nil {
+		*r = RoleUser
+		return nil
+	}
+
+	switch v := value.(type) {
+	case int64:
+		*r = UserRole(v)
+		return nil
+	case int32:
+		*r = UserRole(v)
+		return nil
+	case int16:
+		*r = UserRole(v)
+		return nil
+	case int8:
+		*r = UserRole(v)
+		return nil
+	case int:
+		*r = UserRole(v)
+		return nil
+	case uint64:
+		*r = UserRole(v)
+		return nil
+	case uint32:
+		*r = UserRole(v)
+		return nil
+	case uint16:
+		*r = UserRole(v)
+		return nil
+	case uint8:
+		*r = UserRole(v)
+		return nil
+	case uint:
+		*r = UserRole(v)
+		return nil
+	case []byte:
+		// Try to parse as integer first (most common case for PostgreSQL)
+		if len(v) > 0 {
+			// Try parsing as integer string
+			var i int64
+			if _, err := fmt.Sscanf(string(v), "%d", &i); err == nil {
+				*r = UserRole(i)
+				return nil
+			}
+			// Try parsing as JSON integer
+			if err := json.Unmarshal(v, &i); err == nil {
+				*r = UserRole(i)
+				return nil
+			}
+			// Handle string representation from database (backward compatibility)
+			var s string
+			if err := json.Unmarshal(v, &s); err == nil {
+				parsed, err := ParseUserRole(s)
+				if err != nil {
+					return fmt.Errorf("failed to parse role from database: %w", err)
+				}
+				*r = parsed
+				return nil
+			}
+		}
+		return fmt.Errorf("cannot scan %T (%v) into UserRole", value, string(v))
+	case string:
+		// Try to parse as integer string first (most common case)
+		var i int64
+		if _, err := fmt.Sscanf(v, "%d", &i); err == nil {
+			*r = UserRole(i)
+			return nil
+		}
+		// Handle string representation from database (backward compatibility)
+		parsed, err := ParseUserRole(v)
+		if err != nil {
+			return fmt.Errorf("failed to parse role from database: %w", err)
+		}
+		*r = parsed
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T (%v) into UserRole", value, value)
+	}
 }
