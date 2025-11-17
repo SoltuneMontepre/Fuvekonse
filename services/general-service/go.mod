@@ -15,6 +15,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
+	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 )
 
 require (
@@ -44,7 +45,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 )

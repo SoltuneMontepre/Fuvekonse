@@ -77,7 +77,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		true, // secure
 		true, // httpOnly
 	)
-	utils.RespondSuccess(c, response, "Login successful")
+	utils.RespondSuccess[any](c, nil, "Login successful")
 }
 
 // ResetPassword godoc
@@ -129,4 +129,28 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password reset successful")
+}
+
+// Logout godoc
+// @Summary Logout from the system
+// @Description Remove access token cookie to logout user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully logged out"
+// @Router /auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Clear the access token cookie
+	c.SetCookie(
+		"access_token",
+		"",
+		-1, // MaxAge -1 deletes the cookie
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
+
+	utils.RespondSuccess[any](c, nil, "Logout successful")
 }
