@@ -15,6 +15,12 @@ output "read_only_user_name" {
   value       = module.iam.read_only_user_name
 }
 
+output "read_only_user_password" {
+  description = "Password of the read-only IAM user"
+  value       = module.iam.read_only_password
+  sensitive   = true
+}
+
 output "lambda_app_role_arn" {
   description = "ARN of the Lambda application IAM role"
   value       = module.iam_role.lambda_app_role_arn

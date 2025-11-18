@@ -10,8 +10,12 @@ resource "aws_s3_bucket_cors_configuration" "this" {
     max_age_seconds = 3000
   }
 
-  cors_rule {
+ cors_rule {
     allowed_methods = ["GET", "HEAD"]
-    allowed_origins = ["*"]
+    allowed_origins = [
+      "https://fuve.netlify.app",
+      "http://localhost:3000",
+      "http://localhost:5173"
+    ]
   }
 }
