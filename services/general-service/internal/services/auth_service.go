@@ -53,9 +53,9 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 				// Log the error with context
 				fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, err)
 				// Security: do not reveal internal error, but fail closed
-				return nil, errors.New("internal server error")
+				return nil, constants.ErrInternalServer
 			}
-			return nil, errors.New("invalid email or password")
+			return nil, constants.ErrInvalidCredentials
 		}
 		return nil, err
 	}
@@ -65,9 +65,9 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 		// Increment failed login attempts
 		if incErr := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes); incErr != nil {
 			fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, incErr)
-			return nil, errors.New("internal server error")
+			return nil, constants.ErrInternalServer
 		}
-		return nil, errors.New("invalid email or password")
+		return nil, constants.ErrInvalidCredentials
 	}
 
 	// Reset failed login attempts on successful login
@@ -97,24 +97,24 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 // ResetPassword allows a logged-in user to change their password
 func (s *AuthService) ResetPassword(userID string, req *requests.ResetPasswordRequest) error {
 	if req.NewPassword != req.ConfirmedPassword {
-		return errors.New("new password and confirm password do not match")
+		return constants.ErrPasswordMismatch
 	}
 
 	// Fetch user
 	user, err := s.repos.User.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("user not found")
+			return constants.ErrUserNotFound
 		}
 		return err
 	}
 
 	if err := utils.ComparePassword(user.Password, req.CurrentPassword); err != nil {
-		return errors.New("current password is incorrect")
+		return constants.ErrCurrentPasswordIncorrect
 	}
 
 	if req.CurrentPassword == req.NewPassword {
-		return errors.New("new password cannot be the same as the old password")
+		return constants.ErrSamePassword
 	}
 
 	hashedPassword, err := utils.HashPassword(req.NewPassword)

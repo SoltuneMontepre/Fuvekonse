@@ -3,31 +3,20 @@ package middlewares
 import (
 	role "general-service/internal/common/constants"
 	"general-service/internal/common/utils"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// JWTAuthMiddleware validates the JWT access token from the Authorization header
+// JWTAuthMiddleware validates the JWT access token from cookie
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			utils.RespondUnauthorized(c, "Missing authorization header")
+		// Get the access token from cookie
+		tokenString, err := c.Cookie("access_token")
+		if err != nil || tokenString == "" {
+			utils.RespondUnauthorized(c, "Missing access token")
 			c.Abort()
 			return
 		}
-
-		// Check if the header starts with "Bearer "
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			utils.RespondUnauthorized(c, "Invalid authorization header format. Expected: Bearer <token>")
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
 
 		// Validate the token
 		claims, err := utils.ValidateToken(tokenString)
@@ -67,23 +56,13 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 // It still validates if a token is provided
 func OptionalJWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		// Get the access token from cookie
+		tokenString, err := c.Cookie("access_token")
+		if err != nil || tokenString == "" {
 			// No token provided, continue without setting user context
 			c.Next()
 			return
 		}
-
-		// Check if the header starts with "Bearer "
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			// Invalid format but optional, so continue
-			c.Next()
-			return
-		}
-
-		tokenString := parts[1]
 
 		// Validate the token
 		claims, err := utils.ValidateToken(tokenString)
