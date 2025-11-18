@@ -32,12 +32,12 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Auth.Login)
+		auth.POST("/logout", middlewares.JWTAuthMiddleware(), h.Auth.Logout)
 
 		//add jwt auth
 		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
 	}
 }
-
 
 func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	// Root endpoint
