@@ -10,6 +10,8 @@ resource "aws_lambda_function" "general_service" {
   filename         = var.general_service_zip_path
   source_code_hash = filebase64sha256(var.general_service_zip_path)
 
+  reserved_concurrent_executions = 300
+
   environment {
     variables = {
       DB_HOST                          = var.db_host
@@ -52,6 +54,8 @@ resource "aws_lambda_function" "ticket_service" {
 
   filename         = var.ticket_service_zip_path
   source_code_hash = filebase64sha256(var.ticket_service_zip_path)
+
+  reserved_concurrent_executions = 300
 
   environment {
     variables = {
@@ -102,5 +106,66 @@ resource "aws_cloudwatch_log_group" "ticket_service" {
   tags = {
     Name        = var.project_name
     Environment = "Production"
+  }
+}
+
+# SQS Worker Lambda Function
+resource "aws_lambda_function" "sqs_worker" {
+  function_name = "${var.project_name}-sqs-worker"
+  role          = var.lambda_role_arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  timeout       = 60
+  memory_size   = 256
+
+  filename         = var.sqs_worker_zip_path
+  source_code_hash = filebase64sha256(var.sqs_worker_zip_path)
+
+  # Reserve concurrency for background processing
+  reserved_concurrent_executions = 50
+
+  environment {
+    variables = {
+      DB_HOST      = var.db_host
+      DB_PORT      = var.db_port
+      DB_USER      = var.db_user
+      DB_PASSWORD  = var.db_password
+      DB_NAME      = var.db_name
+      DB_SSLMODE   = var.db_sslmode
+      AWS_REGION   = var.aws_region
+      SES_SENDER   = var.ses_sender_email
+      SQS_QUEUE    = var.sqs_queue_url
+    }
+  }
+
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+    Service     = "sqs-worker"
+  }
+}
+
+# CloudWatch Log Group for SQS Worker
+resource "aws_cloudwatch_log_group" "sqs_worker" {
+  name              = "/aws/lambda/${aws_lambda_function.sqs_worker.function_name}"
+  retention_in_days = 14
+
+  tags = {
+    Name        = var.project_name
+    Environment = "Production"
+  }
+}
+
+# Event Source Mapping - Trigger Lambda from SQS
+resource "aws_lambda_event_source_mapping" "sqs_worker" {
+  event_source_arn = var.sqs_queue_arn
+  function_name    = aws_lambda_function.sqs_worker.arn
+  batch_size       = 10
+  enabled          = true
+
+  function_response_types = ["ReportBatchItemFailures"]
+
+  scaling_config {
+    maximum_concurrency = 50
   }
 }
