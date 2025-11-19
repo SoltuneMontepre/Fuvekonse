@@ -37,12 +37,6 @@ jobs:
             echo "⏭️ No changes in ticket-service, skipping deployment"
           fi
 
-      - name: Skip deployment
-        if: steps.check_changes.outputs.changed == 'false'
-        run: |
-          echo "No relevant changes detected, exiting gracefully"
-          exit 0
-
       - name: Try to download Lambda artifact from CI
         if: steps.check_changes.outputs.changed == 'true'
         id: download-artifact
