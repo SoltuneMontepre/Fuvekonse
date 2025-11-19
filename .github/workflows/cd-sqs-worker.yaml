@@ -19,8 +19,32 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if service files changed
+        id: check_changes
+        run: |
+          # Check if this is the first commit or if sqs-worker files changed
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^services/sqs-worker/|^\.github/workflows/cd-sqs-worker\.yaml$'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected in sqs-worker"
+          elif git diff --name-only HEAD~1 HEAD | grep -q '^infras/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Infrastructure changes detected, deploying all services"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️ No changes in sqs-worker, skipping deployment"
+          fi
+
+      - name: Skip deployment
+        if: steps.check_changes.outputs.changed == 'false'
+        run: |
+          echo "No relevant changes detected, exiting gracefully"
+          exit 0
 
       - name: Try to download Lambda artifact from CI
+        if: steps.check_changes.outputs.changed == 'true'
         id: download-artifact
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -29,6 +53,7 @@ jobs:
           path: services/sqs-worker/
 
       - name: Check if Lambda package exists
+        if: steps.check_changes.outputs.changed == 'true'
         id: check-lambda
         run: |
           if [ -f "services/sqs-worker/bootstrap.zip" ]; then
@@ -40,14 +65,14 @@ jobs:
           fi
 
       - name: Setup Golang (if build needed)
-        if: steps.check-lambda.outputs.exists != 'true'
+        if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
         uses: actions/setup-go@v5
         with:
           go-version-file: "services/sqs-worker/go.mod"
           cache: true
 
       - name: Build Lambda package (if build needed)
-        if: steps.check-lambda.outputs.exists != 'true'
+        if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
         working-directory: services/sqs-worker
         env:
           GOOS: linux
@@ -59,6 +84,7 @@ jobs:
           zip -j bootstrap.zip bootstrap
 
       - name: Configure AWS credentials
+        if: steps.check_changes.outputs.changed == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -66,17 +92,20 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
+        if: steps.check_changes.outputs.changed == 'true'
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: latest
 
       - name: Terraform Init
+        if: steps.check_changes.outputs.changed == 'true'
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: terraform init
 
       - name: Terraform Plan
+        if: steps.check_changes.outputs.changed == 'true'
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
@@ -89,12 +118,14 @@ jobs:
             -out=tfplan
 
       - name: Terraform Apply
+        if: steps.check_changes.outputs.changed == 'true'
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: terraform apply tfplan
 
       - name: Get Lambda Function Info
+        if: steps.check_changes.outputs.changed == 'true'
         id: get-lambda-info
         working-directory: infras
         env:
@@ -111,7 +142,7 @@ jobs:
           echo "function_arn=$FUNCTION_ARN" >> $GITHUB_OUTPUT
 
       - name: Notify deployment success
-        if: success()
+        if: success() && steps.check_changes.outputs.changed == 'true'
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
@@ -127,7 +158,7 @@ jobs:
           avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
 
       - name: Notify deployment failure
-        if: failure()
+        if: failure() && steps.check_changes.outputs.changed == 'true'
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
