@@ -166,3 +166,45 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	utils.ClearAuthCookie(c, h.cookieConfig)
 	utils.RespondSuccess[any](c, nil, "Logout successful")
 }
+
+// VerifyOtp godoc
+// @Summary Verify OTP code
+// @Description Verify the OTP code sent to user's email and mark account as verified
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.VerifyOtpRequest true "Verify OTP request"
+// @Success 200 "Email verified successfully"
+// @Failure 400 "Bad request - validation error or invalid/expired OTP"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/verify-otp [post]
+func (h *AuthHandler) VerifyOtp(c *gin.Context) {
+	var req requests.VerifyOtpRequest
+
+	// Validate request body
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	success, err := h.services.Auth.VerifyOtp(ctx, req.Email, req.Otp)
+
+	if err != nil {
+		errMsg := err.Error()
+		if constants.ErrCodeNotFound == errMsg {
+			utils.RespondNotFound(c, errMsg)
+			return
+		}
+		utils.RespondInternalServerError(c, errMsg)
+		return
+	}
+
+	if !success {
+		utils.RespondBadRequest(c, "Invalid or expired OTP")
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Email verified successfully")
+}

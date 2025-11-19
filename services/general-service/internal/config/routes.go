@@ -36,6 +36,7 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 
 		//add jwt auth
 		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
+		auth.POST("/verify-otp", h.Auth.VerifyOtp)
 	}
 }
 
