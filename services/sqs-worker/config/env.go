@@ -19,8 +19,12 @@ func LoadEnv() error {
 
 	var lastErr error
 	for _, envPath := range envPaths {
-		absPath, _ := filepath.Abs(envPath)
-		err := godotenv.Load(absPath)
+		absPath, err := filepath.Abs(envPath)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to resolve absolute path for %s: %w", envPath, err)
+			continue
+		}
+		err = godotenv.Load(absPath)
 		if err == nil {
 			return nil
 		}

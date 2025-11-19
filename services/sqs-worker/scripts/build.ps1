@@ -3,7 +3,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $projectRoot = (Resolve-Path (Join-Path $scriptDir '..')).ProviderPath
 
 # Prepare output paths inside the build directory
-$linuxOut = Join-Path $scriptDir '..\build\main'
+$linuxOut = Join-Path $scriptDir '..\build\bootstrap'
 $windowsOut = Join-Path $scriptDir '..\build\main.exe'
 $zipPath = Join-Path $scriptDir '..\build\bootstrap.zip'
 

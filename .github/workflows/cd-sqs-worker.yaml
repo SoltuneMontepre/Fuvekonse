@@ -80,7 +80,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           go mod download
-          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap main.go handler.go
+          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap main.go handler.go local.go
           zip -j bootstrap.zip bootstrap
 
       - name: Configure AWS credentials
