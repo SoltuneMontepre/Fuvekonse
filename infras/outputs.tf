@@ -73,3 +73,13 @@ output "ticket_service_function_name" {
   description = "Name of the ticket service Lambda function"
   value       = module.lambda.ticket_service_function_name
 }
+
+output "sqs_worker_function_name" {
+  description = "Name of the SQS worker Lambda function"
+  value       = module.lambda.sqs_worker_function_name
+}
+
+output "sqs_worker_function_arn" {
+  description = "ARN of the SQS worker Lambda function"
+  value       = module.lambda.sqs_worker_function_arn
+}
