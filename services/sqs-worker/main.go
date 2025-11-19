@@ -10,6 +10,6 @@ func main() {
 	if config.IsLambdaEnv() {
 		lambda.Start(handler)
 	} else {
-		local()
+		Local()
 	}
 }
