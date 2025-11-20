@@ -91,6 +91,8 @@ func (s *UserService) UpdateProfile(userID string, req *requests.UpdateProfileRe
 		user.PassportId = *req.PassportId
 	}
 
+
+
 	// Save updated user
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
 		return nil, errors.New("failed to update profile")
