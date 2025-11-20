@@ -1,4 +1,3 @@
-
 aws_region  = "ap-southeast-1"
 project_name = "fuvekon"
 
@@ -18,6 +17,7 @@ iam_lambda_app_role_name = "fuvekon-lambda-app-role"
 # Lambda Deployment Packages
 general_service_zip_path = "../services/general-service/bootstrap.zip"
 ticket_service_zip_path = "../services/ticket-service/bootstrap.zip"
+sqs_worker_zip_path = "../services/sqs-worker/bootstrap.zip"
 
 # Application Configuration
 gin_mode = "release"

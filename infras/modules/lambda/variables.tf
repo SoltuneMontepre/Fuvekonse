@@ -18,6 +18,11 @@ variable "ticket_service_zip_path" {
   type        = string
 }
 
+variable "sqs_worker_zip_path" {
+  description = "Path to the sqs-worker service deployment package"
+  type        = string
+}
+
 variable "db_host" {
   description = "Database host"
   type        = string
@@ -121,4 +126,9 @@ variable "cors_allowed_origins" {
   description = "List of allowed origins for CORS"
   type        = list(string)
   default     = []
+}
+
+variable "sqs_queue_arn" {
+  description = "SQS queue ARN for event source mapping"
+  type        = string
 }

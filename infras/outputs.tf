@@ -15,6 +15,12 @@ output "read_only_user_name" {
   value       = module.iam.read_only_user_name
 }
 
+output "read_only_user_password" {
+  description = "Password of the read-only IAM user"
+  value       = module.iam.read_only_password
+  sensitive   = true
+}
+
 output "lambda_app_role_arn" {
   description = "ARN of the Lambda application IAM role"
   value       = module.iam_role.lambda_app_role_arn
@@ -66,4 +72,14 @@ output "general_service_function_name" {
 output "ticket_service_function_name" {
   description = "Name of the ticket service Lambda function"
   value       = module.lambda.ticket_service_function_name
+}
+
+output "sqs_worker_function_name" {
+  description = "Name of the SQS worker Lambda function"
+  value       = module.lambda.sqs_worker_function_name
+}
+
+output "sqs_worker_function_arn" {
+  description = "ARN of the SQS worker Lambda function"
+  value       = module.lambda.sqs_worker_function_arn
 }

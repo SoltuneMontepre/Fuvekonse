@@ -41,6 +41,7 @@ module "lambda" {
   lambda_role_arn                  = module.iam_role.lambda_app_role_arn
   general_service_zip_path         = var.general_service_zip_path
   ticket_service_zip_path          = var.ticket_service_zip_path
+  sqs_worker_zip_path              = var.sqs_worker_zip_path
   db_host                          = local.db_host
   db_port                          = local.db_port
   db_user                          = local.db_user
@@ -59,6 +60,7 @@ module "lambda" {
   s3_bucket_name                   = module.s3.bucket_name
   ses_sender_email                 = module.ses.sender_email
   sqs_queue_url                    = module.sqs.queue_url
+  sqs_queue_arn                    = module.sqs.queue_arn
   cors_allowed_origins             = var.s3_cors_allowed_origins
 }
 

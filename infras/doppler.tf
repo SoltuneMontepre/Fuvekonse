@@ -13,8 +13,6 @@ locals {
   db_name     = local.secrets.DB_NAME
   db_sslmode  = local.secrets.DB_SSLMODE
 
-  redis_host = try(local.secrets.REDIS_HOST, "")
-  redis_port = try(local.secrets.REDIS_PORT, "")
   redis_url  = local.secrets.REDIS_URL
 
   jwt_secret                      = local.secrets.JWT_SECRET

@@ -1,13 +1,13 @@
-name: general-service CD
+name: sqs-worker CD
 
 on:
   push:
     branches:
       - main
     paths:
-      - "services/general-service/**"
+      - "services/sqs-worker/**"
       - "infras/**"
-      - ".github/workflows/cd-general.yaml"
+      - ".github/workflows/cd-sqs-worker.yaml"
 
 concurrency:
   group: terraform-deploy
@@ -25,16 +25,16 @@ jobs:
       - name: Check if service files changed
         id: check_changes
         run: |
-          # Check if this is the first commit or if general-service files changed
-          if git diff --name-only HEAD~1 HEAD | grep -qE '^services/general-service/|^\.github/workflows/cd-general\.yaml$'; then
+          # Check if this is the first commit or if sqs-worker files changed
+          if git diff --name-only HEAD~1 HEAD | grep -qE '^services/sqs-worker/|^\.github/workflows/cd-sqs-worker\.yaml$'; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Changes detected in general-service"
+            echo "✅ Changes detected in sqs-worker"
           elif git diff --name-only HEAD~1 HEAD | grep -q '^infras/'; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "✅ Infrastructure changes detected, deploying all services"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "⏭️ No changes in general-service, skipping deployment"
+            echo "⏭️ No changes in sqs-worker, skipping deployment"
           fi
 
       - name: Try to download Lambda artifact from CI
@@ -43,14 +43,14 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: general-service-lambda-${{ github.sha }}
-          path: services/general-service/
+          name: sqs-worker-lambda-${{ github.sha }}
+          path: services/sqs-worker/
 
       - name: Check if Lambda package exists
         if: steps.check_changes.outputs.changed == 'true'
         id: check-lambda
         run: |
-          if [ -f "services/general-service/bootstrap.zip" ]; then
+          if [ -f "services/sqs-worker/bootstrap.zip" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "✅ Lambda package found from CI artifacts"
           else
@@ -62,39 +62,19 @@ jobs:
         if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
         uses: actions/setup-go@v5
         with:
-          go-version-file: "services/general-service/go.mod"
+          go-version-file: "services/sqs-worker/go.mod"
           cache: true
-
-      - name: Cache Swagger CLI (if build needed)
-        if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
-        id: cache-swag
-        uses: actions/cache@v4
-        with:
-          path: ~/go/bin/swag
-          key: ${{ runner.os }}-swag-${{ hashFiles('**/go.mod') }}
-          restore-keys: |
-            ${{ runner.os }}-swag-
-
-      - name: Install swag CLI (if build needed)
-        if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true' && steps.cache-swag.outputs.cache-hit != 'true'
-        run: go install github.com/swaggo/swag/cmd/swag@latest
-
-      - name: Generate Swagger docs (if build needed)
-        if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
-        working-directory: services/general-service
-        run: |
-          swag init -g cmd/main.go -o ./docs
 
       - name: Build Lambda package (if build needed)
         if: steps.check_changes.outputs.changed == 'true' && steps.check-lambda.outputs.exists != 'true'
-        working-directory: services/general-service
+        working-directory: services/sqs-worker
         env:
           GOOS: linux
           GOARCH: amd64
           CGO_ENABLED: 0
         run: |
           go mod download
-          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap cmd/main.go
+          go build -tags lambda.norpc -ldflags="-s -w" -o bootstrap main.go handler.go local.go
           zip -j bootstrap.zip bootstrap
 
       - name: Configure AWS credentials
@@ -126,9 +106,9 @@ jobs:
         run: |
           terraform plan \
             -var-file="./envs/prod.tfvars" \
-            -target=module.lambda.aws_lambda_function.general_service \
-            -target=module.lambda.aws_cloudwatch_log_group.general_service \
-            -target=module.lambda.aws_lambda_function_url.general_service \
+            -target=module.lambda.aws_lambda_function.sqs_worker \
+            -target=module.lambda.aws_cloudwatch_log_group.sqs_worker \
+            -target=module.lambda.aws_lambda_event_source_mapping.sqs_worker \
             -out=tfplan
 
       - name: Terraform Apply
@@ -138,17 +118,22 @@ jobs:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: terraform apply tfplan
 
-      - name: Get Lambda URL
+      - name: Get Lambda Function Info
         if: steps.check_changes.outputs.changed == 'true'
-        id: get-lambda-url
+        id: get-lambda-info
         working-directory: infras
         env:
           TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          URL=$(terraform output -raw general_service_url)
-          echo "🚀 Deployed general-service to: $URL"
-          echo "LAMBDA_URL=$URL" >> $GITHUB_ENV
-          echo "lambda_url=$URL" >> $GITHUB_OUTPUT
+          FUNCTION_NAME=$(terraform output -raw sqs_worker_function_name)
+          FUNCTION_ARN=$(terraform output -raw sqs_worker_function_arn)
+          echo "🚀 Deployed sqs-worker Lambda"
+          echo "Function Name: $FUNCTION_NAME"
+          echo "Function ARN: $FUNCTION_ARN"
+          echo "FUNCTION_NAME=$FUNCTION_NAME" >> $GITHUB_ENV
+          echo "FUNCTION_ARN=$FUNCTION_ARN" >> $GITHUB_ENV
+          echo "function_name=$FUNCTION_NAME" >> $GITHUB_OUTPUT
+          echo "function_arn=$FUNCTION_ARN" >> $GITHUB_OUTPUT
 
       - name: Notify deployment success
         if: success() && steps.check_changes.outputs.changed == 'true'
@@ -156,11 +141,11 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: success
-          title: "✅ Deployment Successful [general-service]"
+          title: "✅ Deployment Successful [sqs-worker]"
           description: |
             **Repository:** ${{ github.repository }}
             **Commit:** `${{ github.sha }}`
-            **URL:** ${{ steps.get-lambda-url.outputs.lambda_url }}
+            **Function:** ${{ steps.get-lambda-info.outputs.function_name }}
             **Deployed by:** ${{ github.actor }}
           color: 0x00ff00
           username: GitHub Actions
@@ -172,7 +157,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: failure
-          title: "❌ Deployment Failed [general-service]"
+          title: "❌ Deployment Failed [sqs-worker]"
           description: |
             **Repository:** ${{ github.repository }}
             **Commit:** `${{ github.sha }}`

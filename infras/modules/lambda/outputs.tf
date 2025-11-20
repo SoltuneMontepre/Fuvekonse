@@ -27,3 +27,13 @@ output "ticket_service_invoke_arn" {
   description = "Invoke ARN of the ticket service Lambda function"
   value       = aws_lambda_function.ticket_service.invoke_arn
 }
+
+output "sqs_worker_function_name" {
+  description = "Name of the SQS worker Lambda function"
+  value       = aws_lambda_function.sqs_worker.function_name
+}
+
+output "sqs_worker_function_arn" {
+  description = "ARN of the SQS worker Lambda function"
+  value       = aws_lambda_function.sqs_worker.arn
+}
