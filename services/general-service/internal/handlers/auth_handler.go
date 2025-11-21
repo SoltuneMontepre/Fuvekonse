@@ -208,3 +208,59 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 
 	utils.RespondSuccess[any](c, nil, "Email verified successfully")
 }
+
+// ForgotPassword godoc
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Summary Request password reset token (sent by email)
+// @Param request body requests.ForgotPasswordRequest true "Forgot password request"
+// @Router /auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req requests.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	fromEmail := os.Getenv("SES_EMAIL_IDENTITY") //test cuz idk
+	frontendURL := "http://localhost:3000/reset-password"
+	// frontendURL := os.Getenv("FRONTEND_URL")
+
+	if err := h.services.Auth.ForgotPassword(c.Request.Context(), req.Email, h.services.Mail, frontendURL, fromEmail); err != nil {
+		utils.RespondInternalServerError(c, "Failed to process password reset request")
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "If an account with that email exists, a password reset token has been sent")
+}
+
+// ResetPasswordConfirm godoc
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Summary Reset password using token
+// @Param request body requests.ResetPasswordTokenRequest true "Reset password with token"
+// @Router /auth/reset-password/confirm [post]
+func (h *AuthHandler) ResetPasswordConfirm(c *gin.Context) {
+	var req requests.ResetPasswordTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	if err := h.services.Auth.ResetPasswordWithToken(req.Token, &req); err != nil {
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondBadRequest(c, err.Error())
+			return
+		}
+		if errors.Is(err, constants.ErrUserNotFound) {
+			utils.RespondNotFound(c, err.Error())
+			return
+		}
+		utils.RespondBadRequest(c, err.Error())
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Password has been reset successfully")
+}
