@@ -87,5 +87,29 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		SetupRoleRoutes(api, h.Role)
 		SetupPermissionRoutes(api, h.Permission)
 		SetupUserBanRoutes(api, h.UserBan)
+		SetupTicketRoutes(api, h.Ticket)
+		SetupPaymentRoutes(api, h.Payment)
+	}
+}
+
+func SetupTicketRoutes(rg *gin.RouterGroup, h *handlers.TicketHandler) {
+	tickets := rg.Group("/tickets")
+	{
+		tickets.GET("/tiers", h.GetTicketTiers)
+		tickets.GET("/tiers/active", h.GetActiveTicketTiers)
+		tickets.GET("/tiers/:id", h.GetTicketTier)
+		tickets.GET("/:id", h.GetTicket)
+		tickets.GET("/user/:user_id", h.GetUserTickets)
+	}
+}
+
+func SetupPaymentRoutes(rg *gin.RouterGroup, h *handlers.PaymentHandler) {
+	payments := rg.Group("/payments")
+	{
+		payments.POST("/payment-link", h.CreatePaymentLink)
+		payments.POST("/webhook", h.HandleWebhook)
+		payments.POST("/cleanup-stuck", h.CleanupStuckPayments)
+		payments.GET("/status/:orderCode", h.GetPaymentStatus)
+		payments.POST("/cancel-by-order", h.CancelPaymentByOrderCode)
 	}
 }

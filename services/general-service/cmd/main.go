@@ -33,13 +33,13 @@ import (
 	"general-service/internal/config"
 	"general-service/internal/database"
 	"general-service/internal/handlers"
-	"general-service/internal/middlewares"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	ginadapter "github.com/awslabs/aws-lambda-go-api-proxy/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -89,8 +89,6 @@ func setupRedis() {
 	}
 }
 
-// ...corsMiddleware moved to internal/middlewares/cors.go...
-
 // setupSwagger conditionally enables Swagger documentation based on environment.
 // Swagger is only enabled in development and staging environments.
 func setupSwagger(router *gin.Engine) {
@@ -120,7 +118,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	// Database is already initialized and passed in
 	// Set the global DB reference
 	database.GlobalDB = db
-	
+
 	// Initialize Redis
 	setupRedis()
 
@@ -135,10 +133,19 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 
 	// Setup router with middleware
 	router := gin.Default()
-	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-	
-	router.Use(middlewares.CorsMiddleware(allowedOrigins))
-	log.Println("CORS middleware configured with allowed origins:", allowedOrigins)
+
+	// CORS middleware - allow all origins with credentials
+	router.Use(cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			return true // Allow all origins
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600,
+	}))
+	log.Println("CORS middleware configured to allow all origins with credentials")
 
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)

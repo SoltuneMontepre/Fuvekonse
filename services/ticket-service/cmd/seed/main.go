@@ -1,9 +1,9 @@
 package main
 
 import (
-	"general-service/internal/config"
-	"general-service/internal/database"
 	"log"
+	"ticket-service/internal/config"
+	"ticket-service/internal/database"
 )
 
 func main() {
@@ -20,15 +20,8 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	log.Println("🔄 Starting database migration...")
+	log.Println("🌱 Starting ticket-service data seeding...")
 
-	if err := database.AutoMigrate(db); err != nil {
-		log.Fatal("❌ Failed to migrate database:", err)
-	}
-
-	log.Println("✅ Database migration completed successfully!")
-
-	log.Println("🌱 Starting data seeding...")
 	if err := database.SeedInitialData(db); err != nil {
 		log.Fatal("❌ Failed to seed data:", err)
 	}

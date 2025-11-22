@@ -7,15 +7,17 @@ import (
 )
 
 type Services struct {
-	Auth *AuthService
-	User *UserService
-	Mail *MailService
+	Auth       *AuthService
+	User       *UserService
+	UserTicket *UserTicketService
+	Mail       *MailService
 }
 
 func NewServices(repos *repositories.Repositories, redisClient *redis.Client, loginMaxFail int, loginFailBlockMinutes int) *Services {
 	return &Services{
-		Auth: NewAuthService(repos, redisClient, loginMaxFail, loginFailBlockMinutes),
-		User: NewUserService(repos),
-		Mail: NewMailService(repos),
+		Auth:       NewAuthService(repos, redisClient, loginMaxFail, loginFailBlockMinutes),
+		User:       NewUserService(repos),
+		UserTicket: NewUserTicketService(repos),
+		Mail:       NewMailService(repos),
 	}
 }

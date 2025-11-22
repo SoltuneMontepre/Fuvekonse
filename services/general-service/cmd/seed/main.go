@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// Note: TicketTier is now managed exclusively by ticket-service
+
 func main() {
 	// Load environment variables
 	if err := config.LoadEnv(); err != nil {
@@ -31,9 +33,10 @@ func main() {
 		log.Fatal("Failed to hash password:", err)
 	}
 
-	// Create test user
+	// Create test user with hardcoded ID
+	hardcodedUserID := uuid.MustParse("b3c8e5f4-0a86-4d73-a8b9-3daafe0f6a20")
 	testUser := models.User{
-		Id:          uuid.New(),
+		Id:          hardcodedUserID,
 		Email:       "user@example.com",
 		Password:    string(hashedPassword),
 		FursonaName: "TestFursona",
@@ -48,12 +51,12 @@ func main() {
 		IsDeleted:   false,
 	}
 
-	// Check if user already exists
+	// Check if user already exists by ID
 	var existingUser models.User
-	result := db.Where("email = ?", testUser.Email).First(&existingUser)
+	result := db.Where("id = ?", hardcodedUserID).First(&existingUser)
 
 	if result.Error == nil {
-		log.Printf("⚠️  User with email %s already exists. Updating...", testUser.Email)
+		log.Printf("⚠️  User with ID %s already exists. Updating...", hardcodedUserID)
 		// Update existing user
 		db.Model(&existingUser).Updates(map[string]interface{}{
 			"password":     testUser.Password,
@@ -86,6 +89,8 @@ func main() {
 	log.Printf("Role:        %s", testUser.Role)
 	log.Printf("Is Verified: %v", testUser.IsVerified)
 	log.Println("========================")
+
+	// Note: Ticket tiers are now seeded exclusively by ticket-service
 
 	log.Println("🎉 Seeding completed! You can now login with:")
 	log.Println(`{

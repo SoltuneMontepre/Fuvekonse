@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: fuvekon
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: Asia/Ho_Chi_Minh
     ports:
       - "5432:5432"
     restart: always

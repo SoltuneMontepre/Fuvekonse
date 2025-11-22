@@ -38,7 +38,6 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	}
 }
 
-
 func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	// Root endpoint
 	router.GET("/", func(c *gin.Context) {
@@ -77,6 +76,12 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 	{
 		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)
+
+		// User ticket routes (called from ticket-service after payment)
+		userTickets := v1.Group("/user-tickets")
+		{
+			userTickets.POST("", h.UserTicket.CreateUserTicket)
+		}
 
 		// Protected routes - require JWT authentication
 		protected := v1.Group("")
