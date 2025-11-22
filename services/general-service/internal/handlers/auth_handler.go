@@ -224,8 +224,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	}
 
 	fromEmail := os.Getenv("SES_EMAIL_IDENTITY") //test cuz idk
-	frontendURL := "http://localhost:3000/reset-password"
-	// frontendURL := os.Getenv("FRONTEND_URL")
+	frontendURL := os.Getenv("FRONTEND_URL")
 
 	if err := h.services.Auth.ForgotPassword(c.Request.Context(), req.Email, h.services.Mail, frontendURL, fromEmail); err != nil {
 		utils.RespondInternalServerError(c, "Failed to process password reset request")
