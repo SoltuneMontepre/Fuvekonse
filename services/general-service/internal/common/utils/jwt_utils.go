@@ -288,3 +288,53 @@ func GetTokenIssuedTime(tokenString string) (time.Time, error) {
 
 	return claims.IssuedAt.Time, nil
 }
+
+// GetForgotPasswordTokenExpiry retrieves password reset token expiry (minutes) from env
+func GetForgotPasswordTokenExpiry() time.Duration {
+	minStr := os.Getenv("JWT_PASSWORD_RESET_EXPIRY_MINUTES")
+	if minStr == "" {
+		return 60 * time.Minute
+	}
+	minutes, err := strconv.Atoi(minStr)
+	if err != nil || minutes <= 0 {
+		return 60 * time.Minute
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+// CreateForgotPasswordToken creates a signed JWT used for password reset
+func CreateForgotPasswordToken(userID uuid.UUID, email, fursonaName, role string) (string, error) {
+	claims := JWTClaims{
+		UserID:      userID.String(),
+		Email:       email,
+		FursonaName: fursonaName,
+		Role:        role,
+		TokenType:   "forgot_password",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(GetForgotPasswordTokenExpiry())),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "general-service",
+			Subject:   userID.String(),
+			ID:        uuid.New().String(),
+		},
+	}
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := t.SignedString([]byte(GetJWTSecret()))
+	if err != nil {
+		return "", fmt.Errorf("failed to sign password token: %w", err)
+	}
+	return signed, nil
+}
+
+// ValidateForgotPasswordToken validates a JWT
+func ValidateForgotPasswordToken(tokenString string) (*JWTClaims, error) {
+	claims, err := ValidateToken(tokenString)
+	if err != nil {
+		return nil, fmt.Errorf("invalid forgot password token: %w", err)
+	}
+	if claims.TokenType != "forgot_password" {
+		return nil, errors.New("token is not a forgot password token")
+	}
+	return claims, nil
+}
