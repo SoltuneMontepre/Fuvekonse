@@ -27,9 +27,11 @@ func NewPaymentHandler(paymentService services.PaymentServiceInterface) *Payment
 // @Tags payments
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body dto.CreatePaymentLinkRequest true "Payment link request"
 // @Success 200 {object} dto.CreatePaymentLinkResponse
 // @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /payments/payment-link [post]
 func (h *PaymentHandler) CreatePaymentLink(c *gin.Context) {
@@ -40,20 +42,29 @@ func (h *PaymentHandler) CreatePaymentLink(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get user ID from authentication context
-	// For now, using the user ID from request
-	// In production, this should come from JWT token or session
-
-	// Parse string IDs to UUIDs
-	tierID, err := uuid.Parse(req.TierID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid tier ID format"})
+	// Get user ID from JWT authentication context
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "User ID not found in token"})
 		return
 	}
 
-	userID, err := uuid.Parse(req.UserID)
+	userIDStr, ok := userIDRaw.(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Invalid user ID in token"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user ID format"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Invalid user ID format in token"})
+		return
+	}
+
+	// Parse tier ID from request
+	tierID, err := uuid.Parse(req.TierID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid tier ID format"})
 		return
 	}
 

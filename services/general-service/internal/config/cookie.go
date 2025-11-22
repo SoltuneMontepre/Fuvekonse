@@ -10,11 +10,11 @@ type CookieConfig struct {
 
 // GetCookieConfig returns cookie configuration from environment
 func GetCookieConfig() CookieConfig {
-	secure := GetEnvOr("COOKIE_SECURE", "true") == "true"
-	sameSite := GetEnvOr("COOKIE_SAMESITE", "Strict") // Strict, Lax, or None
+	secure := GetEnvOr("COOKIE_SECURE", "false") == "true" // Default to false for localhost
+	sameSite := GetEnvOr("COOKIE_SAMESITE", "Lax")         // Use Lax for localhost cross-origin
 
 	return CookieConfig{
-		Domain:   GetEnvOr("COOKIE_DOMAIN", ""),
+		Domain:   GetEnvOr("COOKIE_DOMAIN", "localhost"), // Set domain for localhost
 		Secure:   secure,
 		SameSite: sameSite,
 		MaxAge:   3600, // 1 hour default

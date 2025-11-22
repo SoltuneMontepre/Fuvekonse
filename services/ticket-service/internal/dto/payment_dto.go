@@ -5,7 +5,6 @@ import "time"
 // CreatePaymentLinkRequest represents the request to create a payment link
 type CreatePaymentLinkRequest struct {
 	TierID string `json:"tier_id" binding:"required"`
-	UserID string `json:"user_id" binding:"required"`
 }
 
 // CreatePaymentLinkResponse represents the response after creating a payment link

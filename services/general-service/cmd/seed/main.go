@@ -28,7 +28,7 @@ func main() {
 	log.Println("✅ Database connection established")
 
 	// Hash the password using centralized utility
-	hashedPassword, err := utils.HashPassword("password123")
+	hashedPassword, err := utils.HashPassword("admin123")
 	if err != nil {
 		log.Fatal("Failed to hash password:", err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	hardcodedUserID := uuid.MustParse("b3c8e5f4-0a86-4d73-a8b9-3daafe0f6a20")
 	testUser := models.User{
 		Id:          hardcodedUserID,
-		Email:       "user@example.com",
+		Email:       "admin@fuve.com",
 		Password:    string(hashedPassword),
 		FursonaName: "TestFursona",
 		FirstName:   "Test",

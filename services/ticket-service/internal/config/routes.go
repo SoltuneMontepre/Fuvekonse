@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"ticket-service/internal/handlers"
+	"ticket-service/internal/middlewares"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -106,7 +107,7 @@ func SetupTicketRoutes(rg *gin.RouterGroup, h *handlers.TicketHandler) {
 func SetupPaymentRoutes(rg *gin.RouterGroup, h *handlers.PaymentHandler) {
 	payments := rg.Group("/payments")
 	{
-		payments.POST("/payment-link", h.CreatePaymentLink)
+		payments.POST("/payment-link", middlewares.JWTAuthMiddleware(), h.CreatePaymentLink)
 		payments.POST("/webhook", h.HandleWebhook)
 		payments.POST("/cleanup-stuck", h.CleanupStuckPayments)
 		payments.GET("/status/:orderCode", h.GetPaymentStatus)

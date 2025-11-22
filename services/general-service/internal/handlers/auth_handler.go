@@ -18,10 +18,10 @@ type AuthHandler struct {
 
 func NewAuthHandler(services *services.Services) *AuthHandler {
 	// Load cookie configuration from environment
-	secure := os.Getenv("COOKIE_SECURE") != "false" // Default to true
+	secure := os.Getenv("COOKIE_SECURE") != "false" // Default to true, but false for localhost
 	sameSite := os.Getenv("COOKIE_SAMESITE")
 	if sameSite == "" {
-		sameSite = "Strict" // Default to Strict for security
+		sameSite = "Lax" // Use Lax for localhost cross-origin requests
 	}
 
 	cookieConfig := utils.CookieConfig{

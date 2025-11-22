@@ -65,7 +65,7 @@ func setupRouter() *gin.Engine {
 		PayOSAPIKey:      config.GetEnvOr("PAYOS_API_KEY", "faa07056-bc55-49be-a131-0ef24a0e340a"),
 		PayOSChecksumKey: config.GetEnvOr("PAYOS_CHECKSUM_KEY", "cdf9415c04208b9ca1b989ea63460808095fb5666af19056a6b1fdea07910033"),
 		FrontendURL:      config.GetEnvOr("FRONTEND_URL", "http://localhost:3000"),
-		GeneralSvcURL:    config.GetEnvOr("GENERAL_SERVICE_URL", "http://localhost:8080"),
+		GeneralSvcURL:    config.GetEnvOr("GENERAL_SERVICE_URL", "http://localhost:8085"),
 	}
 
 	svc := services.NewServices(repos, paymentConfig)
