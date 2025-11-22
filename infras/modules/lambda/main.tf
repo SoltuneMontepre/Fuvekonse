@@ -10,8 +10,6 @@ resource "aws_lambda_function" "general_service" {
   filename         = var.general_service_zip_path
   source_code_hash = filebase64sha256(var.general_service_zip_path)
 
-  reserved_concurrent_executions = 300
-
   environment {
     variables = {
       DB_HOST                          = var.db_host
@@ -54,8 +52,6 @@ resource "aws_lambda_function" "ticket_service" {
 
   filename         = var.ticket_service_zip_path
   source_code_hash = filebase64sha256(var.ticket_service_zip_path)
-
-  reserved_concurrent_executions = 300
 
   environment {
     variables = {
@@ -121,9 +117,6 @@ resource "aws_lambda_function" "sqs_worker" {
   filename         = var.sqs_worker_zip_path
   source_code_hash = filebase64sha256(var.sqs_worker_zip_path)
 
-  # Reserve concurrency for background processing
-  reserved_concurrent_executions = 50
-
   environment {
     variables = {
       DB_HOST      = var.db_host
@@ -166,6 +159,6 @@ resource "aws_lambda_event_source_mapping" "sqs_worker" {
   function_response_types = ["ReportBatchItemFailures"]
 
   scaling_config {
-    maximum_concurrency = 50
+    maximum_concurrency = 2
   }
 }
