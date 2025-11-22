@@ -71,16 +71,13 @@ variable "ticket_service_zip_path" {
   type        = string
 }
 
+variable "sqs_worker_zip_path" {
+  description = "Path to the sqs-worker service deployment package (zip file)"
+  type        = string
+}
+
 variable "gin_mode" {
   description = "Gin framework mode (debug or release)"
   type        = string
   default     = "release"
 }
-
-# NOTE: The following variables are now managed by Doppler and fetched via doppler.tf
-# - db_host, db_port, db_user, db_password, db_name, db_sslmode
-# - redis_host, redis_port, redis_url
-# - jwt_secret, jwt_access_token_expiry_minutes, jwt_refresh_token_expiry_days
-# - login_max_fail, login_fail_block_minutes
-# - frontend_url
-# - ses_sender_email

@@ -6,16 +6,35 @@ import (
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	services *services.Services
+	services     *services.Services
+	cookieConfig utils.CookieConfig
 }
 
 func NewAuthHandler(services *services.Services) *AuthHandler {
-	return &AuthHandler{services: services}
+	// Load cookie configuration from environment
+	secure := os.Getenv("COOKIE_SECURE") != "false" // Default to true
+	sameSite := os.Getenv("COOKIE_SAMESITE")
+	if sameSite == "" {
+		sameSite = "Strict" // Default to Strict for security
+	}
+
+	cookieConfig := utils.CookieConfig{
+		Domain:   os.Getenv("COOKIE_DOMAIN"),
+		Secure:   secure,
+		SameSite: sameSite,
+		MaxAge:   int(utils.GetAccessTokenExpiry().Seconds()),
+	}
+
+	return &AuthHandler{
+		services:     services,
+		cookieConfig: cookieConfig,
+	}
 }
 
 // Login godoc
@@ -47,37 +66,32 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Call service with context
 	response, err := h.services.Auth.Login(c.Request.Context(), &req)
 	if err != nil {
-		errMsg := err.Error()
-
 		// Check if it's a rate limit error using sentinel
 		if errors.Is(err, constants.ErrAccountLocked) {
 			utils.RespondTooManyRequests(c, "Too many failed login attempts")
 			return
 		}
 
-		switch errMsg {
-		case "invalid email or password":
-			utils.RespondUnauthorized(c, errMsg)
-			return
-		case "user is not verified":
-			utils.RespondForbidden(c, errMsg)
+		// Check for invalid credentials
+		if errors.Is(err, constants.ErrInvalidCredentials) {
+			utils.RespondUnauthorized(c, err.Error())
 			return
 		}
-		utils.RespondInternalServerError(c, errMsg)
+
+		// Check for unverified user
+		if errors.Is(err, constants.ErrUserNotVerified) {
+			utils.RespondForbidden(c, err.Error())
+			return
+		}
+
+		// Default to internal server error
+		utils.RespondInternalServerError(c, "An error occurred during login")
 		return
 	}
 
-	// Set JWT access token in cookie
-	c.SetCookie(
-		"access_token",
-		response.AccessToken,
-		int(utils.GetAccessTokenExpiry().Seconds()),
-		"/",
-		"",
-		true, // secure
-		true, // httpOnly
-	)
-	utils.RespondSuccess(c, response, "Login successful")
+	// Set JWT access token in cookie using helper
+	utils.SetAuthCookie(c, response.AccessToken, h.cookieConfig)
+	utils.RespondSuccess[any](c, nil, "Login successful")
 }
 
 // ResetPassword godoc
@@ -102,6 +116,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
+	// Extract user ID from context (stored as string from JWT)
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "User ID not found in token")
@@ -115,18 +130,81 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
-		switch err.Error() {
-		case constants.ErrCodeUnauthorized:
-			utils.RespondUnauthorized(c, err.Error())
-		case constants.ErrCodeForbidden:
-			utils.RespondForbidden(c, err.Error())
-		case constants.ErrCodeInternalServerError:
-			utils.RespondInternalServerError(c, err.Error())
-		default:
-			utils.RespondBadRequest(c, err.Error())
+		// Use sentinel errors for consistent error handling
+		if errors.Is(err, constants.ErrUserNotFound) {
+			utils.RespondNotFound(c, err.Error())
+			return
 		}
+		if errors.Is(err, constants.ErrCurrentPasswordIncorrect) {
+			utils.RespondUnauthorized(c, err.Error())
+			return
+		}
+		if errors.Is(err, constants.ErrPasswordMismatch) || errors.Is(err, constants.ErrSamePassword) {
+			utils.RespondBadRequest(c, err.Error())
+			return
+		}
+
+		// Default to internal server error for unknown errors
+		utils.RespondInternalServerError(c, "Failed to reset password")
 		return
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password reset successful")
+}
+
+// Logout godoc
+// @Summary Logout from the system
+// @Description Remove access token cookie to logout user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully logged out"
+// @Router /auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Clear the access token cookie using helper
+	utils.ClearAuthCookie(c, h.cookieConfig)
+	utils.RespondSuccess[any](c, nil, "Logout successful")
+}
+
+// VerifyOtp godoc
+// @Summary Verify OTP code
+// @Description Verify the OTP code sent to user's email and mark account as verified
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.VerifyOtpRequest true "Verify OTP request"
+// @Success 200 "Email verified successfully"
+// @Failure 400 "Bad request - validation error or invalid/expired OTP"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/verify-otp [post]
+func (h *AuthHandler) VerifyOtp(c *gin.Context) {
+	var req requests.VerifyOtpRequest
+
+	// Validate request body
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	ctx := c.Request.Context()
+	success, err := h.services.Auth.VerifyOtp(ctx, req.Email, req.Otp)
+
+	if err != nil {
+		errMsg := err.Error()
+		if constants.ErrCodeNotFound == errMsg {
+			utils.RespondNotFound(c, errMsg)
+			return
+		}
+		utils.RespondInternalServerError(c, errMsg)
+		return
+	}
+
+	if !success {
+		utils.RespondBadRequest(c, "Invalid or expired OTP")
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Email verified successfully")
 }
