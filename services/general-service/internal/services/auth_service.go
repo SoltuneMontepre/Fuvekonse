@@ -9,6 +9,7 @@ import (
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/dto/auth/responses"
 	"general-service/internal/repositories"
+	"net/url"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -223,4 +224,90 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 	}
 
 	return true, nil
+}
+
+// ForgotPassword generates a password-reset JWT and emails it to the user.
+// frontendURL can be empty; email body includes token itself for Swagger testing.
+func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailService *MailService, frontendURL, fromEmail string) error {
+	user, err := s.repos.User.FindByEmail(email)
+	if err != nil {
+		// do not leak existence of email — return nil for not-found
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	// create signed reset token
+	token, err := utils.CreateForgotPasswordToken(user.Id, user.Email, user.FursonaName, user.Role.String())
+	if err != nil {
+		return fmt.Errorf("failed to create reset token: %w", err)
+	}
+
+	// if frontendURL provided, create link; otherwise include token in email body
+	var link string
+	if frontendURL != "" {
+		u, err := url.Parse(frontendURL)
+		if err == nil {
+			q := u.Query()
+			q.Set("token", token)
+			u.RawQuery = q.Encode()
+			link = u.String()
+		}
+	}
+
+	// Compose email body. For Swagger testing we include the raw token as well.
+	body := fmt.Sprintf(
+		"Hello,\n\nUse the following token to reset your password (expires in %d minutes):\n\n%s\n\n",
+		int(utils.GetForgotPasswordTokenExpiry().Minutes()),
+		token,
+	)
+	if link != "" {
+		body += fmt.Sprintf("\nOr open the following link:\n\n%s\n\n", link)
+	}
+	body += "If you did not request this, ignore this message."
+
+	if mailService == nil {
+		return fmt.Errorf("mail service not available")
+	}
+
+	if err := mailService.SendEmail(ctx, fromEmail, user.Email, "Password Reset Request", body, nil, nil); err != nil {
+		return fmt.Errorf("failed to send reset email: %w", err)
+	}
+
+	return nil
+}
+
+// ResetPasswordWithToken validates reset token and updates the user's password
+func (s *AuthService) ResetPasswordWithToken(token string, req *requests.ResetPasswordTokenRequest) error {
+	if req.NewPassword != req.ConfirmedPassword {
+		return constants.ErrPasswordMismatch
+	}
+
+	claims, err := utils.ValidateForgotPasswordToken(token)
+	if err != nil {
+		return err
+	}
+
+	userID := claims.UserID
+	user, err := s.repos.User.FindByID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return constants.ErrUserNotFound
+		}
+		return err
+	}
+
+	hashed, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return constants.ErrInternalServer
+	}
+
+	user.Password = hashed
+
+	if err := s.repos.User.UpdateUserProfile(user); err != nil {
+		return constants.ErrInternalServer
+	}
+
+	return nil
 }
