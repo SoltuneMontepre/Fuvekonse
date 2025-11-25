@@ -2,6 +2,7 @@
 
 [![CI - General Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml)
 [![CI - Ticket Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml)
+[![sqs-worker CD](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/cd-sqs-worker.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/cd-sqs-worker.yaml)
 
 ## Overview
 

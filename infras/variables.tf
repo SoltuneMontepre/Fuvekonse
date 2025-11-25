@@ -48,6 +48,12 @@ variable "iam_bucket_access_username" {
   type        = string
 }
 
+variable "iam_s3_upload_username" {
+  description = "IAM username for S3 upload access from frontend"
+  type        = string
+  default     = "fuvekon-s3-upload"
+}
+
 variable "iam_lambda_app_role_name" {
   description = "The name of the IAM role for Lambda application"
   type        = string

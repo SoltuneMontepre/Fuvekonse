@@ -1,7 +1,9 @@
 # Cursor Rules for Fuvekonse Project
 
 ## Project Overview
+
 This is a Go microservices project using:
+
 - **Framework**: Gin (HTTP router)
 - **Database**: PostgreSQL with GORM
 - **Cache**: Redis
@@ -12,7 +14,9 @@ This is a Go microservices project using:
 ## Architecture Patterns
 
 ### Service Structure
+
 Each service follows this structure:
+
 ```
 services/{service-name}/
 ├── cmd/
@@ -33,6 +37,7 @@ services/{service-name}/
 ### Layer Responsibilities
 
 **Handlers (HTTP Layer)**
+
 - Handle HTTP requests/responses only
 - Validate request DTOs using `c.ShouldBindJSON()`
 - Call services with context
@@ -47,6 +52,7 @@ services/{service-name}/
 - Always include Swagger annotations for API documentation
 
 **Services (Business Logic)**
+
 - Contain all business logic
 - Accept `context.Context` as first parameter
 - Use repositories for data access
@@ -55,6 +61,7 @@ services/{service-name}/
 - Never access database directly (use repositories)
 
 **Repositories (Data Access)**
+
 - Only database operations
 - Accept `*gorm.DB` or repository-specific DB connection
 - Return models or errors
@@ -62,6 +69,7 @@ services/{service-name}/
 - Use GORM query methods: `Where()`, `First()`, `Find()`, `Save()`, `Create()`, `Update()`
 
 **Models (Database Schema)**
+
 - Use GORM tags for database mapping
 - Include soft delete support: `DeletedAt *time.Time` and `IsDeleted bool`
 - Use `uuid.UUID` for primary keys
@@ -71,6 +79,7 @@ services/{service-name}/
 ## Code Style & Conventions
 
 ### Naming Conventions
+
 - **Packages**: lowercase, single word (e.g., `handlers`, `services`, `repositories`)
 - **Files**: snake_case (e.g., `auth_handler.go`, `user_repository.go`)
 - **Types**: PascalCase (e.g., `UserRepository`, `AuthService`)
@@ -79,6 +88,7 @@ services/{service-name}/
 - **Constants**: PascalCase for exported constants
 
 ### Error Handling
+
 - Use `errors.New()` for simple error messages
 - Use `errors.Is(err, gorm.ErrRecordNotFound)` to check for not found
 - Use sentinel errors from `common/constants` for domain errors (e.g., `constants.ErrAccountLocked`)
@@ -87,18 +97,22 @@ services/{service-name}/
 - Never expose internal implementation details in error messages
 
 ### API Response Format
+
 Always use the standardized `ApiResponse[T]` format:
+
 ```go
 utils.RespondSuccess(c, data, "Success message")
 utils.RespondError(c, errorCode, "Error message", statusCode)
 ```
 
 ### Context Usage
+
 - Always pass `context.Context` as the first parameter in service methods
 - Use context for cancellation, timeouts, and request-scoped values
 - Extract context from Gin: `c.Request.Context()`
 
 ### Database Patterns
+
 - Use soft deletes: always check `is_deleted = false` in queries
 - Use transactions for multi-step operations
 - Use GORM hooks for automatic timestamp management
@@ -108,6 +122,7 @@ utils.RespondError(c, errorCode, "Error message", statusCode)
 ## Authentication & Authorization
 
 ### JWT Authentication
+
 - Use `middlewares.JWTAuthMiddleware()` for protected routes
 - Extract user info from context: `c.Get("user_id")`, `c.Get("email")`, `c.Get("role")`
 - Store user ID as string in JWT claims
@@ -115,11 +130,13 @@ utils.RespondError(c, errorCode, "Error message", statusCode)
 - Access token expiry configured via `utils.GetAccessTokenExpiry()`
 
 ### Role-Based Access Control
+
 - Use `middlewares.RequireRole()` for role-based routes
 - Roles defined in `common/constants/user_roles.go`
 - Check roles in middleware before handler execution
 
 ### Rate Limiting
+
 - Use Redis for rate limiting (login attempts, API calls)
 - Implement rate limiting utilities in `common/utils/rate_limiter.go`
 - Use `utils.IsLoginBlocked()` and `utils.IncrementLoginFailedAttempts()` for login protection
@@ -127,7 +144,9 @@ utils.RespondError(c, errorCode, "Error message", statusCode)
 ## Swagger Documentation
 
 ### Annotations
+
 Every handler function must include Swagger annotations:
+
 ```go
 // FunctionName godoc
 // @Summary Brief summary
@@ -143,6 +162,7 @@ Every handler function must include Swagger annotations:
 ```
 
 ### Generating Swagger Docs
+
 - Run `swag init -g cmd/main.go -o ./docs` before building
 - Swagger docs are auto-generated and gitignored
 - Access docs at `/swagger/index.html`
@@ -150,6 +170,7 @@ Every handler function must include Swagger annotations:
 ## AWS Lambda Support
 
 ### Lambda Handler Pattern
+
 - Check for Lambda environment: `os.Getenv("AWS_LAMBDA_FUNCTION_NAME")`
 - Use `ginadapter.GinLambda` for Lambda integration
 - Same router works for both local and Lambda deployment
@@ -158,12 +179,14 @@ Every handler function must include Swagger annotations:
 ## Environment Configuration
 
 ### Environment Variables
+
 - Use `config.LoadEnv()` to load environment variables
 - Use `config.GetEnvOr(key, defaultValue)` for optional vars
 - Store env config in `internal/config/env.go`
 - Never commit `.env` files
 
 ### Database Connection
+
 - Use `database.ConnectWithEnv()` for database connection
 - Use `database.InitRedis()` for Redis connection
 - Always close connections: `defer database.CloseRedis()`
@@ -171,28 +194,33 @@ Every handler function must include Swagger annotations:
 ## Testing Guidelines
 
 ### Test Structure
+
 - Create `*_test.go` files alongside source files
 - Use table-driven tests for multiple scenarios
 - Mock repositories for service tests
 - Use test database for integration tests
 
 ### Test Naming
+
 - Test functions: `TestFunctionName_Scenario`
 - Example: `TestLogin_InvalidCredentials`, `TestLogin_Success`
 
 ## Code Quality
 
 ### Imports
+
 - Group imports: standard library, third-party, local
 - Use `gofmt` or `goimports` for formatting
 - Remove unused imports
 
 ### Comments
+
 - Export all public functions, types, and constants
 - Use `//` for comments, `/* */` for package documentation
 - Include usage examples in complex functions
 
 ### Dependencies
+
 - Use Go modules (`go.mod`)
 - Pin specific versions in `go.mod`
 - Run `go mod tidy` regularly
@@ -201,12 +229,14 @@ Every handler function must include Swagger annotations:
 ## Service-Specific Patterns
 
 ### General Service
+
 - Handles authentication, user management
 - Uses JWT for authentication
 - Implements rate limiting for login attempts
 - Uses email service for notifications
 
 ### Ticket Service
+
 - Handles ticket-related operations
 - Similar architecture to general-service
 - May have different models and business logic
@@ -214,20 +244,24 @@ Every handler function must include Swagger annotations:
 ## Common Utilities
 
 ### Response Utils (`common/utils/response_utils.go`)
+
 - Standardized API responses
 - Consistent error formatting
 - Status code management
 
 ### Auth Utils (`common/utils/auth_utils.go`)
+
 - JWT token creation and validation
 - Password hashing with bcrypt
 - Token expiry management
 
 ### Bcrypt Utils (`common/utils/bcrypt_utils.go`)
+
 - Password hashing: `utils.HashPassword()`
 - Password comparison: `utils.ComparePassword()`
 
 ### Rate Limiter (`common/utils/rate_limiter.go`)
+
 - Redis-based rate limiting
 - Login attempt tracking
 - Account lockout management
@@ -278,4 +312,3 @@ Every handler function must include Swagger annotations:
 - Refer to Swagger docs for API contract
 - Keep code simple and readable
 - Prioritize security and error handling
-
