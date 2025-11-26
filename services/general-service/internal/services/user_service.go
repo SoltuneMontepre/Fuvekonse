@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"general-service/internal/common/constants"
 	"general-service/internal/dto/common"
 	"general-service/internal/dto/user/requests"
 	"general-service/internal/dto/user/responses"
@@ -102,7 +103,7 @@ func (s *UserService) UpdateAvatar(userID string, req *requests.UpdateAvatarRequ
 	user, err := s.repos.User.FindByID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, constants.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -166,7 +167,7 @@ func (s *UserService) GetUserByIDForAdmin(userID string) (*responses.UserDetaile
 	user, err := s.repos.User.FindByIDForAdmin(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, constants.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -180,7 +181,7 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	user, err := s.repos.User.FindByIDForAdmin(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, constants.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -226,7 +227,7 @@ func (s *UserService) DeleteUser(userID string) error {
 	user, err := s.repos.User.FindByIDForAdmin(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("user not found")
+			return constants.ErrUserNotFound
 		}
 		return err
 	}
@@ -250,7 +251,7 @@ func (s *UserService) VerifyUser(userID string) (*responses.UserDetailedResponse
 	user, err := s.repos.User.FindByIDForAdmin(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+			return nil, constants.ErrUserNotFound
 		}
 		return nil, err
 	}
