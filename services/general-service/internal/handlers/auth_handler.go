@@ -16,16 +16,21 @@ type AuthHandler struct {
 	cookieConfig utils.CookieConfig
 }
 
+// getEnvOr returns the environment variable value or a default value if not set
+func getEnvOr(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func NewAuthHandler(services *services.Services) *AuthHandler {
 	// Load cookie configuration from environment
-	secure := os.Getenv("COOKIE_SECURE") != "false" // Default to true
-	sameSite := os.Getenv("COOKIE_SAMESITE")
-	if sameSite == "" {
-		sameSite = "Strict" // Default to Strict for security
-	}
+	secure := getEnvOr("COOKIE_SECURE", "true") != "false" // Default to true
+	sameSite := getEnvOr("COOKIE_SAMESITE", "Strict")      // Default to Strict for security
 
 	cookieConfig := utils.CookieConfig{
-		Domain:   os.Getenv("COOKIE_DOMAIN"),
+		Domain:   getEnvOr("COOKIE_DOMAIN", ""),
 		Secure:   secure,
 		SameSite: sameSite,
 		MaxAge:   int(utils.GetAccessTokenExpiry().Seconds()),
@@ -223,8 +228,8 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	fromEmail := os.Getenv("SES_EMAIL_IDENTITY") //test cuz idk
-	frontendURL := os.Getenv("FRONTEND_URL")
+	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "") //test cuz idk
+	frontendURL := getEnvOr("FRONTEND_URL", "")
 
 	if err := h.services.Auth.ForgotPassword(c.Request.Context(), req.Email, h.services.Mail, frontendURL, fromEmail); err != nil {
 		utils.RespondInternalServerError(c, "Failed to process password reset request")
