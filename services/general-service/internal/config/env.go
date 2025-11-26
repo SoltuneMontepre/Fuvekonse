@@ -21,6 +21,8 @@ func LoadEnv() error {
 	envPaths := []string{
 		".env",
 		"../../.env",
+		"../../../.env",
+		"../../../../.env",
 	}
 
 	var lastErr error
@@ -29,6 +31,7 @@ func LoadEnv() error {
 		err := godotenv.Load(absPath)
 		if err == nil {
 			// Successfully loaded
+			fmt.Printf("Loaded .env from: %s\n", absPath)
 			return nil
 		}
 		lastErr = err

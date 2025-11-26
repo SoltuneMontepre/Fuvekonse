@@ -33,7 +33,6 @@ func MapUserToDetailedResponse(user *models.User) *responses.UserDetailedRespons
 		Avatar:           user.Avatar,
 		Role:             user.Role,
 		IdentificationId: user.IdentificationId,
-		PassportId:       user.PassportId,
 		IsVerified:       user.IsVerified,
 		CreatedAt:        user.CreatedAt,
 		ModifiedAt:       user.ModifiedAt,

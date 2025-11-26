@@ -87,11 +87,6 @@ func (s *UserService) UpdateProfile(userID string, req *requests.UpdateProfileRe
 	if req.IdentificationId != nil {
 		user.IdentificationId = *req.IdentificationId
 	}
-	if req.PassportId != nil {
-		user.PassportId = *req.PassportId
-	}
-
-
 
 	// Save updated user
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
@@ -212,9 +207,6 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	}
 	if req.IdentificationId != nil {
 		user.IdentificationId = *req.IdentificationId
-	}
-	if req.PassportId != nil {
-		user.PassportId = *req.PassportId
 	}
 	if req.IsVerified != nil {
 		user.IsVerified = *req.IsVerified

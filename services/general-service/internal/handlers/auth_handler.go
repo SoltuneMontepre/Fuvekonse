@@ -64,7 +64,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "")
-	
+
 	response, err := h.services.Auth.Register(c.Request.Context(), &req, h.services.Mail, fromEmail)
 	if err != nil {
 		errMsg := err.Error()

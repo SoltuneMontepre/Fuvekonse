@@ -36,7 +36,6 @@ type UserDetailedResponse struct {
 	Avatar           string        `json:"avatar"`
 	Role             role.UserRole `json:"role"`
 	IdentificationId string        `json:"identification_id,omitempty"`
-	PassportId       string        `json:"passport_id,omitempty"`
 	IsVerified       bool          `json:"is_verified"`
 	CreatedAt        time.Time     `json:"created_at"`
 	ModifiedAt       time.Time     `json:"modified_at"`
