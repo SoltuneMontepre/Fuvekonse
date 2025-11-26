@@ -42,6 +42,47 @@ func NewAuthHandler(services *services.Services) *AuthHandler {
 	}
 }
 
+// Register godoc
+// @Summary Register a new user account
+// @Description Create a new user account with email verification. An OTP will be sent to the provided email.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.RegisterRequest true "Registration details"
+// @Success 200 "Registration successful, OTP sent to email"
+// @Failure 400 "Bad request - validation error or passwords don't match"
+// @Failure 409 "Conflict - user already exists"
+// @Failure 500 "Internal server error"
+// @Router /auth/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req requests.RegisterRequest
+
+	// Validate request body
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "")
+	
+	response, err := h.services.Auth.Register(c.Request.Context(), &req, h.services.Mail, fromEmail)
+	if err != nil {
+		errMsg := err.Error()
+		if errMsg == "user with this email already exists" {
+			utils.RespondError(c, 409, "USER_EXISTS", errMsg)
+			return
+		}
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondBadRequest(c, "Passwords do not match")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to register user")
+		return
+	}
+
+	utils.RespondSuccess(c, response, response.Message)
+}
+
 // Login godoc
 // @Summary Login to the system
 // @Description Authenticate user with email and password, returns access token and refresh token

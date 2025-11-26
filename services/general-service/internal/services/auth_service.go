@@ -8,10 +8,12 @@ import (
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/dto/auth/responses"
+	"general-service/internal/models"
 	"general-service/internal/repositories"
 	"net/url"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -30,6 +32,120 @@ func NewAuthService(repos *repositories.Repositories, redisClient *redis.Client,
 		loginMaxFail:          loginMaxFail,
 		loginFailBlockMinutes: loginFailBlockMinutes,
 	}
+}
+
+// Register creates a new user account and sends OTP verification email
+func (s *AuthService) Register(ctx context.Context, req *requests.RegisterRequest, mailService *MailService, fromEmail string) (*responses.RegisterResponse, error) {
+	// Validate password match
+	if req.Password != req.ConfirmPassword {
+		return nil, constants.ErrPasswordMismatch
+	}
+
+	// Check if user already exists
+	existingUser, err := s.repos.User.FindByEmail(req.Email)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to check existing user: %w", err)
+	}
+	if existingUser != nil {
+		return nil, fmt.Errorf("user with this email already exists")
+	}
+
+	// Hash password
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Generate OTP
+	otp, err := utils.GenerateOtp()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate OTP: %w", err)
+	}
+
+	// Set OTP expiry time (10 minutes)
+	expiryTime := time.Now().Add(10 * time.Minute)
+
+	// Parse full name into first and last name
+	firstName, lastName := parseFullName(req.FullName)
+
+	// Create new user
+	newUser := &models.User{
+		Id:               uuid.New(),
+		FursonaName:      req.Nickname,
+		FirstName:        firstName,
+		LastName:         lastName,
+		Email:            req.Email,
+		Password:         hashedPassword,
+		Country:          req.Country,
+		IdentificationId: req.IdCard,
+		IsVerified:       false,
+		Otp:              otp,
+		OtpExpiryTime:    &expiryTime,
+		Role:             constants.RoleUser,
+		CreatedAt:        time.Now(),
+		ModifiedAt:       time.Now(),
+	}
+
+	// Save user to database
+	if err := s.repos.User.Create(newUser); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Send OTP email
+	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp); err != nil {
+		// Log error but don't fail registration
+		fmt.Printf("[ERROR] Failed to send OTP email to %s: %v\n", newUser.Email, err)
+		return &responses.RegisterResponse{
+			Message: "Registration successful, but failed to send verification email. Please request a new OTP.",
+			Email:   newUser.Email,
+		}, nil
+	}
+
+	return &responses.RegisterResponse{
+		Message: "Registration successful. Please check your email for OTP verification.",
+		Email:   newUser.Email,
+	}, nil
+}
+
+// parseFullName splits a full name into first and last name
+func parseFullName(fullName string) (firstName, lastName string) {
+	// Simple implementation - you can make this more sophisticated
+	parts := splitName(fullName)
+	if len(parts) == 0 {
+		return "", ""
+	}
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	// First part is first name, rest is last name
+	firstName = parts[0]
+	for i := 1; i < len(parts); i++ {
+		if i > 1 {
+			lastName += " "
+		}
+		lastName += parts[i]
+	}
+	return firstName, lastName
+}
+
+// splitName splits a name by spaces
+func splitName(name string) []string {
+	var parts []string
+	current := ""
+	for _, char := range name {
+		if char == ' ' {
+			if current != "" {
+				parts = append(parts, current)
+				current = ""
+			}
+		} else {
+			current += string(char)
+		}
+	}
+	if current != "" {
+		parts = append(parts, current)
+	}
+	return parts
 }
 
 // Login authenticates a user and returns tokens
