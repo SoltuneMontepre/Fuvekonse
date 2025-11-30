@@ -77,7 +77,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		c.JSON(200, gin.H{"status": "redis healthy"})
 	})
 
-	v1 := router.Group("/api/v1")
+	v1 := router.Group("/v1")
 	{
 		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)
