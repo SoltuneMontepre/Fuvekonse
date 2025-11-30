@@ -82,7 +82,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		c.JSON(200, gin.H{"status": "redis healthy"})
 	})
 
-	api := router.Group("/api/v1")
+	api := router.Group("/v1")
 	{
 		SetupRoleRoutes(api, h.Role)
 		SetupPermissionRoutes(api, h.Permission)
