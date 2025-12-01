@@ -21,17 +21,10 @@ type MailService struct {
 
 func NewMailService(repos *repositories.Repositories) *MailService {
 	ctx := context.Background()
+
 	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = "ap-southeast-1"
-	}
 
 	useLocalStack := os.Getenv("USE_LOCALSTACK") == "true"
-	localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
-	if localEndpoint == "" {
-		localEndpoint = "http://localhost:4566"
-	}
-
 	var cfg aws.Config
 	var err error
 
@@ -39,9 +32,10 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if accessKey == "" || secretKey == "" {
-			log.Printf("warning: AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set for LocalStack")
-			return &MailService{repos: repos, sesClient: nil}
+			log.Fatalf("USE_LOCALSTACK=true but AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set")
 		}
+
+		localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
 
 		cfg, err = config.LoadDefaultConfig(ctx,
 			config.WithRegion(region),
@@ -58,13 +52,7 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 	}
 
 	if err != nil {
-		// Don't fatal in dev — fallback to log-only mail service
-		env := os.Getenv("ENV")
-		if env == "production" {
-			log.Fatalf("failed to load AWS SDK config in production: %v", err)
-		}
-		log.Printf("warning: failed to load AWS SDK config: %v — emails will be logged to console", err)
-		return &MailService{repos: repos, sesClient: nil}
+		log.Fatalf("failed to load AWS SDK config: %v", err)
 	}
 
 	client := ses.NewFromConfig(cfg)
@@ -72,20 +60,21 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 }
 
 func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
-	// If no SES client (config failed or dev mode), fallback to logging
-	if s.sesClient == nil || os.Getenv("DEV_EMAIL_FALLBACK") == "true" {
-		log.Printf("[DEV EMAIL] from=%s to=%s subject=%s\nbody:\n%s\n", fromEmail, toEmail, subject, body)
-		return nil
+	// log the email content ...
+	if os.Getenv("USE_LOCALSTACK") == "true" {
+		log.Printf("[EMAIL CONTENT] From: %s To: %s Subject: %s\nBody:\n%s\n", fromEmail, toEmail, subject, body)
+	}
+
+	if s.sesClient == nil {
+		return fmt.Errorf("SES client not configured")
 	}
 
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
-
 	if len(cc) > 0 {
 		destination.CcAddresses = cc
 	}
-
 	if len(bcc) > 0 {
 		destination.BccAddresses = bcc
 	}
@@ -110,11 +99,6 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
 		log.Printf("failed to send email via SES: %v (from=%s to=%s)", err, fromEmail, toEmail)
-		// Optional fallback on send failure if DEV_EMAIL_FALLBACK is true:
-		if os.Getenv("DEV_EMAIL_FALLBACK") == "true" {
-			log.Printf("[DEV-FALLBACK] Email fallback (send failed): from=%s to=%s subject=%s body=%s\n", fromEmail, toEmail, subject, body)
-			return nil
-		}
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
