@@ -37,6 +37,9 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 		//add jwt auth
 		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
 		auth.POST("/verify-otp", h.Auth.VerifyOtp)
+
+		auth.POST("/forgot-password", h.Auth.ForgotPassword)
+		auth.POST("/reset-password/confirm", h.Auth.ResetPasswordConfirm)
 	}
 }
 
@@ -74,7 +77,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		c.JSON(200, gin.H{"status": "redis healthy"})
 	})
 
-	v1 := router.Group("/api/v1")
+	v1 := router.Group("/v1")
 	{
 		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)

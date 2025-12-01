@@ -79,6 +79,23 @@ output "sqs_worker_function_name" {
   value       = module.lambda.sqs_worker_function_name
 }
 
+# S3 Upload User Outputs (for Frontend)
+output "s3_upload_access_key_id" {
+  description = "Access Key ID for S3 uploads from frontend"
+  value       = module.iam.s3_upload_access_key_id
+}
+
+output "s3_upload_secret_access_key" {
+  description = "Secret Access Key for S3 uploads from frontend"
+  value       = module.iam.s3_upload_secret_access_key
+  sensitive   = true
+}
+
+output "s3_upload_user_name" {
+  description = "Username of the S3 upload IAM user"
+  value       = module.iam.s3_upload_user_name
+}
+
 output "sqs_worker_function_arn" {
   description = "ARN of the SQS worker Lambda function"
   value       = module.lambda.sqs_worker_function_arn
