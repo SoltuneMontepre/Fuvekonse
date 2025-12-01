@@ -38,11 +38,9 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 	if useLocalStack {
 		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-		if accessKey == "" {
-			accessKey = "test"
-		}
-		if secretKey == "" {
-			secretKey = "test"
+		if accessKey == "" || secretKey == "" {
+			log.Printf("warning: AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set for LocalStack")
+			return &MailService{repos: repos, sesClient: nil}
 		}
 
 		cfg, err = config.LoadDefaultConfig(ctx,
@@ -61,6 +59,10 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 
 	if err != nil {
 		// Don't fatal in dev — fallback to log-only mail service
+		env := os.Getenv("ENV")
+		if env == "production" {
+			log.Fatalf("failed to load AWS SDK config in production: %v", err)
+		}
 		log.Printf("warning: failed to load AWS SDK config: %v — emails will be logged to console", err)
 		return &MailService{repos: repos, sesClient: nil}
 	}
