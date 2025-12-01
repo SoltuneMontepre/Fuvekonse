@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"general-service/internal/repositories"
-
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 )
@@ -20,21 +21,61 @@ type MailService struct {
 
 func NewMailService(repos *repositories.Repositories) *MailService {
 	ctx := context.Background()
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "ap-southeast-1"
+	}
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	useLocalStack := os.Getenv("USE_LOCALSTACK") == "true"
+	localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
+	if localEndpoint == "" {
+		localEndpoint = "http://localhost:4566"
+	}
+
+	var cfg aws.Config
+	var err error
+
+	if useLocalStack {
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		if accessKey == "" {
+			accessKey = "test"
+		}
+		if secretKey == "" {
+			secretKey = "test"
+		}
+
+		cfg, err = config.LoadDefaultConfig(ctx,
+			config.WithRegion(region),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+			config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					URL:           localEndpoint,
+					SigningRegion: region,
+				}, nil
+			})),
+		)
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	}
+
 	if err != nil {
-		log.Fatalf("unable to load AWS SDK config: %v", err)
+		// Don't fatal in dev — fallback to log-only mail service
+		log.Printf("warning: failed to load AWS SDK config: %v — emails will be logged to console", err)
+		return &MailService{repos: repos, sesClient: nil}
 	}
 
 	client := ses.NewFromConfig(cfg)
-
-	return &MailService{
-		repos:     repos,
-		sesClient: client,
-	}
+	return &MailService{repos: repos, sesClient: client}
 }
 
 func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
+	// If no SES client (config failed or dev mode), fallback to logging
+	if s.sesClient == nil || os.Getenv("DEV_EMAIL_FALLBACK") == "true" {
+		log.Printf("[DEV EMAIL] from=%s to=%s subject=%s\nbody:\n%s\n", fromEmail, toEmail, subject, body)
+		return nil
+	}
+
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
@@ -66,6 +107,12 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 
 	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
+		log.Printf("failed to send email via SES: %v (from=%s to=%s)", err, fromEmail, toEmail)
+		// Optional fallback on send failure if DEV_EMAIL_FALLBACK is true:
+		if os.Getenv("DEV_EMAIL_FALLBACK") == "true" {
+			log.Printf("[DEV-FALLBACK] Email fallback (send failed): from=%s to=%s subject=%s body=%s\n", fromEmail, toEmail, subject, body)
+			return nil
+		}
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
