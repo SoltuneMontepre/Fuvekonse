@@ -18,8 +18,7 @@ type User struct {
 	Email            string        `gorm:"type:varchar(255);uniqueIndex" json:"email"`
 	Avatar           string        `gorm:"type:varchar(500)" json:"avatar"` // image url
 	Role             role.UserRole `gorm:"type:integer;default:0" json:"role"`
-	IdentificationId string        `gorm:"type:varchar(255)" json:"identification_id"`
-	PassportId       string        `gorm:"type:varchar(255)" json:"passport_id"`
+	IdCard           string        `gorm:"type:varchar(255)" json:"id_card"`
 	IsVerified       bool          `gorm:"default:false" json:"is_verified"`
 	CreatedAt        time.Time     `gorm:"autoCreateTime" json:"created_at"`
 	ModifiedAt       time.Time     `gorm:"autoUpdateTime" json:"modified_at"`
