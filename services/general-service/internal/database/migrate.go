@@ -9,7 +9,7 @@ import (
 
 func AutoMigrate(db *gorm.DB) error {
 	// Danh sách các models cần migrate
-	models := []interface{}{
+	allModels := []interface{}{
 		&models.User{},
 		&models.DealerBooth{},
 		&models.UserDealerStaff{},
@@ -20,14 +20,14 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 
 	// AutoMigrate thông thường (tạo tables, thêm columns, indexes)
-	err := db.AutoMigrate(models...)
+	err := db.AutoMigrate(allModels...)
 	if err != nil {
 		return fmt.Errorf("failed to auto-migrate base tables: %w", err)
 	}
 
 	// Drop các columns không còn trong model
 	// CẢNH BÁO: Điều này sẽ XÓA DỮ LIỆU vĩnh viễn!
-	if err := dropUnusedColumns(db, models); err != nil {
+	if err := dropUnusedColumns(db, allModels); err != nil {
 		return fmt.Errorf("failed to drop unused columns: %w", err)
 	}
 
@@ -62,11 +62,16 @@ func dropColumnsForModel(db *gorm.DB, migrator gorm.Migrator, model interface{})
 	}
 	tableName := stmt.Schema.Table
 
+	// Check if table exists before attempting to get column types
+	if !migrator.HasTable(tableName) {
+		// Table doesn't exist yet, skip
+		return nil
+	}
+
 	// Lấy tất cả columns hiện tại trong database
 	columnTypes, err := migrator.ColumnTypes(tableName)
 	if err != nil {
-		// Nếu table chưa tồn tại thì skip
-		return nil
+		return fmt.Errorf("failed to get column types for table %s: %w", tableName, err)
 	}
 
 	// Lấy danh sách fields trong model
