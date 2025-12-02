@@ -1,11 +1,19 @@
+#!/bin/sh
+# Pure POSIX sh script - works with sh, dash, bash, zsh, etc.
+
+set -e
+
 # Get the current branch name
 branch=$(git symbolic-ref --short HEAD)
 
+# Use printf with octal escape sequences for maximum cross-platform compatibility
+FAIL_BADGE=$(printf '\033[30;41m')
+INFO=$(printf '\033[97m')
+RESET=$(printf '\033[0m')
+SUCCESS_BADGE=$(printf '\033[30;42m')
+
 # Branch name validation
 branch_regex="^(main$|revert-.+|(feat|fix|docs|refactor|chore|task|feature)\/.+)"
-FAIL_BADGE=$'\u001B[30;41m'  
-INFO='\033[97m'           
-RESET='\033[0m'
 
 if ! echo "$branch" | grep -Eq "$branch_regex"; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Branch name '${branch}' does not match the required pattern:"
@@ -21,5 +29,4 @@ if ! echo "$branch" | grep -Eq "$branch_regex"; then
   exit 1
 fi
 
-SUCCESS_BADGE=$'\u001B[30;42m'  # black text on green background
 printf "\n%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Branch validation passed"

@@ -1,12 +1,17 @@
+#!/bin/sh
+# Pure POSIX sh script - works with sh, dash, bash, zsh, etc.
+
+set -e
+
 commit_msg=$(cat "$1")
 
-banned_words=("things" "stuff" "changes" "update" "fix" "test" "wip")
+# Use printf with octal escape sequences for maximum cross-platform compatibility
+FAIL_BADGE=$(printf '\033[30;41m')
+INFO=$(printf '\033[97m')
+RESET=$(printf '\033[0m')
+SUCCESS_BADGE=$(printf '\033[30;42m')
 
 commit_regex="^(feat|fix|chore|docs|style|refactor|test|perf|build|ci)(\(.+\))?: .+|^Merge.*|^Revert.*"
-FAIL_BADGE=$'\u001B[30;41m'  
-INFO='\033[97m'           
-RESET='\033[0m'
-SUCCESS_BADGE=$'\u001B[30;42m'
 
 if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message does not match the required pattern:"
@@ -23,23 +28,29 @@ if ! echo "$commit_msg" | grep -Eq "$commit_regex"; then
   exit 1
 fi
 
-message_only=$(echo "$commit_msg" | sed -E 's/^(feat|fix|chore|docs|style|refactor|test|perf|build|ci)(\(.+\))?: //i')
+# Extract message without prefix (use basic sed for BSD/GNU compatibility)
+message_only=$(echo "$commit_msg" | sed 's/^[^:]*: *//')
 
-if [ -z "$(echo "$message_only" | xargs)" ]; then
+# Check if message is empty after removing whitespace
+if [ -z "$(echo "$message_only" | tr -d ' \t\n\r')" ]; then
   printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Commit message cannot be empty"
   printf "%b\n" "${INFO}Please provide a descriptive commit message after the prefix.${RESET}"
   exit 1
 fi
 
-for banned in "${banned_words[@]}"; do
-  if [ "$(echo "$message_only" | tr '[:upper:]' '[:lower:]')" = "$(echo "$banned" | tr '[:upper:]' '[:lower:]')" ]; then
+# Convert message to lowercase for comparison (portable way)
+message_lower=$(echo "$message_only" | tr 'A-Z' 'a-z')
+
+# Check against banned words (no arrays, use case statement)
+case "$message_lower" in
+  things|stuff|changes|update|fix|test|wip)
     printf "\n%b\n" "${FAIL_BADGE} FAILED ${RESET} Please provide a more descriptive commit message\n"
     printf "%b\n" "${INFO}Examples:${RESET}"
     printf "%b\n" "${INFO}   - feat: add user authentication${RESET}"
     printf "%b\n" "${INFO}   - fix: resolve null pointer exception in login${RESET}"
     printf "%b\n" "${INFO}   - chore: update dependencies to latest versions${RESET}\n"
     exit 1
-  fi
-done
+    ;;
+esac
 
 printf "%b\n" "${SUCCESS_BADGE} PASSED ${RESET} Commit message validation passed\n"
