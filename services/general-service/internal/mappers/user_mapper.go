@@ -24,17 +24,17 @@ func MapUserToResponse(user *models.User) *responses.UserResponse {
 // MapUserToDetailedResponse maps a User model to a detailed UserDetailedResponse DTO (with sensitive fields)
 func MapUserToDetailedResponse(user *models.User) *responses.UserDetailedResponse {
 	return &responses.UserDetailedResponse{
-		Id:               user.Id,
-		FursonaName:      user.FursonaName,
-		LastName:         user.LastName,
-		FirstName:        user.FirstName,
-		Country:          user.Country,
-		Email:            user.Email,
-		Avatar:           user.Avatar,
-		Role:             user.Role,
-		IdentificationId: user.IdentificationId,
-		IsVerified:       user.IsVerified,
-		CreatedAt:        user.CreatedAt,
-		ModifiedAt:       user.ModifiedAt,
+		Id:          user.Id,
+		FursonaName: user.FursonaName,
+		LastName:    user.LastName,
+		FirstName:   user.FirstName,
+		Country:     user.Country,
+		Email:       user.Email,
+		Avatar:      user.Avatar,
+		Role:        user.Role,
+		IdCard:      user.IdCard,
+		IsVerified:  user.IsVerified,
+		CreatedAt:   user.CreatedAt,
+		ModifiedAt:  user.ModifiedAt,
 	}
 }

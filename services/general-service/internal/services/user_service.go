@@ -85,8 +85,8 @@ func (s *UserService) UpdateProfile(userID string, req *requests.UpdateProfileRe
 	if req.Country != nil {
 		user.Country = *req.Country
 	}
-	if req.IdentificationId != nil {
-		user.IdentificationId = *req.IdentificationId
+	if req.IdCard != nil {
+		user.IdCard = *req.IdCard
 	}
 
 	// Save updated user
@@ -206,8 +206,8 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	if req.Role != nil {
 		user.Role = *req.Role
 	}
-	if req.IdentificationId != nil {
-		user.IdentificationId = *req.IdentificationId
+	if req.IdCard != nil {
+		user.IdCard = *req.IdCard
 	}
 	if req.IsVerified != nil {
 		user.IsVerified = *req.IsVerified
