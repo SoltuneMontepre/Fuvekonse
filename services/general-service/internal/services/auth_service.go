@@ -70,20 +70,20 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 
 	// Create new user
 	newUser := &models.User{
-		Id:               uuid.New(),
-		FursonaName:      req.Nickname,
-		FirstName:        firstName,
-		LastName:         lastName,
-		Email:            req.Email,
-		Password:         hashedPassword,
-		Country:          req.Country,
-		IdentificationId: req.IdCard,
-		IsVerified:       false,
-		Otp:              otp,
-		OtpExpiryTime:    &expiryTime,
-		Role:             constants.RoleUser,
-		CreatedAt:        time.Now(),
-		ModifiedAt:       time.Now(),
+		Id:            uuid.New(),
+		FursonaName:   req.Nickname,
+		FirstName:     firstName,
+		LastName:      lastName,
+		Email:         req.Email,
+		Password:      hashedPassword,
+		Country:       req.Country,
+		IdCard:        req.IdCard,
+		IsVerified:    false,
+		Otp:           otp,
+		OtpExpiryTime: &expiryTime,
+		Role:          constants.RoleUser,
+		CreatedAt:     time.Now(),
+		ModifiedAt:    time.Now(),
 	}
 
 	// Save user to database
