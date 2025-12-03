@@ -9,4 +9,3 @@ type UpdateProfileRequest struct {
 	Country     *string `json:"country,omitempty" binding:"omitempty,max=255" example:"USA"`
 	IdCard      *string `json:"id_card,omitempty" binding:"omitempty,max=255" example:"ID123456"`
 }
-

@@ -99,14 +99,14 @@ func MigrateAndSeed(db *gorm.DB) error {
 		return err
 	}
 
-	if err := seedInitialData(db); err != nil {
+	if err := seedInitialData(); err != nil {
 		return fmt.Errorf("failed to seed data: %w", err)
 	}
 
 	return nil
 }
 
-func seedInitialData(db *gorm.DB) error {
+func seedInitialData() error {
 
 	fmt.Println("Initial data seeded successfully")
 	return nil

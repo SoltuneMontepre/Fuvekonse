@@ -15,4 +15,3 @@ type AdminUpdateUserRequest struct {
 	IdCard      *string        `json:"id_card,omitempty" binding:"omitempty,max=255" example:"ID123456"`
 	IsVerified  *bool          `json:"is_verified,omitempty" binding:"omitempty" example:"true"`
 }
-

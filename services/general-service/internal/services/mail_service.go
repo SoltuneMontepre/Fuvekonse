@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"general-service/internal/repositories"
-
 	"log"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 )
@@ -21,28 +22,59 @@ type MailService struct {
 func NewMailService(repos *repositories.Repositories) *MailService {
 	ctx := context.Background()
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	region := os.Getenv("AWS_REGION")
+
+	useLocalStack := os.Getenv("USE_LOCALSTACK") == "true"
+	var cfg aws.Config
+	var err error
+
+	if useLocalStack {
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		if accessKey == "" || secretKey == "" {
+			log.Fatalf("USE_LOCALSTACK=true but AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set")
+		}
+
+		localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
+
+		cfg, err = config.LoadDefaultConfig(ctx,
+			config.WithRegion(region),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+			config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					URL:           localEndpoint,
+					SigningRegion: region,
+				}, nil
+			})),
+		)
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	}
+
 	if err != nil {
-		log.Fatalf("unable to load AWS SDK config: %v", err)
+		log.Fatalf("failed to load AWS SDK config: %v", err)
 	}
 
 	client := ses.NewFromConfig(cfg)
-
-	return &MailService{
-		repos:     repos,
-		sesClient: client,
-	}
+	return &MailService{repos: repos, sesClient: client}
 }
 
 func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
+	// log the email content ...
+	if os.Getenv("USE_LOCALSTACK") == "true" {
+		log.Printf("[EMAIL CONTENT] From: %s To: %s Subject: %s\nBody:\n%s\n", fromEmail, toEmail, subject, body)
+	}
+
+	if s.sesClient == nil {
+		return fmt.Errorf("SES client not configured")
+	}
+
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
-
 	if len(cc) > 0 {
 		destination.CcAddresses = cc
 	}
-
 	if len(bcc) > 0 {
 		destination.BccAddresses = bcc
 	}
@@ -66,6 +98,7 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 
 	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
+		log.Printf("failed to send email via SES: %v (from=%s to=%s)", err, fromEmail, toEmail)
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 

@@ -16,6 +16,11 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+// Create creates a new user
+func (r *UserRepository) Create(user *models.User) error {
+	return r.db.Create(user).Error
+}
+
 // FindByEmail finds a user by email
 func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
