@@ -83,6 +83,13 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)
 
+		// Public ticket routes (no auth required for viewing tiers)
+		tickets := v1.Group("/tickets")
+		{
+			tickets.GET("/tiers", h.Ticket.GetTiers)
+			tickets.GET("/tiers/:id", h.Ticket.GetTierByID)
+		}
+
 		// Protected routes - require JWT authentication
 		protected := v1.Group("")
 		protected.Use(middlewares.JWTAuthMiddleware())
@@ -93,6 +100,16 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				users.GET("/me", h.User.GetMe)
 				users.PUT("/me", h.User.UpdateProfile)
 				users.PATCH("/me/avatar", h.User.UpdateAvatar)
+			}
+
+			// Protected ticket routes (require auth)
+			protectedTickets := protected.Group("/tickets")
+			{
+				protectedTickets.GET("/me", h.Ticket.GetMyTicket)
+				protectedTickets.POST("/purchase", h.Ticket.PurchaseTicket)
+				protectedTickets.PATCH("/me/confirm", h.Ticket.ConfirmPayment)
+				protectedTickets.DELETE("/me/cancel", h.Ticket.CancelTicket)
+				protectedTickets.PATCH("/me/badge", h.Ticket.UpdateBadgeDetails)
 			}
 		}
 
@@ -109,6 +126,19 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminUsers.PUT("/:id", h.User.UpdateUserByAdmin)
 				adminUsers.DELETE("/:id", h.User.DeleteUser)
 				adminUsers.PATCH("/:id/verify", h.User.VerifyUser)
+				adminUsers.GET("/blacklisted", h.Ticket.GetBlacklistedUsers)
+				adminUsers.PATCH("/:id/blacklist", h.Ticket.BlacklistUser)
+				adminUsers.PATCH("/:id/unblacklist", h.Ticket.UnblacklistUser)
+			}
+
+			// Admin ticket management routes
+			adminTickets := admin.Group("/tickets")
+			{
+				adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
+				adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
+				adminTickets.GET("/:id", h.Ticket.GetTicketByID)
+				adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
+				adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
 			}
 		}
 	}

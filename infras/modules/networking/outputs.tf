@@ -13,7 +13,7 @@ output "general_service_url" {
   value       = "${aws_apigatewayv2_api.main.api_endpoint}/api/general"
 }
 
-output "ticket_service_url" {
-  description = "Full URL for the ticket service"
+output "rbac_service_url" {
+  description = "Full URL for the RBAC service (legacy /api/ticket path for backwards compatibility)"
   value       = "${aws_apigatewayv2_api.main.api_endpoint}/api/ticket"
 }

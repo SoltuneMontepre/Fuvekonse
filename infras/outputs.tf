@@ -49,9 +49,9 @@ output "general_service_url" {
   value       = module.networking.general_service_url
 }
 
-output "ticket_service_url" {
-  description = "HTTPS URL for the ticket service (use this in your frontend)"
-  value       = module.networking.ticket_service_url
+output "rbac_service_url" {
+  description = "HTTPS URL for the RBAC service (legacy /api/ticket path for backwards compatibility)"
+  value       = module.networking.rbac_service_url
 }
 
 output "api_gateway_url" {
@@ -69,9 +69,9 @@ output "general_service_function_name" {
   value       = module.lambda.general_service_function_name
 }
 
-output "ticket_service_function_name" {
-  description = "Name of the ticket service Lambda function"
-  value       = module.lambda.ticket_service_function_name
+output "rbac_service_function_name" {
+  description = "Name of the RBAC service Lambda function"
+  value       = module.lambda.rbac_service_function_name
 }
 
 output "sqs_worker_function_name" {

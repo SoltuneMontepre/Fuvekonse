@@ -44,17 +44,17 @@ resource "aws_lambda_function" "general_service" {
   }
 }
 
-# Ticket Service Lambda Function
-resource "aws_lambda_function" "ticket_service" {
-  function_name = "${var.project_name}-ticket-service"
+# RBAC Service Lambda Function
+resource "aws_lambda_function" "rbac_service" {
+  function_name = "${var.project_name}-rbac-service"
   role          = var.lambda_role_arn
   handler       = "bootstrap"
   runtime       = "provided.al2023"
   timeout       = 30
   memory_size   = 512
 
-  filename         = var.ticket_service_zip_path
-  source_code_hash = filebase64sha256(var.ticket_service_zip_path)
+  filename         = var.rbac_service_zip_path
+  source_code_hash = filebase64sha256(var.rbac_service_zip_path)
 
   environment {
     variables = {
@@ -86,7 +86,7 @@ resource "aws_lambda_function" "ticket_service" {
   tags = {
     Name        = var.project_name
     Environment = "Production"
-    Service     = "ticket-service"
+    Service     = "rbac-service"
   }
 }
 
@@ -101,8 +101,8 @@ resource "aws_cloudwatch_log_group" "general_service" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "ticket_service" {
-  name              = "/aws/lambda/${aws_lambda_function.ticket_service.function_name}"
+resource "aws_cloudwatch_log_group" "rbac_service" {
+  name              = "/aws/lambda/${aws_lambda_function.rbac_service.function_name}"
   retention_in_days = 14
 
   tags = {
