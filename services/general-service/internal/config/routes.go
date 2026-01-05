@@ -93,6 +93,12 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				users.PUT("/me", h.User.UpdateProfile)
 				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
+
+			// Dealer routes
+			dealer := protected.Group("/dealer")
+			{
+				_ = dealer // Placeholder - routes will be added here
+			}
 		}
 
 		// Admin only routes - require JWT authentication and admin role

@@ -12,7 +12,7 @@
 //	@license.url	https://opensource.org/licenses/MIT
 
 //	@host		localhost:8085
-//	@BasePath	/api/v1
+//	@BasePath	/v1
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -120,7 +120,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	// Database is already initialized and passed in
 	// Set the global DB reference
 	database.GlobalDB = db
-	
+
 	// Initialize Redis
 	setupRedis()
 
@@ -136,7 +136,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	// Setup router with middleware
 	router := gin.Default()
 	allowedOrigins := config.GetEnvOr("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-	
+
 	router.Use(middlewares.CorsMiddleware(allowedOrigins))
 	log.Println("CORS middleware configured with allowed origins:", allowedOrigins)
 
