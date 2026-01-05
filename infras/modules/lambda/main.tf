@@ -31,6 +31,9 @@ resource "aws_lambda_function" "general_service" {
       S3_BUCKET                        = var.s3_bucket_name
       SES_SENDER                       = var.ses_sender_email
       SQS_QUEUE                        = var.sqs_queue_url
+      COOKIE_DOMAIN                    = ""
+      COOKIE_SECURE                    = "true"
+      COOKIE_SAMESITE                  = "None"
     }
   }
 
@@ -74,6 +77,9 @@ resource "aws_lambda_function" "ticket_service" {
       S3_BUCKET                        = var.s3_bucket_name
       SES_SENDER                       = var.ses_sender_email
       SQS_QUEUE                        = var.sqs_queue_url
+      COOKIE_DOMAIN                    = ""
+      COOKIE_SECURE                    = "true"
+      COOKIE_SAMESITE                  = "None"
     }
   }
 

@@ -31,6 +31,7 @@ func CheckHealth(c *gin.Context) {
 func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	auth := router.Group("/auth")
 	{
+		auth.POST("/register", h.Auth.Register)
 		auth.POST("/login", h.Auth.Login)
 		auth.POST("/logout", middlewares.JWTAuthMiddleware(), h.Auth.Logout)
 
