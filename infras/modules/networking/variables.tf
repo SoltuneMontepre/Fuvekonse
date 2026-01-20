@@ -19,12 +19,12 @@ variable "general_service_invoke_arn" {
   type        = string
 }
 
-variable "ticket_service_function_name" {
-  description = "Name of the ticket service Lambda function"
+variable "rbac_service_function_name" {
+  description = "Name of the RBAC service Lambda function"
   type        = string
 }
 
-variable "ticket_service_invoke_arn" {
-  description = "Invoke ARN of the ticket service Lambda function"
+variable "rbac_service_invoke_arn" {
+  description = "Invoke ARN of the RBAC service Lambda function"
   type        = string
 }

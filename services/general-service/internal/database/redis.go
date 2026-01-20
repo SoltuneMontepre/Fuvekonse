@@ -56,7 +56,6 @@ func InitRedis() error {
 	}
 
 	RedisClient = client
-	fmt.Println("Redis connection established successfully")
 	return nil
 }
 

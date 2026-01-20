@@ -13,19 +13,19 @@ output "general_service_invoke_arn" {
   value       = aws_lambda_function.general_service.invoke_arn
 }
 
-output "ticket_service_function_name" {
-  description = "Name of the ticket service Lambda function"
-  value       = aws_lambda_function.ticket_service.function_name
+output "rbac_service_function_name" {
+  description = "Name of the RBAC service Lambda function"
+  value       = aws_lambda_function.rbac_service.function_name
 }
 
-output "ticket_service_function_arn" {
-  description = "ARN of the ticket service Lambda function"
-  value       = aws_lambda_function.ticket_service.arn
+output "rbac_service_function_arn" {
+  description = "ARN of the RBAC service Lambda function"
+  value       = aws_lambda_function.rbac_service.arn
 }
 
-output "ticket_service_invoke_arn" {
-  description = "Invoke ARN of the ticket service Lambda function"
-  value       = aws_lambda_function.ticket_service.invoke_arn
+output "rbac_service_invoke_arn" {
+  description = "Invoke ARN of the RBAC service Lambda function"
+  value       = aws_lambda_function.rbac_service.invoke_arn
 }
 
 output "sqs_worker_function_name" {

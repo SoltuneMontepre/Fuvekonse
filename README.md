@@ -1,15 +1,15 @@
 # Fuvekonse
 
 [![CI - General Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-general.yaml)
-[![CI - Ticket Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-ticket.yaml)
+[![CI - RBAC Service](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-rbac.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/ci-rbac.yaml)
 [![sqs-worker CD](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/cd-sqs-worker.yaml/badge.svg)](https://github.com/SoltuneMontepre/Fuvekonse/actions/workflows/cd-sqs-worker.yaml)
 
 ## Overview
 
 Fuvekonse is a microservices-based application built with Go, featuring:
 
-- **General Service**: Core application functionality including user management, roles, and permissions
-- **Ticket Service**: Ticket management and processing system
+- **General Service**: Core application functionality including user management, authentication, and ticket purchasing
+- **RBAC Service**: Role-Based Access Control - manages roles, permissions, and user bans
 
 The services use PostgreSQL for data persistence, Redis for caching, and LocalStack for local AWS services (S3, SQS, SES) development.
 
@@ -54,7 +54,7 @@ npm i
 
 # Copy environment files
 cp .env.example ./services/general-service/.env
-cp .env.example ./services/ticket-service/.env
+cp .env.example ./services/rbac-service/.env
 
 # Install Go tools
 go install github.com/swaggo/swag/cmd/swag@latest
@@ -96,21 +96,21 @@ Copy the example environment file to each service directory:
 
 ```bash
 cp .env.example ./services/general-service/.env
-cp .env.example ./services/ticket-service/.env
+cp .env.example ./services/rbac-service/.env
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 Copy-Item .env.example .\services\general-service\.env -Force
-Copy-Item .env.example .\services\ticket-service\.env -Force
+Copy-Item .env.example .\services\rbac-service\.env -Force
 ```
 
 **Windows (CMD):**
 
 ```cmd
 copy .env.example services\general-service\.env
-copy .env.example services\ticket-service\.env
+copy .env.example services\rbac-service\.env
 ```
 
 **Environment Variables Reference:**
@@ -144,10 +144,10 @@ Navigate to the service directory you want to work on:
 cd services/general-service
 ```
 
-**Ticket service:**
+**RBAC service:**
 
 ```bash
-cd services/ticket-service
+cd services/rbac-service
 ```
 
 Then install dependencies:

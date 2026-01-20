@@ -41,7 +41,7 @@ module "lambda" {
   project_name                     = var.project_name
   lambda_role_arn                  = module.iam_role.lambda_app_role_arn
   general_service_zip_path         = var.general_service_zip_path
-  ticket_service_zip_path          = var.ticket_service_zip_path
+  rbac_service_zip_path          = var.rbac_service_zip_path
   sqs_worker_zip_path              = var.sqs_worker_zip_path
   db_host                          = local.db_host
   db_port                          = local.db_port
@@ -71,6 +71,6 @@ module "networking" {
   cors_allowed_origins            = var.s3_cors_allowed_origins
   general_service_function_name   = module.lambda.general_service_function_name
   general_service_invoke_arn      = module.lambda.general_service_invoke_arn
-  ticket_service_function_name    = module.lambda.ticket_service_function_name
-  ticket_service_invoke_arn       = module.lambda.ticket_service_invoke_arn
+  rbac_service_function_name    = module.lambda.rbac_service_function_name
+  rbac_service_invoke_arn       = module.lambda.rbac_service_invoke_arn
 }

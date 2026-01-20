@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-lambda-go v1.41.0
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.17
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.21
 	github.com/aws/aws-sdk-go-v2/service/ses v1.34.9
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/gin-gonic/gin v1.10.1
@@ -19,7 +20,6 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.21 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.13 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.13 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.13 // indirect
