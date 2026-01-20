@@ -8,8 +8,8 @@ const (
 	OTPExpiryMinutes = 10
 
 	// JWT token durations
-	AccessTokenDefaultMinutes  = 15
-	RefreshTokenDefaultDays    = 7
+	AccessTokenDefaultMinutes   = 15
+	RefreshTokenDefaultDays     = 7
 	RefreshTokenFallbackMinutes = 60
 
 	// Common time constants
@@ -24,8 +24,12 @@ const (
 )
 
 // Helper functions for common time calculations
-func GetOTPExpiry() time.Time {
-	return time.Now().Add(OTPExpiryMinutes * time.Minute)
+// func GetOTPExpiry() time.Time {
+// 	return time.Now().Add(OTPExpiryMinutes * time.Minute)
+// }
+
+func GetOTPExpiryDuration() time.Duration {
+	return time.Duration(OTPExpiryMinutes) * time.Minute
 }
 
 func GetTwentyFourHoursAgo() time.Time {

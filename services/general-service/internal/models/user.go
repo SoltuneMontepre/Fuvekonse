@@ -28,6 +28,4 @@ type User struct {
 	ModifiedAt      time.Time     `gorm:"autoUpdateTime" json:"modified_at"`
 	DeletedAt       *time.Time    `gorm:"index" json:"deleted_at,omitempty"`
 	IsDeleted       bool          `gorm:"default:false" json:"is_deleted"`
-	Otp             string        `gorm:"type:varchar(6)" json:"otp"`
-	OtpExpiryTime   *time.Time    `gorm:"index" json:"otp_expiry_time"`
 }
