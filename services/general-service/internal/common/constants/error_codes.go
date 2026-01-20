@@ -4,6 +4,7 @@ import "errors"
 
 // Sentinel errors for consistent error handling
 var (
+	// Auth errors
 	ErrAccountLocked            = errors.New("account temporarily locked due to too many failed login attempts")
 	ErrInvalidCredentials       = errors.New("invalid email or password")
 	ErrUserNotVerified          = errors.New("user is not verified")
@@ -12,6 +13,13 @@ var (
 	ErrPasswordMismatch         = errors.New("new password and confirm password do not match")
 	ErrSamePassword             = errors.New("new password cannot be the same as the old password")
 	ErrInternalServer           = errors.New("internal server error")
+
+	// Ticket errors
+	ErrInvalidTierID       = errors.New("invalid tier ID format")
+	ErrInvalidTicketID     = errors.New("invalid ticket ID format")
+	ErrInvalidUserID       = errors.New("invalid user ID format")
+	ErrNoTicketFound       = errors.New("no ticket found for this user")
+	ErrInvalidTicketStatus = errors.New("invalid ticket status")
 )
 
 const (

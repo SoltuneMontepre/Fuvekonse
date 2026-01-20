@@ -23,9 +23,9 @@ func Connect(connectionString string) (*gorm.DB, error) {
 func ConnectWithEnv() (*gorm.DB, error) {
 	host := config.GetEnvOr("DB_HOST", "localhost")
 	port := config.GetEnvOr("DB_PORT", "5432")
-	user := config.GetEnvOr("DB_USER", "admin")
-	password := config.GetEnvOr("DB_PASSWORD", "password")
-	dbname := config.GetEnvOr("DB_NAME", "authorizationdb")
+	user := config.GetEnvOr("DB_USER", "root")
+	password := config.GetEnvOr("DB_PASSWORD", "root")
+	dbname := config.GetEnvOr("DB_NAME", "fuvekon")
 	sslmode := config.GetEnvOr("DB_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",

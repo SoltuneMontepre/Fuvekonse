@@ -13,8 +13,8 @@ variable "general_service_zip_path" {
   type        = string
 }
 
-variable "ticket_service_zip_path" {
-  description = "Path to the ticket service deployment package"
+variable "rbac_service_zip_path" {
+  description = "Path to the RBAC service deployment package"
   type        = string
 }
 

@@ -1,6 +1,6 @@
-# Seed Test User
+# Seed Test Users
 
-This script creates a test user in the database for testing the authentication API.
+This script creates test users with different roles in the database for testing.
 
 ## Usage
 
@@ -15,6 +15,31 @@ go run cmd/seed/main.go
 
 After running the seed script, you can login with:
 
+### Admin User
+```json
+{
+  "email": "admin@fuve.com",
+  "password": "admin123"
+}
+```
+
+### Regular User
+```json
+{
+  "email": "user@fuve.com",
+  "password": "user123"
+}
+```
+
+### Dealer User
+```json
+{
+  "email": "dealer@fuve.com",
+  "password": "dealer123"
+}
+```
+
+### Legacy Test User
 ```json
 {
   "email": "user@example.com",
@@ -24,33 +49,42 @@ After running the seed script, you can login with:
 
 ## User Details
 
-- **Email**: user@example.com
-- **Password**: password123
-- **Fursona Name**: TestFursona
-- **First Name**: Test
-- **Last Name**: User
-- **Role**: User
-- **Is Verified**: true
+| Email | Password | Role | Fursona Name |
+|-------|----------|------|--------------|
+| admin@fuve.com | admin123 | Admin | AdminFox |
+| user@fuve.com | user123 | User | UserWolf |
+| dealer@fuve.com | dealer123 | Dealer | DealerCat |
+| user@example.com | password123 | User | TestFursona |
 
 ## Testing the Login API
 
 ### Using cURL:
 
 ```bash
+# Login as Admin
 curl -X POST http://localhost:8085/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
-    "password": "password123"
+    "email": "admin@fuve.com",
+    "password": "admin123"
+  }'
+
+# Login as User
+curl -X POST http://localhost:8085/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@fuve.com",
+    "password": "user123"
   }'
 ```
 
 ### Using PowerShell:
 
 ```powershell
+# Login as Admin
 $body = @{
-    email = "user@example.com"
-    password = "password123"
+    email = "admin@fuve.com"
+    password = "admin123"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "http://localhost:8085/api/v1/auth/login" `
@@ -68,29 +102,17 @@ Visit: http://localhost:8085/swagger/index.html
 3. Enter the credentials
 4. Click "Execute"
 
-## Expected Response
+## Role Permissions
 
-```json
-{
-  "user": {
-    "id": "06313f91-9d9a-482d-a6aa-59a2f9fad3f7",
-    "email": "user@example.com",
-    "fursona_name": "TestFursona",
-    "first_name": "Test",
-    "last_name": "User",
-    "role": "User",
-    "avatar": "https://via.placeholder.com/150",
-    "is_verified": true
-  },
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "Bearer",
-  "expires_in": 900
-}
-```
+| Role | Can Access Admin Panel | Can Purchase Tickets | Can Manage Dealer Booth |
+|------|------------------------|---------------------|------------------------|
+| Admin | Yes | Yes | Yes |
+| User | No | Yes | No |
+| Dealer | No | Yes | Yes |
 
 ## Notes
 
-- The script will update the user if it already exists
+- The script will update users if they already exist
 - Password is hashed using bcrypt
-- The user is automatically verified (is_verified = true)
+- All users are automatically verified (is_verified = true)
+- Admin users can access `/admin/*` routes

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
+	timeConstants "general-service/internal/constants"
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/dto/auth/responses"
 	"general-service/internal/models"
@@ -62,8 +63,8 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		return nil, fmt.Errorf("failed to generate OTP: %w", err)
 	}
 
-	// Set OTP expiry time (10 minutes)
-	expiryTime := time.Now().Add(10 * time.Minute)
+	// Set OTP expiry time
+	expiryTime := timeConstants.GetOTPExpiry()
 
 	// Parse full name into first and last name
 	firstName, lastName := parseFullName(req.FullName)
@@ -324,8 +325,8 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 		return false, fmt.Errorf("failed to generate OTP")
 	}
 
-	// 10 mins expire
-	expiryTime := time.Now().Add(10 * time.Minute)
+	// Set OTP expiry time
+	expiryTime := timeConstants.GetOTPExpiry()
 	user.Otp = newOtp
 	user.OtpExpiryTime = &expiryTime
 

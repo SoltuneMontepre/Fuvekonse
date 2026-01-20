@@ -16,7 +16,7 @@ iam_lambda_app_role_name = "fuvekon-lambda-app-role"
 
 # Lambda Deployment Packages
 general_service_zip_path = "../services/general-service/bootstrap.zip"
-ticket_service_zip_path = "../services/ticket-service/bootstrap.zip"
+rbac_service_zip_path = "../services/rbac-service/bootstrap.zip"
 sqs_worker_zip_path = "../services/sqs-worker/bootstrap.zip"
 
 # Application Configuration

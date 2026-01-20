@@ -269,7 +269,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "") //test cuz idk
+	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "")
 	frontendURL := getEnvOr("FRONTEND_URL", "")
 
 	if err := h.services.Auth.ForgotPassword(c.Request.Context(), req.Email, h.services.Mail, frontendURL, fromEmail); err != nil {
