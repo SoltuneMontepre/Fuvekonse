@@ -102,11 +102,11 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
 
-			// Dealer routes
-			dealer := protected.Group("/dealer")
-			{
-				_ = dealer // Placeholder - routes will be added here
-			}
+		// Dealer routes
+		dealer := protected.Group("/dealer")
+		{
+			dealer.POST("/register", h.Dealer.RegisterDealer)
+		}
 
 			// Protected ticket routes (require auth)
 			protectedTickets := protected.Group("/tickets")
