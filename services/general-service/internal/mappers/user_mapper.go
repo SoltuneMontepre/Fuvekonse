@@ -23,6 +23,11 @@ func MapUserToResponse(user *models.User) *responses.UserResponse {
 
 // MapUserToDetailedResponse maps a User model to a detailed UserDetailedResponse DTO (with sensitive fields)
 func MapUserToDetailedResponse(user *models.User) *responses.UserDetailedResponse {
+	return MapUserToDetailedResponseWithDealer(user, false)
+}
+
+// MapUserToDetailedResponseWithDealer maps a User model to a detailed UserDetailedResponse DTO with dealer status
+func MapUserToDetailedResponseWithDealer(user *models.User, isDealer bool) *responses.UserDetailedResponse {
 	return &responses.UserDetailedResponse{
 		Id:          user.Id,
 		FursonaName: user.FursonaName,
@@ -34,6 +39,7 @@ func MapUserToDetailedResponse(user *models.User) *responses.UserDetailedRespons
 		Role:        user.Role,
 		IdCard:      user.IdCard,
 		IsVerified:  user.IsVerified,
+		IsDealer:    isDealer,
 		CreatedAt:   user.CreatedAt,
 		ModifiedAt:  user.ModifiedAt,
 	}

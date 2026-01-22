@@ -37,6 +37,7 @@ type UserDetailedResponse struct {
 	Role        role.UserRole `json:"role"`
 	IdCard      string        `json:"id_card,omitempty"`
 	IsVerified  bool          `json:"is_verified"`
+	IsDealer    bool          `json:"is_dealer"`
 	CreatedAt   time.Time     `json:"created_at"`
 	ModifiedAt  time.Time     `json:"modified_at"`
 }

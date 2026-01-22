@@ -58,7 +58,15 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	return mappers.MapUserToDetailedResponse(user), nil
+	// Check if user is a dealer (staff member of a dealer booth)
+	isDealer, err := s.repos.Dealer.CheckUserIsStaff(userID)
+	if err != nil {
+		// If there's an error checking dealer status, default to false
+		// Log error but don't fail the request
+		isDealer = false
+	}
+
+	return mappers.MapUserToDetailedResponseWithDealer(user, isDealer), nil
 }
 
 // UpdateProfile updates user profile information
