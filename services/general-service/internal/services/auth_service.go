@@ -63,33 +63,39 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		return nil, fmt.Errorf("failed to generate OTP: %w", err)
 	}
 
-	// Set OTP expiry time
-	expiryTime := timeConstants.GetOTPExpiry()
-
 	// Parse full name into first and last name
 	firstName, lastName := parseFullName(req.FullName)
 
 	// Create new user
 	newUser := &models.User{
-		Id:            uuid.New(),
-		FursonaName:   req.Nickname,
-		FirstName:     firstName,
-		LastName:      lastName,
-		Email:         req.Email,
-		Password:      hashedPassword,
-		Country:       req.Country,
-		IdCard:        req.IdCard,
-		IsVerified:    false,
-		Otp:           otp,
-		OtpExpiryTime: &expiryTime,
-		Role:          constants.RoleUser,
-		CreatedAt:     time.Now(),
-		ModifiedAt:    time.Now(),
+		Id:          uuid.New(),
+		FursonaName: req.Nickname,
+		FirstName:   firstName,
+		LastName:    lastName,
+		Email:       req.Email,
+		Password:    hashedPassword,
+		Country:     req.Country,
+		IdCard:      req.IdCard,
+		IsVerified:  false,
+		Role:        constants.RoleUser,
+		CreatedAt:   time.Now(),
+		ModifiedAt:  time.Now(),
 	}
 
 	// Save user to database
 	if err := s.repos.User.Create(newUser); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Store OTP in Redis with expiration
+	otpExpiry := timeConstants.GetOTPExpiryDuration()
+	if err := utils.StoreOTP(ctx, s.redisClient, newUser.Email, otp, otpExpiry); err != nil {
+		// Log error but don't fail registration
+		fmt.Printf("[ERROR] Failed to store OTP in Redis for %s: %v\n", newUser.Email, err)
+		return &responses.RegisterResponse{
+			Message: "Registration successful, but failed to store verification code. Please request a new OTP.",
+			Email:   newUser.Email,
+		}, nil
 	}
 
 	// Send OTP email
@@ -259,15 +265,18 @@ func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (
 		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
 	}
 
-	// Verify OTP and check expiry
-	if user.Otp != otp || user.OtpExpiryTime == nil || user.OtpExpiryTime.Before(time.Now()) {
+	// Verify OTP against Redis and delete if valid
+	valid, err := utils.VerifyAndDeleteOTP(ctx, s.redisClient, email, otp)
+	if err != nil {
+		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
+	}
+
+	if !valid {
 		return false, nil
 	}
 
 	// Update user verification status
 	user.IsVerified = true
-	user.Otp = ""
-	user.OtpExpiryTime = nil
 
 	// Update user in database
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
@@ -286,15 +295,18 @@ func (s *AuthService) VerifyOtpAndCompleteRegistration(ctx context.Context, emai
 		return false, nil
 	}
 
-	// Verify OTP and check expiry
-	if user.Otp != otp || user.OtpExpiryTime == nil || user.OtpExpiryTime.Before(time.Now()) {
+	// Verify OTP against Redis and delete if valid
+	valid, err := utils.VerifyAndDeleteOTP(ctx, s.redisClient, email, otp)
+	if err != nil {
+		return false, err
+	}
+
+	if !valid {
 		return false, nil
 	}
 
 	// Update user verification status
 	user.IsVerified = true
-	user.Otp = ""
-	user.OtpExpiryTime = nil
 
 	if err := s.repos.User.UpdateUserProfile(user); err != nil {
 		return false, err
@@ -326,13 +338,9 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 	}
 
 	// Set OTP expiry time
-	expiryTime := timeConstants.GetOTPExpiry()
-	user.Otp = newOtp
-	user.OtpExpiryTime = &expiryTime
-
-	// Update user in database
-	if err := s.repos.User.UpdateUserProfile(user); err != nil {
-		return false, fmt.Errorf("failed to update OTP")
+	expiryTime := timeConstants.GetOTPExpiryDuration()
+	if err := utils.StoreOTP(ctx, s.redisClient, email, newOtp, expiryTime); err != nil {
+		return false, fmt.Errorf("failed to store OTP: %w", err)
 	}
 
 	// Send OTP email

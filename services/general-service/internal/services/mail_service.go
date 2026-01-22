@@ -61,9 +61,9 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 
 func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
 	// log the email content ...
-	if os.Getenv("USE_LOCALSTACK") == "true" {
-		log.Printf("[EMAIL CONTENT] From: %s To: %s Subject: %s\nBody:\n%s\n", fromEmail, toEmail, subject, body)
-	}
+	// if os.Getenv("USE_LOCALSTACK") == "true" {
+	// 	log.Printf("[EMAIL CONTENT] From: %s To: %s Subject: %s\nBody:\n%s\n", fromEmail, toEmail, subject, body)
+	// }
 
 	if s.sesClient == nil {
 		return fmt.Errorf("SES client not configured")

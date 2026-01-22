@@ -9,7 +9,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const loginFailedKeyPrefix = "login:failed:%s"
+const (
+	loginFailedKeyPrefix = "login:failed:%s"
+	otpKeyPrefix         = "otp:%s"
+)
 
 // GetLoginFailedAttempts returns the number of failed login attempts for a given email
 func GetLoginFailedAttempts(ctx context.Context, redisClient *redis.Client, email string) (int, error) {
@@ -73,4 +76,49 @@ func IsLoginBlocked(ctx context.Context, redisClient *redis.Client, email string
 	}
 
 	return false, 0, nil
+}
+
+// StoreOTP stores an OTP in Redis with expiration
+func StoreOTP(ctx context.Context, redisClient *redis.Client, email, otp string, expiration time.Duration) error {
+	key := fmt.Sprintf(otpKeyPrefix, email)
+	return redisClient.Set(ctx, key, otp, expiration).Err()
+}
+
+// GetOTP retrieves the OTP for a given email from Redis
+func GetOTP(ctx context.Context, redisClient *redis.Client, email string) (string, error) {
+	key := fmt.Sprintf(otpKeyPrefix, email)
+	val, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return "", nil // OTP not found or expired
+		}
+		return "", err
+	}
+	return val, nil
+}
+
+// VerifyAndDeleteOTP verifies the OTP and deletes it from Redis
+func VerifyAndDeleteOTP(ctx context.Context, redisClient *redis.Client, email, providedOTP string) (bool, error) {
+	storedOTP, err := GetOTP(ctx, redisClient, email)
+	if err != nil {
+		return false, err
+	}
+
+	if storedOTP == "" {
+		return false, nil // OTP not found or expired
+	}
+
+	if storedOTP != providedOTP {
+		return false, nil // OTP mismatch
+	}
+
+	// OTP matches, delete it
+	key := fmt.Sprintf(otpKeyPrefix, email)
+	return true, redisClient.Del(ctx, key).Err()
+}
+
+// DeleteOTP removes the OTP for a given email
+func DeleteOTP(ctx context.Context, redisClient *redis.Client, email string) error {
+	key := fmt.Sprintf(otpKeyPrefix, email)
+	return redisClient.Del(ctx, key).Err()
 }
