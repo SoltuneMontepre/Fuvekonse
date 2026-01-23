@@ -105,6 +105,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		// Dealer routes
 		dealer := protected.Group("/dealer")
 		{
+			dealer.GET("/me", h.Dealer.GetMyDealer)
 			dealer.POST("/register", h.Dealer.RegisterDealer)
 			dealer.POST("/join", h.Dealer.JoinDealerBooth)
 			dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)

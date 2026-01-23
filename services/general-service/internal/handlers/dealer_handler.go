@@ -378,3 +378,48 @@ func (h *DealerHandler) RemoveStaffFromBooth(c *gin.Context) {
 
 	utils.RespondSuccess(c, booth, "Successfully removed staff member")
 }
+
+// GetMyDealer godoc
+// @Summary Get current user's dealer booth
+// @Description Get the dealer booth information for the currently authenticated user
+// @Description Returns detailed booth information including staff members
+// @Tags dealer
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved user's dealer booth"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 404 "User is not a staff member of any dealer booth"
+// @Failure 500 "Internal server error"
+// @Router /dealer/me [get]
+func (h *DealerHandler) GetMyDealer(c *gin.Context) {
+	// Get user ID from JWT context
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	// Call service to get user's dealer booth
+	booth, err := h.services.Dealer.GetMyDealer(userID)
+	if err != nil {
+		errMsg := err.Error()
+		switch errMsg {
+		case "user is not a staff member of any dealer booth":
+			utils.RespondNotFound(c, errMsg)
+		case "failed to retrieve dealer booth information":
+			utils.RespondInternalServerError(c, errMsg)
+		default:
+			utils.RespondInternalServerError(c, "Failed to retrieve dealer booth")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, booth, "Successfully retrieved dealer booth")
+}

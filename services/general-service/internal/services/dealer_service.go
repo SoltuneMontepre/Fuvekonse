@@ -330,3 +330,23 @@ func (s *DealerService) RemoveStaffFromBooth(ownerUserID string, staffUserID str
 
 	return mappers.MapDealerBoothToDetailResponse(boothWithStaffs), nil
 }
+
+// GetMyDealer retrieves the dealer booth for the current user
+func (s *DealerService) GetMyDealer(userID string) (*responses.DealerBoothDetailResponse, error) {
+	// Get the booth that the user is a staff member of
+	booth, err := s.repos.Dealer.GetBoothByStaffUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user is not a staff member of any dealer booth")
+		}
+		return nil, err
+	}
+
+	// Get booth with staff information
+	boothWithStaffs, err := s.repos.Dealer.FindBoothByIDWithStaffs(booth.Id.String())
+	if err != nil {
+		return nil, errors.New("failed to retrieve dealer booth information")
+	}
+
+	return mappers.MapDealerBoothToDetailResponse(boothWithStaffs), nil
+}
