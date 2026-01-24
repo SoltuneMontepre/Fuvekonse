@@ -102,6 +102,15 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
 
+		// Dealer routes
+		dealer := protected.Group("/dealer")
+		{
+			dealer.GET("/me", h.Dealer.GetMyDealer)
+			dealer.POST("/register", h.Dealer.RegisterDealer)
+			dealer.POST("/join", h.Dealer.JoinDealerBooth)
+			dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)
+		}
+
 			// Protected ticket routes (require auth)
 			protectedTickets := protected.Group("/tickets")
 			{
@@ -131,15 +140,23 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminUsers.PATCH("/:id/unblacklist", h.Ticket.UnblacklistUser)
 			}
 
-			// Admin ticket management routes
-			adminTickets := admin.Group("/tickets")
-			{
-				adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
-				adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
-				adminTickets.GET("/:id", h.Ticket.GetTicketByID)
-				adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
-				adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
-			}
+		// Admin ticket management routes
+		adminTickets := admin.Group("/tickets")
+		{
+			adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
+			adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
+			adminTickets.GET("/:id", h.Ticket.GetTicketByID)
+			adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
+			adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
+		}
+
+		// Admin dealer management routes
+		adminDealers := admin.Group("/dealers")
+		{
+			adminDealers.GET("", h.Dealer.GetDealersForAdmin)
+			adminDealers.GET("/:id", h.Dealer.GetDealerByIDForAdmin)
+			adminDealers.PATCH("/:id/verify", h.Dealer.VerifyDealer)
 		}
 	}
+}
 }

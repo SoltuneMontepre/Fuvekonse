@@ -11,6 +11,7 @@ type Services struct {
 	User   *UserService
 	Mail   *MailService
 	Ticket *TicketService
+	Dealer *DealerService
 }
 
 func NewServices(repos *repositories.Repositories, redisClient *redis.Client, loginMaxFail int, loginFailBlockMinutes int) *Services {
@@ -19,5 +20,6 @@ func NewServices(repos *repositories.Repositories, redisClient *redis.Client, lo
 		User:   NewUserService(repos),
 		Mail:   NewMailService(repos),
 		Ticket: NewTicketService(repos),
+		Dealer: NewDealerService(repos),
 	}
 }
