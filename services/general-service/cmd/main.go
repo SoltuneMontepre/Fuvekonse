@@ -22,10 +22,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm"
 
@@ -45,7 +47,10 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var ginLambda *ginadapter.GinLambdaV2
+var (
+	ginLambda *ginadapter.GinLambdaV2
+	initMutex sync.Mutex
+)
 
 // validateRequiredEnvVars checks that all required environment variables are set at startup.
 // Returns an error if any required variable is missing.
@@ -106,7 +111,8 @@ func setupSwagger(router *gin.Engine) {
 
 // setupRouter configures and returns a new Gin router with all middleware,
 // handlers, and routes configured.
-func setupRouter(db *gorm.DB) *gin.Engine {
+// Returns an error if setup fails (for Lambda context), otherwise panics (for local dev).
+func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	// Load environment configuration
 	if err := config.LoadEnv(); err != nil {
 		log.Printf("WARNING: Error loading .env file: %v", err)
@@ -114,6 +120,10 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 
 	// Validate required environment variables
 	if err := validateRequiredEnvVars(); err != nil {
+		// In Lambda, return error; in local dev, fatal
+		if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
+			return nil, fmt.Errorf("configuration error: %w", err)
+		}
 		log.Fatalf("Configuration error: %v", err)
 	}
 
@@ -155,38 +165,72 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		log.Println("Routes configured without prefix for local development")
 	}
 
-	return router
+	return router, nil
 }
 
 // Handler is the AWS Lambda handler function that proxies requests through Gin.
 // It initializes the Gin Lambda adapter on first invocation and reuses it.
 var globalDB *gorm.DB
 
+// createErrorResponse creates a proper HTTP error response for Lambda
+func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTPResponse {
+	body := map[string]interface{}{
+		"isSuccess":  false,
+		"errorCode":  "INTERNAL_SERVER_ERROR",
+		"message":    message,
+		"statusCode": statusCode,
+	}
+	bodyJSON, _ := json.Marshal(body)
+	
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: statusCode,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: string(bodyJSON),
+	}
+}
+
 func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	// Double-check locking pattern to safely initialize ginLambda
 	if ginLambda == nil {
-		// Load environment configuration FIRST
-		if err := config.LoadEnv(); err != nil {
-			log.Printf("WARNING: Error loading .env file: %v", err)
-		}
-
-		// Validate required environment variables
-		if err := validateRequiredEnvVars(); err != nil {
-			log.Fatalf("Configuration error: %v", err)
-		}
-
-		// Setup database connection
-		if globalDB == nil {
-			var err error
-			globalDB, err = database.ConnectWithEnv()
-			if err != nil {
-				log.Fatalf("Failed to connect to database: %v", err)
+		initMutex.Lock()
+		defer initMutex.Unlock()
+		
+		// Check again after acquiring lock (another goroutine might have initialized it)
+		if ginLambda == nil {
+			// Load environment configuration FIRST
+			if err := config.LoadEnv(); err != nil {
+				log.Printf("WARNING: Error loading .env file: %v", err)
 			}
-			log.Println("Database connection established successfully")
-		}
 
-		// Initialize the Gin Lambda adapter
-		ginLambda = ginadapter.NewV2(setupRouter(globalDB))
-		log.Println("Lambda handler initialized successfully")
+			// Validate required environment variables
+			if err := validateRequiredEnvVars(); err != nil {
+				log.Printf("ERROR: Configuration error: %v", err)
+				return createErrorResponse(500, "Service configuration error. Please contact support."), nil
+			}
+
+			// Setup database connection
+			if globalDB == nil {
+				var err error
+				globalDB, err = database.ConnectWithEnv()
+				if err != nil {
+					log.Printf("ERROR: Failed to connect to database: %v", err)
+					return createErrorResponse(500, "Database connection failed. Please contact support."), nil
+				}
+				log.Println("Database connection established successfully")
+			}
+
+			// Initialize the Gin Lambda adapter
+			router, err := setupRouter(globalDB)
+			if err != nil {
+				log.Printf("ERROR: Failed to setup router: %v", err)
+				return createErrorResponse(500, "Service initialization failed. Please contact support."), nil
+			}
+			
+			ginLambda = ginadapter.NewV2(router)
+			log.Println("Lambda handler initialized successfully")
+		}
 	}
 	return ginLambda.ProxyWithContext(ctx, req)
 }
@@ -218,7 +262,10 @@ func main() {
 	defer database.CloseRedis()
 
 	// Setup HTTP server
-	router := setupRouter(db)
+	router, err := setupRouter(db)
+	if err != nil {
+		log.Fatalf("Failed to setup router: %v", err)
+	}
 	port := config.GetEnvOr("PORT", "8080")
 
 	// Start server
