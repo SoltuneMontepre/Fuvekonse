@@ -6,7 +6,7 @@ resource "aws_apigatewayv2_api" "main" {
   cors_configuration {
     allow_origins     = var.cors_allowed_origins
     allow_methods     = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allow_headers     = ["content-type", "authorization", "x-amz-date", "x-api-key", "x-amz-security-token"]
+    allow_headers     = ["content-type", "authorization", "accept", "origin", "x-requested-with", "x-amz-date", "x-api-key", "x-amz-security-token"]
     expose_headers    = ["set-cookie"]
     allow_credentials = true
     max_age           = 300
