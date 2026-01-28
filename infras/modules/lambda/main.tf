@@ -12,28 +12,28 @@ resource "aws_lambda_function" "general_service" {
 
   environment {
     variables = {
-      DB_HOST                          = var.db_host
-      DB_PORT                          = var.db_port
-      DB_USER                          = var.db_user
-      DB_PASSWORD                      = var.db_password
-      DB_NAME                          = var.db_name
-      DB_SSLMODE                       = var.db_sslmode
-      REDIS_URL                        = var.redis_url
-      REDIS_TLS                        = "true"
-      JWT_SECRET                       = var.jwt_secret
-      JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
-      JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
-      LOGIN_MAX_FAIL                   = var.login_max_fail
-      LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
-      FRONTEND_URL                     = var.frontend_url
-      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
-      GIN_MODE                         = var.gin_mode
-      S3_BUCKET                        = var.s3_bucket_name
-      SES_SENDER                       = var.ses_sender_email
-      SQS_QUEUE                        = var.sqs_queue_url
-      COOKIE_DOMAIN                    = ""
-      COOKIE_SECURE                    = "true"
-      COOKIE_SAMESITE                  = "None"
+      DB_HOST                         = var.db_host
+      DB_PORT                         = var.db_port
+      DB_USER                         = var.db_user
+      DB_PASSWORD                     = var.db_password
+      DB_NAME                         = var.db_name
+      DB_SSLMODE                      = var.db_sslmode
+      REDIS_URL                       = var.redis_url
+      REDIS_TLS                       = "true"
+      JWT_SECRET                      = var.jwt_secret
+      JWT_ACCESS_TOKEN_EXPIRY_MINUTES = var.jwt_access_token_expiry_minutes
+      JWT_REFRESH_TOKEN_EXPIRY_DAYS   = var.jwt_refresh_token_expiry_days
+      LOGIN_MAX_FAIL                  = var.login_max_fail
+      LOGIN_FAIL_BLOCK_MINUTES        = var.login_fail_block_minutes
+      FRONTEND_URL                    = var.frontend_url
+      CORS_ALLOWED_ORIGINS            = join(",", var.cors_allowed_origins)
+      GIN_MODE                        = var.gin_mode
+      S3_BUCKET                       = var.s3_bucket_name
+      SES_SENDER                      = var.ses_sender_email
+      SQS_QUEUE                       = var.sqs_queue_url
+      COOKIE_DOMAIN                   = ""
+      COOKIE_SECURE                   = "true"
+      COOKIE_SAMESITE                 = "None"
     }
   }
 
@@ -58,28 +58,28 @@ resource "aws_lambda_function" "rbac_service" {
 
   environment {
     variables = {
-      DB_HOST                          = var.db_host
-      DB_PORT                          = var.db_port
-      DB_USER                          = var.db_user
-      DB_PASSWORD                      = var.db_password
-      DB_NAME                          = var.db_name
-      DB_SSLMODE                       = var.db_sslmode
-      REDIS_URL                        = var.redis_url
-      REDIS_TLS                        = "true"
-      JWT_SECRET                       = var.jwt_secret
-      JWT_ACCESS_TOKEN_EXPIRY_MINUTES  = var.jwt_access_token_expiry_minutes
-      JWT_REFRESH_TOKEN_EXPIRY_DAYS    = var.jwt_refresh_token_expiry_days
-      LOGIN_MAX_FAIL                   = var.login_max_fail
-      LOGIN_FAIL_BLOCK_MINUTES         = var.login_fail_block_minutes
-      FRONTEND_URL                     = var.frontend_url
-      CORS_ALLOWED_ORIGINS             = join(",", var.cors_allowed_origins)
-      GIN_MODE                         = var.gin_mode
-      S3_BUCKET                        = var.s3_bucket_name
-      SES_SENDER                       = var.ses_sender_email
-      SQS_QUEUE                        = var.sqs_queue_url
-      COOKIE_DOMAIN                    = ""
-      COOKIE_SECURE                    = "true"
-      COOKIE_SAMESITE                  = "None"
+      DB_HOST                         = var.db_host
+      DB_PORT                         = var.db_port
+      DB_USER                         = var.db_user
+      DB_PASSWORD                     = var.db_password
+      DB_NAME                         = var.db_name
+      DB_SSLMODE                      = var.db_sslmode
+      REDIS_URL                       = var.redis_url
+      REDIS_TLS                       = "true"
+      JWT_SECRET                      = var.jwt_secret
+      JWT_ACCESS_TOKEN_EXPIRY_MINUTES = var.jwt_access_token_expiry_minutes
+      JWT_REFRESH_TOKEN_EXPIRY_DAYS   = var.jwt_refresh_token_expiry_days
+      LOGIN_MAX_FAIL                  = var.login_max_fail
+      LOGIN_FAIL_BLOCK_MINUTES        = var.login_fail_block_minutes
+      FRONTEND_URL                    = var.frontend_url
+      CORS_ALLOWED_ORIGINS            = join(",", var.cors_allowed_origins)
+      GIN_MODE                        = var.gin_mode
+      S3_BUCKET                       = var.s3_bucket_name
+      SES_SENDER                      = var.ses_sender_email
+      SQS_QUEUE                       = var.sqs_queue_url
+      COOKIE_DOMAIN                   = ""
+      COOKIE_SECURE                   = "true"
+      COOKIE_SAMESITE                 = "None"
     }
   }
 
@@ -125,15 +125,14 @@ resource "aws_lambda_function" "sqs_worker" {
 
   environment {
     variables = {
-      DB_HOST      = var.db_host
-      DB_PORT      = var.db_port
-      DB_USER      = var.db_user
-      DB_PASSWORD  = var.db_password
-      DB_NAME      = var.db_name
-      DB_SSLMODE   = var.db_sslmode
-      AWS_REGION   = var.aws_region
-      SES_SENDER   = var.ses_sender_email
-      SQS_QUEUE    = var.sqs_queue_url
+      DB_HOST     = var.db_host
+      DB_PORT     = var.db_port
+      DB_USER     = var.db_user
+      DB_PASSWORD = var.db_password
+      DB_NAME     = var.db_name
+      DB_SSLMODE  = var.db_sslmode
+      SES_SENDER  = var.ses_sender_email
+      SQS_QUEUE   = var.sqs_queue_url
     }
   }
 

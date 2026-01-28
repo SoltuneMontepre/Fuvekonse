@@ -3,9 +3,9 @@ resource "aws_sqs_queue" "main" {
   name                       = "${var.project_name}-queue"
   delay_seconds              = 0
   max_message_size           = 262144
-  message_retention_seconds  = 345600  # 4 days
+  message_retention_seconds  = 345600 # 4 days
   receive_wait_time_seconds  = 0
-  visibility_timeout_seconds = 30
+  visibility_timeout_seconds = 360 # 6 minutes (6x the Lambda timeout of 60s)
 
   tags = {
     Name        = var.project_name
@@ -15,11 +15,11 @@ resource "aws_sqs_queue" "main" {
 
 # SQS Dead Letter Queue
 resource "aws_sqs_queue" "dead_letter" {
-  name                       = "${var.project_name}-dlq"
-  delay_seconds              = 0
-  max_message_size           = 262144
-  message_retention_seconds  = 1209600  # 14 days
-  receive_wait_time_seconds  = 0
+  name                      = "${var.project_name}-dlq"
+  delay_seconds             = 0
+  max_message_size          = 262144
+  message_retention_seconds = 1209600 # 14 days
+  receive_wait_time_seconds = 0
 
   tags = {
     Name        = var.project_name
