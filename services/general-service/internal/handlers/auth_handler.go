@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/auth/requests"
@@ -106,6 +107,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Validate request body
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	// Guard: ensure services are initialized
+	if h.services == nil || h.services.Auth == nil {
+		fmt.Printf("[ERROR] Auth handler called but services.Auth is nil: services=%v\n", h.services)
+		utils.RespondInternalServerError(c, "An error occurred during login")
 		return
 	}
 

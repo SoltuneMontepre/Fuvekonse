@@ -157,7 +157,21 @@ func splitName(name string) []string {
 
 // Login authenticates a user and returns tokens
 
-func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*responses.LoginResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (response *responses.LoginResponse, err error) {
+	// Recover from unexpected panics and convert to internal server error
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("[PANIC] recovered in AuthService.Login: %v\n", r)
+			response = nil
+			err = constants.ErrInternalServer
+		}
+	}()
+
+	// Defensive checks to avoid nil pointer dereferences
+	if s == nil || s.repos == nil || s.repos.User == nil || req == nil {
+		fmt.Printf("[ERROR] AuthService or dependencies not initialized (s=%v, repos=%v, userRepo=%v, req=%v)\n", s, s.repos, func() interface{} { if s != nil { return s.repos.User } ; return nil }(), req)
+		return nil, constants.ErrInternalServer
+	}
 
 	// Check if user is blocked due to too many failed login attempts
 	isBlocked, remainingMinutes, err := utils.IsLoginBlocked(ctx, s.redisClient, req.Email, s.loginMaxFail)
@@ -211,7 +225,7 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (*r
 	}
 
 	// Build response
-	response := &responses.LoginResponse{
+	response = &responses.LoginResponse{
 		AccessToken: AccessToken,
 	}
 
