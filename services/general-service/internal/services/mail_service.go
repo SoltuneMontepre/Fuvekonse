@@ -102,7 +102,8 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
-	log.Printf("Email sent successfully! Message ID: %s\n", *resp.MessageId)
+	// Avoid dereferencing a potentially nil MessageId (can be nil in some SES responses)
+	log.Printf("Email sent successfully! Message ID: %s\n", aws.ToString(resp.MessageId))
 	return nil
 }
 
