@@ -90,8 +90,8 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 	// Store OTP in Redis with expiration
 	otpExpiry := timeConstants.GetOTPExpiryDuration()
 	if err := utils.StoreOTP(ctx, s.redisClient, newUser.Email, otp, otpExpiry); err != nil {
-		// Log error but don't fail registration
-		fmt.Printf("[ERROR] Failed to store OTP in Redis for %s: %v\n", newUser.Email, err)
+		// Log error but don't fail registration (PII redacted)
+		fmt.Printf("[ERROR] Failed to store OTP in Redis for user (email redacted): %v\n", err)
 		return &responses.RegisterResponse{
 			Message: "Registration successful, but failed to store verification code. Please request a new OTP.",
 			Email:   newUser.Email,
@@ -101,7 +101,7 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 	// Send OTP email
 	if mailService == nil {
 		// Mail service not available; log and return success response so registration doesn't fail
-		fmt.Printf("[ERROR] Mail service not available when attempting to send OTP to %s\n", newUser.Email)
+		fmt.Printf("[ERROR] Mail service not available when attempting to send OTP (email redacted) for user ID %s\n", newUser.Id)
 		return &responses.RegisterResponse{
 			Message: "Registration successful, but failed to send verification email. Please request a new OTP.",
 			Email:   newUser.Email,
@@ -110,7 +110,7 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 
 	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp); err != nil {
 		// Log error but don't fail registration
-		fmt.Printf("[ERROR] Failed to send OTP email to %s: %v\n", newUser.Email, err)
+		fmt.Printf("[ERROR] Failed to send OTP email (email redacted) for user ID %s: %v\n", newUser.Id, err)
 		return &responses.RegisterResponse{
 			Message: "Registration successful, but failed to send verification email. Please request a new OTP.",
 			Email:   newUser.Email,
