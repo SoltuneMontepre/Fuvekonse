@@ -133,13 +133,15 @@ variable "sqs_queue_arn" {
   type        = string
 }
 
-variable "internal_api_key" {
-  description = "Internal API key for service-to-service communication"
+variable "general_service_url" {
+  description = "Base URL of general-service API (for sqs-worker to call /internal/jobs/ticket)"
   type        = string
-  sensitive   = true
+  default     = ""
 }
 
-variable "general_service_url" {
-  description = "URL of the general service for internal API calls"
+variable "internal_api_key" {
+  description = "Internal API key for general-service /internal/jobs/ticket (must match general-service INTERNAL_API_KEY)"
   type        = string
+  default     = ""
+  sensitive   = true
 }

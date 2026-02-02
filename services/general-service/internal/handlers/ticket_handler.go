@@ -4,8 +4,10 @@ import (
 	"errors"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/ticket/requests"
+	"general-service/internal/queue"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
+	"log"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -13,10 +15,11 @@ import (
 
 type TicketHandler struct {
 	services *services.Services
+	queue    queue.Publisher
 }
 
-func NewTicketHandler(services *services.Services) *TicketHandler {
-	return &TicketHandler{services: services}
+func NewTicketHandler(services *services.Services, queuePublisher queue.Publisher) *TicketHandler {
+	return &TicketHandler{services: services, queue: queuePublisher}
 }
 
 // ========== Public User Endpoints ==========
@@ -109,13 +112,14 @@ func (h *TicketHandler) GetMyTicket(c *gin.Context) {
 
 // PurchaseTicket godoc
 // @Summary Purchase a ticket
-// @Description Purchase a ticket for a specific tier. Creates a pending ticket and decrements stock.
+// @Description Purchase a ticket for a specific tier. Creates a pending ticket and decrements stock. When queue is enabled, request is queued and processed asynchronously (202).
 // @Tags tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body requests.PurchaseTicketRequest true "Purchase request"
 // @Success 201 "Ticket purchased successfully"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid request or tier ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "User is blacklisted"
@@ -133,6 +137,20 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 	var req requests.PurchaseTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action: queue.ActionPurchaseTicket,
+			UserID: userID.(string),
+			TierID: req.TierID,
+		}); err != nil {
+			log.Printf("SQS PublishTicketJob failed: %v", err)
+			utils.RespondInternalServerError(c, "Failed to queue ticket purchase")
+			return
+		}
+		utils.RespondAccepted(c, "Ticket purchase request queued for processing.")
 		return
 	}
 
@@ -160,12 +178,13 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 
 // ConfirmPayment godoc
 // @Summary Confirm payment for pending ticket
-// @Description Mark the user's pending ticket as self-confirmed (user claims they have paid)
+// @Description Mark the user's pending ticket as self-confirmed (user claims they have paid). When queue is enabled, request is queued (202).
 // @Tags tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Success 200 "Payment confirmation submitted"
+// @Success 202 "Request queued for processing"
 // @Failure 401 "Unauthorized"
 // @Failure 404 "No pending ticket found"
 // @Failure 409 "Ticket is not in pending status"
@@ -176,6 +195,18 @@ func (h *TicketHandler) ConfirmPayment(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action: queue.ActionConfirmPayment,
+			UserID: userID.(string),
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue payment confirmation")
+			return
+		}
+		utils.RespondAccepted(c, "Payment confirmation queued for processing.")
 		return
 	}
 
@@ -197,12 +228,13 @@ func (h *TicketHandler) ConfirmPayment(c *gin.Context) {
 
 // CancelTicket godoc
 // @Summary Cancel a ticket
-// @Description Cancel a pending or self_confirmed ticket and re-increment stock
+// @Description Cancel a pending or self_confirmed ticket and re-increment stock. When queue is enabled, request is queued (202).
 // @Tags tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Success 200 "Ticket cancelled successfully"
+// @Success 202 "Request queued for processing"
 // @Failure 401 "Unauthorized"
 // @Failure 404 "No ticket found"
 // @Failure 409 "Ticket cannot be cancelled (already approved or denied)"
@@ -213,6 +245,18 @@ func (h *TicketHandler) CancelTicket(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action: queue.ActionCancelTicket,
+			UserID: userID.(string),
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue ticket cancellation")
+			return
+		}
+		utils.RespondAccepted(c, "Ticket cancellation queued for processing.")
 		return
 	}
 
@@ -235,13 +279,14 @@ func (h *TicketHandler) CancelTicket(c *gin.Context) {
 
 // UpdateBadgeDetails godoc
 // @Summary Update badge details
-// @Description Update badge details for an approved ticket (con badge name, image, fursuiter status)
+// @Description Update badge details for an approved ticket (con badge name, image, fursuiter status). When queue is enabled, request is queued (202).
 // @Tags tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body requests.UpdateBadgeDetailsRequest true "Badge details"
 // @Success 200 "Badge details updated"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid request"
 // @Failure 401 "Unauthorized"
 // @Failure 404 "No approved ticket found"
@@ -259,6 +304,22 @@ func (h *TicketHandler) UpdateBadgeDetails(c *gin.Context) {
 	var req requests.UpdateBadgeDetailsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action:          queue.ActionUpdateBadge,
+			UserID:          userID.(string),
+			ConBadgeName:    req.ConBadgeName,
+			BadgeImage:      req.BadgeImage,
+			IsFursuiter:     req.IsFursuiter,
+			IsFursuitStaff:  req.IsFursuitStaff,
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue badge update")
+			return
+		}
+		utils.RespondAccepted(c, "Badge update queued for processing.")
 		return
 	}
 
@@ -383,13 +444,14 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 
 // ApproveTicket godoc
 // @Summary Approve a ticket (admin)
-// @Description Approve a pending or self-confirmed ticket
+// @Description Approve a pending or self-confirmed ticket. When queue is enabled, request is queued (202).
 // @Tags admin-tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Ticket ID" format(uuid)
 // @Success 200 "Ticket approved successfully"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid ticket ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -408,6 +470,19 @@ func (h *TicketHandler) ApproveTicket(c *gin.Context) {
 	staffID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "Staff ID not found in token")
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action:   queue.ActionApproveTicket,
+			StaffID:  staffID.(string),
+			TicketID: ticketID,
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue ticket approval")
+			return
+		}
+		utils.RespondAccepted(c, "Ticket approval queued for processing.")
 		return
 	}
 
@@ -431,7 +506,7 @@ func (h *TicketHandler) ApproveTicket(c *gin.Context) {
 
 // DenyTicket godoc
 // @Summary Deny a ticket (admin)
-// @Description Deny a pending or self-confirmed ticket and return stock
+// @Description Deny a pending or self-confirmed ticket and return stock. When queue is enabled, request is queued (202).
 // @Tags admin-tickets
 // @Accept json
 // @Produce json
@@ -439,6 +514,7 @@ func (h *TicketHandler) ApproveTicket(c *gin.Context) {
 // @Param id path string true "Ticket ID" format(uuid)
 // @Param request body requests.DenyTicketRequest true "Denial reason (optional)"
 // @Success 200 "Ticket denied successfully"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid ticket ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -462,8 +538,21 @@ func (h *TicketHandler) DenyTicket(c *gin.Context) {
 
 	var req requests.DenyTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// Denial reason is optional, so we don't fail on binding error
 		req = requests.DenyTicketRequest{}
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action:   queue.ActionDenyTicket,
+			StaffID:  staffID.(string),
+			TicketID: ticketID,
+			Reason:   req.Reason,
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue ticket denial")
+			return
+		}
+		utils.RespondAccepted(c, "Ticket denial queued for processing.")
+		return
 	}
 
 	ticket, err := h.services.Ticket.DenyTicket(ctx, ticketID, staffID.(string), &req)
@@ -552,7 +641,7 @@ func (h *TicketHandler) GetBlacklistedUsers(c *gin.Context) {
 
 // BlacklistUser godoc
 // @Summary Blacklist a user (admin)
-// @Description Manually blacklist a user from purchasing tickets
+// @Description Manually blacklist a user from purchasing tickets. When queue is enabled, request is queued (202).
 // @Tags admin-users
 // @Accept json
 // @Produce json
@@ -560,6 +649,7 @@ func (h *TicketHandler) GetBlacklistedUsers(c *gin.Context) {
 // @Param id path string true "User ID" format(uuid)
 // @Param request body requests.BlacklistUserRequest true "Blacklist reason"
 // @Success 200 "User blacklisted successfully"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid user ID or missing reason"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -579,6 +669,22 @@ func (h *TicketHandler) BlacklistUser(c *gin.Context) {
 		return
 	}
 
+	staffID, _ := c.Get("user_id")
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action:       queue.ActionBlacklistUser,
+			StaffID:      staffID.(string),
+			TargetUserID: userID,
+			Reason:       req.Reason,
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue blacklist request")
+			return
+		}
+		utils.RespondAccepted(c, "Blacklist request queued for processing.")
+		return
+	}
+
 	err := h.services.Ticket.BlacklistUser(ctx, userID, &req)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidUserID) {
@@ -594,13 +700,14 @@ func (h *TicketHandler) BlacklistUser(c *gin.Context) {
 
 // UnblacklistUser godoc
 // @Summary Remove user from blacklist (admin)
-// @Description Remove a user from the blacklist, allowing them to purchase tickets again
+// @Description Remove a user from the blacklist, allowing them to purchase tickets again. When queue is enabled, request is queued (202).
 // @Tags admin-users
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "User ID" format(uuid)
 // @Success 200 "User removed from blacklist"
+// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid user ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -611,6 +718,21 @@ func (h *TicketHandler) UnblacklistUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
 		utils.RespondBadRequest(c, "User ID is required")
+		return
+	}
+
+	staffID, _ := c.Get("user_id")
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action:       queue.ActionUnblacklistUser,
+			StaffID:      staffID.(string),
+			TargetUserID: userID,
+		}); err != nil {
+			utils.RespondInternalServerError(c, "Failed to queue unblacklist request")
+			return
+		}
+		utils.RespondAccepted(c, "Unblacklist request queued for processing.")
 		return
 	}
 

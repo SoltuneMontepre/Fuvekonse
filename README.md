@@ -21,6 +21,7 @@ The services use PostgreSQL for data persistence, Redis for caching, and LocalSt
 - [Running the Services](#running-the-services)
 - [Development Flow](#development-flow)
 - [LocalStack Guide](#localstack-guide)
+- [Production (Ticket queue)](#production-ticket-queue)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
@@ -521,6 +522,42 @@ aws --endpoint-url=http://localhost:4566 ses send-email \
   --destination "ToAddresses=recipient@example.com" \
   --message "Subject={Data=Test},Body={Text={Data=Hello from LocalStack}}"
 ```
+
+---
+
+## Production (Ticket queue)
+
+Ticket write operations (purchase, confirm, cancel, approve, deny, etc.) go through SQS in production: the API returns **202 Accepted** and enqueues a job; the **sqs-worker Lambda** is triggered by SQS, then calls the general-service internal endpoint to perform the action.
+
+### What runs in production
+
+| Component                    | Role                                                                                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **general-service (Lambda)** | Receives ticket API calls; if `SQS_QUEUE` is set, enqueues jobs and returns 202. Exposes `POST /internal/jobs/ticket` (protected by `INTERNAL_API_KEY`) for the worker. |
+| **sqs-worker (Lambda)**      | Triggered by SQS. For each message, POSTs to general-service `/internal/jobs/ticket` with the same `INTERNAL_API_KEY`.                                                  |
+| **SQS queue**                | Created by Terraform. general-service sends messages here; Lambda event source mapping triggers sqs-worker.                                                             |
+
+### Terraform variables you must set
+
+Set these for production (e.g. in `infras/envs/prod.tfvars` or via Doppler):
+
+| Variable                  | Description                                                                                                                                                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`general_service_url`** | Full base URL of the general-service API. Must be the same as the `general_service_url` Terraform output after deploy (e.g. `https://xxxxxxxxxx.execute-api.ap-southeast-1.amazonaws.com/api/general`). The sqs-worker Lambda uses this to call `/internal/jobs/ticket`. |
+| **`internal_api_key`**    | A secret string. **Use the same value** for both general-service and sqs-worker (Terraform passes it to both Lambdas). Generate a random string (e.g. `openssl rand -hex 32`) and store it in secrets (Doppler, tfvars with sensitive = true, etc.).                     |
+
+### Example (prod.tfvars or Doppler)
+
+```hcl
+# After first apply, use: terraform output general_service_url
+general_service_url = "https://xxxxxxxxxx.execute-api.ap-southeast-1.amazonaws.com/api/general"
+internal_api_key   = "<your-secret-from-doppler-or-secrets-manager>"  # sensitive
+```
+
+- **general-service Lambda** already receives `SQS_QUEUE` (queue URL) and `INTERNAL_API_KEY` from Terraform.
+- **sqs-worker Lambda** receives `GENERAL_SERVICE_URL` and `INTERNAL_API_KEY` from Terraform.
+
+No extra services to run: the sqs-worker runs as Lambda and is invoked by AWS when messages arrive in the queue.
 
 ---
 

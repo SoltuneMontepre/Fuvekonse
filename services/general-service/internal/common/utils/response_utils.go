@@ -32,6 +32,14 @@ func RespondCreated[T any](c *gin.Context, data *T, message string) {
 	c.JSON(http.StatusCreated, common.SuccessResponse(data, message, http.StatusCreated))
 }
 
+// RespondAccepted sends a 202 Accepted response (e.g. request queued for processing)
+func RespondAccepted(c *gin.Context, message string) {
+	if message == "" {
+		message = "Request accepted for processing"
+	}
+	c.JSON(http.StatusAccepted, common.SuccessResponse[any](nil, message, http.StatusAccepted))
+}
+
 // RespondSuccessWithMeta sends a successful response with data and metadata
 func RespondSuccessWithMeta[T any](c *gin.Context, data *T, meta interface{}, message string) {
 	if message == "" {
