@@ -63,6 +63,8 @@ module "lambda" {
   sqs_queue_url                    = module.sqs.queue_url
   sqs_queue_arn                    = module.sqs.queue_arn
   cors_allowed_origins             = var.s3_cors_allowed_origins
+  general_service_url              = var.general_service_url
+  internal_api_key                 = var.internal_api_key
 }
 
 module "networking" {

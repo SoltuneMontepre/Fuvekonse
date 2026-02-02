@@ -21,3 +21,7 @@ sqs_worker_zip_path = "../services/sqs-worker/bootstrap.zip"
 
 # Application Configuration
 gin_mode = "release"
+
+# Ticket queue (general-service + sqs-worker). Required for ticket write flow in production.
+# general_service_url = "https://<api-gateway-id>.execute-api.ap-southeast-1.amazonaws.com/api/general"  # Use: terraform output general_service_url
+# internal_api_key   = "<secret>"  # Same value for both Lambdas; store in Doppler or secrets manager (sensitive)

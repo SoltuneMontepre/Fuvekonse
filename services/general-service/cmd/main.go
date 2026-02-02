@@ -36,6 +36,7 @@ import (
 	"general-service/internal/database"
 	"general-service/internal/handlers"
 	"general-service/internal/middlewares"
+	"general-service/internal/queue"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
 
@@ -138,10 +139,17 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	loginMaxFail := config.GetLoginMaxFail()
 	loginFailBlockMinutes := config.GetLoginFailBlockMinutes()
 
+	// Initialize SQS queue client (optional; if not set, ticket writes are synchronous)
+	queueClient, err := queue.NewSQSClient(context.Background())
+	if err != nil {
+		log.Printf("WARNING: SQS queue client failed: %v (ticket writes will be synchronous)", err)
+		queueClient = nil
+	}
+
 	// Initialize repositories and services
 	repos := repositories.NewRepositories(db)
 	svc := services.NewServices(repos, database.RedisClient, loginMaxFail, loginFailBlockMinutes)
-	h := handlers.NewHandlers(svc)
+	h := handlers.NewHandlers(svc, queueClient)
 
 	// Setup router with middleware
 	router := gin.Default()
@@ -181,7 +189,7 @@ func createErrorResponse(statusCode int, message string) events.APIGatewayV2HTTP
 		"statusCode": statusCode,
 	}
 	bodyJSON, _ := json.Marshal(body)
-	
+
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: statusCode,
 		Headers: map[string]string{
@@ -196,7 +204,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 	if ginLambda == nil {
 		initMutex.Lock()
 		defer initMutex.Unlock()
-		
+
 		// Check again after acquiring lock (another goroutine might have initialized it)
 		if ginLambda == nil {
 			// Load environment configuration FIRST
@@ -227,7 +235,7 @@ func Handler(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.AP
 				log.Printf("ERROR: Failed to setup router: %v", err)
 				return createErrorResponse(500, "Service initialization failed. Please contact support."), nil
 			}
-			
+
 			ginLambda = ginadapter.NewV2(router)
 			log.Println("Lambda handler initialized successfully")
 		}

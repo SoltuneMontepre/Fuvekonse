@@ -12,6 +12,7 @@ import (
 	"general-service/internal/models"
 	"general-service/internal/repositories"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -173,8 +174,11 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (re
 		return nil, constants.ErrInternalServer
 	}
 
+	// Normalize email for case-insensitive login and consistent rate limiting
+	emailNorm := strings.ToLower(strings.TrimSpace(req.Email))
+
 	// Check if user is blocked due to too many failed login attempts
-	isBlocked, remainingMinutes, err := utils.IsLoginBlocked(ctx, s.redisClient, req.Email, s.loginMaxFail)
+	isBlocked, remainingMinutes, err := utils.IsLoginBlocked(ctx, s.redisClient, emailNorm, s.loginMaxFail)
 	if err != nil {
 		return nil, err
 	}
@@ -182,14 +186,14 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (re
 		return nil, fmt.Errorf("%w: please try again in %d minutes", constants.ErrAccountLocked, remainingMinutes+1)
 	}
 
-	// Find user by email
-	user, err := s.repos.User.FindByEmail(req.Email)
+	// Find user by email (case-insensitive)
+	user, err := s.repos.User.FindByEmail(emailNorm)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Increment failed attempts even if user doesn't exist to prevent email enumeration
-			if err := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes); err != nil {
+			if err := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, emailNorm, s.loginFailBlockMinutes); err != nil {
 				// Log the error with context
-				fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, err)
+				fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", emailNorm, err)
 				// Security: do not reveal internal error, but fail closed
 				return nil, constants.ErrInternalServer
 			}
@@ -201,19 +205,19 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (re
 	// Compare password
 	if err := utils.ComparePassword(user.Password, req.Password); err != nil {
 		// Increment failed login attempts
-		if incErr := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, req.Email, s.loginFailBlockMinutes); incErr != nil {
-			fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", req.Email, incErr)
+		if incErr := utils.IncrementLoginFailedAttempts(ctx, s.redisClient, emailNorm, s.loginFailBlockMinutes); incErr != nil {
+			fmt.Printf("[ERROR] Failed to increment login attempts for email %s: %v\n", emailNorm, incErr)
 			return nil, constants.ErrInternalServer
 		}
 		return nil, constants.ErrInvalidCredentials
 	}
 
 	// Reset failed login attempts on successful login
-	if err := utils.ResetLoginFailedAttempts(ctx, s.redisClient, req.Email); err != nil {
-		fmt.Printf("[ERROR] Failed to reset login attempts for email %s: %v\n", req.Email, err)
+	if err := utils.ResetLoginFailedAttempts(ctx, s.redisClient, emailNorm); err != nil {
+		fmt.Printf("[ERROR] Failed to reset login attempts for email %s: %v\n", emailNorm, err)
 		// Optionally retry once
-		if retryErr := utils.ResetLoginFailedAttempts(ctx, s.redisClient, req.Email); retryErr != nil {
-			fmt.Printf("[ERROR] Retry also failed to reset login attempts for email %s: %v\n", req.Email, retryErr)
+		if retryErr := utils.ResetLoginFailedAttempts(ctx, s.redisClient, emailNorm); retryErr != nil {
+			fmt.Printf("[ERROR] Retry also failed to reset login attempts for email %s: %v\n", emailNorm, retryErr)
 			// Here you could increment a metric, e.g. metrics.IncResetLoginFailError()
 		}
 	}

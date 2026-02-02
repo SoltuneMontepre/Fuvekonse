@@ -31,6 +31,7 @@ resource "aws_lambda_function" "general_service" {
       S3_BUCKET                       = var.s3_bucket_name
       SES_SENDER                      = var.ses_sender_email
       SQS_QUEUE                       = var.sqs_queue_url
+      INTERNAL_API_KEY                = var.internal_api_key
       COOKIE_DOMAIN                   = ""
       COOKIE_SECURE                   = "true"
       COOKIE_SAMESITE                 = "None"
@@ -125,14 +126,16 @@ resource "aws_lambda_function" "sqs_worker" {
 
   environment {
     variables = {
-      DB_HOST     = var.db_host
-      DB_PORT     = var.db_port
-      DB_USER     = var.db_user
-      DB_PASSWORD = var.db_password
-      DB_NAME     = var.db_name
-      DB_SSLMODE  = var.db_sslmode
-      SES_SENDER  = var.ses_sender_email
-      SQS_QUEUE   = var.sqs_queue_url
+      DB_HOST              = var.db_host
+      DB_PORT              = var.db_port
+      DB_USER              = var.db_user
+      DB_PASSWORD          = var.db_password
+      DB_NAME              = var.db_name
+      DB_SSLMODE           = var.db_sslmode
+      SES_SENDER           = var.ses_sender_email
+      SQS_QUEUE            = var.sqs_queue_url
+      GENERAL_SERVICE_URL  = var.general_service_url
+      INTERNAL_API_KEY     = var.internal_api_key
     }
   }
 

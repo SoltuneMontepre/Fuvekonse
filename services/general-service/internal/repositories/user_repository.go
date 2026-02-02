@@ -21,10 +21,10 @@ func (r *UserRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-// FindByEmail finds a user by email
+// FindByEmail finds a user by email (case-insensitive)
 func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("email = ? AND is_deleted = ?", email, false).First(&user).Error
+	err := r.db.Where("LOWER(email) = LOWER(?) AND is_deleted = ?", email, false).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

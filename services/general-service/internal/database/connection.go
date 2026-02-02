@@ -3,13 +3,30 @@ package database
 import (
 	"fmt"
 	"general-service/internal/config"
+	"log"
+	"os"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func Connect(connectionString string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{})
+	// Ignore "record not found" in logs (expected when checking e.g. user has no ticket)
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Info,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		},
+	)
+
+	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+		Logger: gormLogger,
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %w", err)

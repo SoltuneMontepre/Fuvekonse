@@ -87,3 +87,16 @@ variable "gin_mode" {
   type        = string
   default     = "release"
 }
+
+variable "general_service_url" {
+  description = "Base URL of general-service API (for sqs-worker to call /internal/jobs/ticket)"
+  type        = string
+  default     = ""
+}
+
+variable "internal_api_key" {
+  description = "Internal API key for general-service /internal/jobs/ticket"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

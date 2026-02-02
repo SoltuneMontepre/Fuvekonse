@@ -38,6 +38,7 @@ type UserDetailedResponse struct {
 	IdCard      string        `json:"id_card,omitempty"`
 	IsVerified  bool          `json:"is_verified"`
 	IsDealer    bool          `json:"is_dealer"`
+	IsHasTicket bool          `json:"is_has_ticket"`
 	CreatedAt   time.Time     `json:"created_at"`
 	ModifiedAt  time.Time     `json:"modified_at"`
 }
