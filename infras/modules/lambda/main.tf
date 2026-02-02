@@ -34,6 +34,7 @@ resource "aws_lambda_function" "general_service" {
       COOKIE_DOMAIN                   = ""
       COOKIE_SECURE                   = "true"
       COOKIE_SAMESITE                 = "None"
+      INTERNAL_API_KEY                = var.internal_api_key
     }
   }
 
@@ -80,6 +81,7 @@ resource "aws_lambda_function" "rbac_service" {
       COOKIE_DOMAIN                   = ""
       COOKIE_SECURE                   = "true"
       COOKIE_SAMESITE                 = "None"
+      INTERNAL_API_KEY                = var.internal_api_key
     }
   }
 
@@ -125,14 +127,16 @@ resource "aws_lambda_function" "sqs_worker" {
 
   environment {
     variables = {
-      DB_HOST     = var.db_host
-      DB_PORT     = var.db_port
-      DB_USER     = var.db_user
-      DB_PASSWORD = var.db_password
-      DB_NAME     = var.db_name
-      DB_SSLMODE  = var.db_sslmode
-      SES_SENDER  = var.ses_sender_email
-      SQS_QUEUE   = var.sqs_queue_url
+      DB_HOST             = var.db_host
+      DB_PORT             = var.db_port
+      DB_USER             = var.db_user
+      DB_PASSWORD         = var.db_password
+      DB_NAME             = var.db_name
+      DB_SSLMODE          = var.db_sslmode
+      SES_SENDER          = var.ses_sender_email
+      SQS_QUEUE           = var.sqs_queue_url
+      INTERNAL_API_KEY    = var.internal_api_key
+      GENERAL_SERVICE_URL = var.general_service_url
     }
   }
 

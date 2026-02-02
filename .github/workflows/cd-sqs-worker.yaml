@@ -85,48 +85,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Setup Terraform
+      - name: Update Lambda Function Code
         if: steps.check_changes.outputs.changed == 'true'
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: latest
-
-      - name: Terraform Init
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
-        run: terraform init
-
-      - name: Terraform Plan
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        working-directory: services/sqs-worker
         run: |
-          terraform plan \
-            -var-file="./envs/prod.tfvars" \
-            -target=module.lambda.aws_lambda_function.sqs_worker \
-            -target=module.lambda.aws_cloudwatch_log_group.sqs_worker \
-            -target=module.lambda.aws_lambda_event_source_mapping.sqs_worker \
-            -out=tfplan
+          FUNCTION_NAME="fuvekon-sqs-worker"
+          echo "📦 Updating Lambda function: $FUNCTION_NAME"
 
-      - name: Terraform Apply
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
-        run: terraform apply tfplan
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://bootstrap.zip \
+            --publish
+
+          echo "⏳ Waiting for function update to complete..."
+          aws lambda wait function-updated-v2 \
+            --function-name "$FUNCTION_NAME"
+
+          echo "✅ Lambda function updated successfully"
 
       - name: Get Lambda Function Info
         if: steps.check_changes.outputs.changed == 'true'
         id: get-lambda-info
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          FUNCTION_NAME=$(terraform output -raw sqs_worker_function_name)
-          FUNCTION_ARN=$(terraform output -raw sqs_worker_function_arn)
+          FUNCTION_NAME="fuvekon-sqs-worker"
+          FUNCTION_ARN=$(aws lambda get-function \
+            --function-name "$FUNCTION_NAME" \
+            --query 'Configuration.FunctionArn' \
+            --output text)
+
           echo "🚀 Deployed sqs-worker Lambda"
           echo "Function Name: $FUNCTION_NAME"
           echo "Function ARN: $FUNCTION_ARN"

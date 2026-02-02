@@ -132,3 +132,14 @@ variable "sqs_queue_arn" {
   description = "SQS queue ARN for event source mapping"
   type        = string
 }
+
+variable "internal_api_key" {
+  description = "Internal API key for service-to-service communication"
+  type        = string
+  sensitive   = true
+}
+
+variable "general_service_url" {
+  description = "URL of the general service for internal API calls"
+  type        = string
+}

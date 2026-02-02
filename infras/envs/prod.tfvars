@@ -21,3 +21,7 @@ sqs_worker_zip_path = "../services/sqs-worker/bootstrap.zip"
 
 # Application Configuration
 gin_mode = "release"
+
+# Internal API Configuration
+internal_api_key = "87af98737bb13a9075238255f581f3d3147c0d5bas"
+general_service_url = "https://riw96amgn7.execute-api.ap-southeast-1.amazonaws.com"

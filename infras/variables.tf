@@ -87,3 +87,14 @@ variable "gin_mode" {
   type        = string
   default     = "release"
 }
+
+variable "internal_api_key" {
+  description = "Internal API key for service-to-service communication"
+  type        = string
+  sensitive   = true
+}
+
+variable "general_service_url" {
+  description = "URL of the general service for internal API calls"
+  type        = string
+}
