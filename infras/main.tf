@@ -37,42 +37,42 @@ module "iam_role" {
 }
 
 module "lambda" {
-  source                           = "./modules/lambda"
-  project_name                     = var.project_name
-  lambda_role_arn                  = module.iam_role.lambda_app_role_arn
-  general_service_zip_path         = var.general_service_zip_path
-  rbac_service_zip_path          = var.rbac_service_zip_path
-  sqs_worker_zip_path              = var.sqs_worker_zip_path
-  db_host                          = local.db_host
-  db_port                          = local.db_port
-  db_user                          = local.db_user
-  db_password                      = local.db_password
-  db_name                          = local.db_name
-  db_sslmode                       = local.db_sslmode
-  redis_url                        = local.redis_url
-  aws_region                       = var.aws_region
-  jwt_secret                       = local.jwt_secret
-  jwt_access_token_expiry_minutes  = local.jwt_access_token_expiry_minutes
-  jwt_refresh_token_expiry_days    = local.jwt_refresh_token_expiry_days
-  login_max_fail                   = local.login_max_fail
-  login_fail_block_minutes         = local.login_fail_block_minutes
-  frontend_url                     = local.frontend_url
-  gin_mode                         = var.gin_mode
-  s3_bucket_name                   = module.s3.bucket_name
-  ses_sender_email                 = module.ses.sender_email
-  sqs_queue_url                    = module.sqs.queue_url
-  sqs_queue_arn                    = module.sqs.queue_arn
-  cors_allowed_origins             = var.s3_cors_allowed_origins
-  general_service_url              = var.general_service_url
-  internal_api_key                 = var.internal_api_key
+  source                          = "./modules/lambda"
+  project_name                    = var.project_name
+  lambda_role_arn                 = module.iam_role.lambda_app_role_arn
+  general_service_zip_path        = var.general_service_zip_path
+  rbac_service_zip_path           = var.rbac_service_zip_path
+  sqs_worker_zip_path             = var.sqs_worker_zip_path
+  db_host                         = local.db_host
+  db_port                         = local.db_port
+  db_user                         = local.db_user
+  db_password                     = local.db_password
+  db_name                         = local.db_name
+  db_sslmode                      = local.db_sslmode
+  redis_url                       = local.redis_url
+  aws_region                      = var.aws_region
+  jwt_secret                      = local.jwt_secret
+  jwt_access_token_expiry_minutes = local.jwt_access_token_expiry_minutes
+  jwt_refresh_token_expiry_days   = local.jwt_refresh_token_expiry_days
+  login_max_fail                  = local.login_max_fail
+  login_fail_block_minutes        = local.login_fail_block_minutes
+  frontend_url                    = local.frontend_url
+  gin_mode                        = var.gin_mode
+  s3_bucket_name                  = module.s3.bucket_name
+  ses_sender_email                = module.ses.sender_email
+  sqs_queue_url                   = module.sqs.queue_url
+  sqs_queue_arn                   = module.sqs.queue_arn
+  cors_allowed_origins            = var.s3_cors_allowed_origins
+  general_service_url             = var.general_service_url
+  internal_api_key                = var.internal_api_key
 }
 
 module "networking" {
-  source                          = "./modules/networking"
-  project_name                    = var.project_name
-  cors_allowed_origins            = var.s3_cors_allowed_origins
-  general_service_function_name   = module.lambda.general_service_function_name
-  general_service_invoke_arn      = module.lambda.general_service_invoke_arn
+  source                        = "./modules/networking"
+  project_name                  = var.project_name
+  cors_allowed_origins          = var.s3_cors_allowed_origins
+  general_service_function_name = module.lambda.general_service_function_name
+  general_service_invoke_arn    = module.lambda.general_service_invoke_arn
   rbac_service_function_name    = module.lambda.rbac_service_function_name
   rbac_service_invoke_arn       = module.lambda.rbac_service_invoke_arn
 }

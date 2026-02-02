@@ -105,47 +105,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Setup Terraform
+      - name: Update Lambda Function Code
         if: steps.check_changes.outputs.changed == 'true'
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: latest
-
-      - name: Terraform Init
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
-        run: terraform init
-
-      - name: Terraform Plan
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
+        working-directory: services/rbac-service
         run: |
-          terraform plan \
-            -var-file="./envs/prod.tfvars" \
-            -target=module.lambda.aws_lambda_function.rbac_service \
-            -target=module.lambda.aws_cloudwatch_log_group.rbac_service \
-            -target=module.lambda.aws_lambda_function_url.rbac_service \
-            -out=tfplan
+          FUNCTION_NAME="fuvekon-rbac-service"
+          echo "📦 Updating Lambda function: $FUNCTION_NAME"
 
-      - name: Terraform Apply
-        if: steps.check_changes.outputs.changed == 'true'
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
-        run: terraform apply tfplan
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://bootstrap.zip \
+            --publish
+
+          echo "⏳ Waiting for function update to complete..."
+          aws lambda wait function-updated-v2 \
+            --function-name "$FUNCTION_NAME"
+
+          echo "✅ Lambda function updated successfully"
 
       - name: Get Lambda URL
         if: steps.check_changes.outputs.changed == 'true'
         id: get-lambda-url
-        working-directory: infras
-        env:
-          TF_VAR_doppler_token: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          URL=$(terraform output -raw rbac_service_url)
+          FUNCTION_NAME="fuvekon-rbac-service"
+          URL=$(aws lambda get-function-url-config \
+            --function-name "$FUNCTION_NAME" \
+            --query 'FunctionUrl' \
+            --output text)
+
           echo "🚀 Deployed rbac-service to: $URL"
           echo "LAMBDA_URL=$URL" >> $GITHUB_ENV
           echo "lambda_url=$URL" >> $GITHUB_OUTPUT

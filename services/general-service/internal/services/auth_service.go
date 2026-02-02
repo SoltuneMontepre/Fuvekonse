@@ -91,8 +91,8 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 	// Store OTP in Redis with expiration
 	otpExpiry := timeConstants.GetOTPExpiryDuration()
 	if err := utils.StoreOTP(ctx, s.redisClient, newUser.Email, otp, otpExpiry); err != nil {
-		// Log error but don't fail registration
-		fmt.Printf("[ERROR] Failed to store OTP in Redis for %s: %v\n", newUser.Email, err)
+		// Log error but don't fail registration (PII redacted)
+		fmt.Printf("[ERROR] Failed to store OTP in Redis for user (email redacted): %v\n", err)
 		return &responses.RegisterResponse{
 			Message: "Registration successful, but failed to store verification code. Please request a new OTP.",
 			Email:   newUser.Email,
@@ -100,9 +100,18 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 	}
 
 	// Send OTP email
+	if mailService == nil {
+		// Mail service not available; log and return success response so registration doesn't fail
+		fmt.Printf("[ERROR] Mail service not available when attempting to send OTP (email redacted) for user ID %s\n", newUser.Id)
+		return &responses.RegisterResponse{
+			Message: "Registration successful, but failed to send verification email. Please request a new OTP.",
+			Email:   newUser.Email,
+		}, nil
+	}
+
 	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp); err != nil {
 		// Log error but don't fail registration
-		fmt.Printf("[ERROR] Failed to send OTP email to %s: %v\n", newUser.Email, err)
+		fmt.Printf("[ERROR] Failed to send OTP email (email redacted) for user ID %s: %v\n", newUser.Id, err)
 		return &responses.RegisterResponse{
 			Message: "Registration successful, but failed to send verification email. Please request a new OTP.",
 			Email:   newUser.Email,
@@ -170,7 +179,12 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (re
 
 	// Defensive checks to avoid nil pointer dereferences
 	if s == nil || s.repos == nil || s.repos.User == nil || req == nil {
-		fmt.Printf("[ERROR] AuthService or dependencies not initialized (s=%v, repos=%v, userRepo=%v, req=%v)\n", s, s.repos, func() interface{} { if s != nil { return s.repos.User } ; return nil }(), req)
+		fmt.Printf("[ERROR] AuthService or dependencies not initialized (s=%v, repos=%v, userRepo=%v, req=%v)\n", s, s.repos, func() interface{} {
+			if s != nil {
+				return s.repos.User
+			}
+			return nil
+		}(), req)
 		return nil, constants.ErrInternalServer
 	}
 
@@ -362,6 +376,9 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 	}
 
 	// Send OTP email
+	if mailService == nil {
+		return false, fmt.Errorf("mail service not available")
+	}
 	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp); err != nil {
 		return false, fmt.Errorf("failed to send OTP email: %w", err)
 	}
@@ -399,16 +416,21 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 		}
 	}
 
-	// Compose email body. For Swagger testing we include the raw token as well.
-	body := fmt.Sprintf(
-		"Hello,\n\nUse the following token to reset your password (expires in %d minutes):\n\n%s\n\n",
-		int(utils.GetForgotPasswordTokenExpiry().Minutes()),
-		token,
-	)
+	// Compose email body: when a frontend reset link is provided, include only the link; otherwise include the raw token
+	var body string
 	if link != "" {
-		body += fmt.Sprintf("\nOr open the following link:\n\n%s\n\n", link)
+		body = fmt.Sprintf(
+			"Hello,\n\nUse the following link to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
+			int(utils.GetForgotPasswordTokenExpiry().Minutes()),
+			link,
+		)
+	} else {
+		// body = fmt.Sprintf(
+		// 	"Hello,\n\nUse the following token to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
+		// 	int(utils.GetForgotPasswordTokenExpiry().Minutes()),
+		// 	token,
+		// )
 	}
-	body += "If you did not request this, ignore this message."
 
 	if mailService == nil {
 		return fmt.Errorf("mail service not available")
