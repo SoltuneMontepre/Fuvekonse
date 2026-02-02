@@ -86,36 +86,14 @@ jobs:
         working-directory: services/sqs-worker
         run: |
           FUNCTION_NAME="fuvekon-sqs-worker"
-          echo "📦 Updating Lambda function: $FUNCTION_NAME"
 
           aws lambda update-function-code \
             --function-name "$FUNCTION_NAME" \
             --zip-file fileb://bootstrap.zip \
             --publish
 
-          echo "⏳ Waiting for function update to complete..."
           aws lambda wait function-updated-v2 \
             --function-name "$FUNCTION_NAME"
-
-          echo "✅ Lambda function updated successfully"
-
-      - name: Get Lambda Function Info
-        if: steps.check_changes.outputs.changed == 'true'
-        id: get-lambda-info
-        run: |
-          FUNCTION_NAME="fuvekon-sqs-worker"
-          FUNCTION_ARN=$(aws lambda get-function \
-            --function-name "$FUNCTION_NAME" \
-            --query 'Configuration.FunctionArn' \
-            --output text)
-
-          echo "🚀 Deployed sqs-worker Lambda"
-          echo "Function Name: $FUNCTION_NAME"
-          echo "Function ARN: $FUNCTION_ARN"
-          echo "FUNCTION_NAME=$FUNCTION_NAME" >> $GITHUB_ENV
-          echo "FUNCTION_ARN=$FUNCTION_ARN" >> $GITHUB_ENV
-          echo "function_name=$FUNCTION_NAME" >> $GITHUB_OUTPUT
-          echo "function_arn=$FUNCTION_ARN" >> $GITHUB_OUTPUT
 
       - name: Notify deployment success
         if: success() && steps.check_changes.outputs.changed == 'true'

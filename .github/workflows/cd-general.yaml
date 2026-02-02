@@ -106,32 +106,14 @@ jobs:
         working-directory: services/general-service
         run: |
           FUNCTION_NAME="fuvekon-general-service"
-          echo "📦 Updating Lambda function: $FUNCTION_NAME"
 
           aws lambda update-function-code \
             --function-name "$FUNCTION_NAME" \
             --zip-file fileb://bootstrap.zip \
             --publish
 
-          echo "⏳ Waiting for function update to complete..."
           aws lambda wait function-updated-v2 \
             --function-name "$FUNCTION_NAME"
-
-          echo "✅ Lambda function updated successfully"
-
-      - name: Get Lambda URL
-        if: steps.check_changes.outputs.changed == 'true'
-        id: get-lambda-url
-        run: |
-          FUNCTION_NAME="fuvekon-general-service"
-          URL=$(aws lambda get-function-url-config \
-            --function-name "$FUNCTION_NAME" \
-            --query 'FunctionUrl' \
-            --output text)
-
-          echo "🚀 Deployed general-service to: $URL"
-          echo "LAMBDA_URL=$URL" >> $GITHUB_ENV
-          echo "lambda_url=$URL" >> $GITHUB_OUTPUT
 
       - name: Notify deployment success
         if: success() && steps.check_changes.outputs.changed == 'true'
