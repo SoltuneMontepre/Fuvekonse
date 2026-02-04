@@ -31,6 +31,33 @@ type AdminTicketFilterRequest struct {
 	PageSize      int    `form:"page_size,default=20"`
 }
 
+// CreateTicketForAdminRequest is the request body for admin creating a ticket for a user
+type CreateTicketForAdminRequest struct {
+	UserID string `json:"user_id" binding:"required,uuid"`
+	TierID string `json:"tier_id" binding:"required,uuid"`
+}
+
+// CreateTicketTierRequest is the request body for admin creating a ticket tier.
+// Price and Stock use pointers so that 0 is accepted (validator "required" treats numeric 0 as unset).
+type CreateTicketTierRequest struct {
+	TicketName  string   `json:"ticket_name" binding:"required,min=1,max=255"`
+	Description string   `json:"description" binding:"max=500"`
+	Benefits    []string `json:"benefits"`
+	Price       *float64 `json:"price" binding:"required,gte=0"`
+	Stock       *int     `json:"stock" binding:"required,gte=0"`
+	IsActive    bool     `json:"is_active"`
+}
+
+// UpdateTicketTierRequest is the request body for admin updating a ticket tier (all optional)
+type UpdateTicketTierRequest struct {
+	TicketName  *string   `json:"ticket_name" binding:"omitempty,min=1,max=255"`
+	Description *string   `json:"description" binding:"omitempty,max=500"`
+	Benefits    []string  `json:"benefits"`
+	Price       *float64  `json:"price" binding:"omitempty,gte=0"`
+	Stock       *int      `json:"stock" binding:"omitempty,gte=0"`
+	IsActive    *bool     `json:"is_active"`
+}
+
 // BlacklistUserRequest is the request body for blacklisting a user
 type BlacklistUserRequest struct {
 	Reason string `json:"reason" binding:"required,min=1,max=500"`

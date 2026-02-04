@@ -147,11 +147,18 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminUsers.PATCH("/:id/unblacklist", h.Ticket.UnblacklistUser)
 			}
 
-		// Admin ticket management routes
+		// Admin ticket management routes (literal /tiers paths before /:id)
 		adminTickets := admin.Group("/tickets")
 		{
 			adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
+			adminTickets.POST("", h.Ticket.CreateTicketForAdmin)
 			adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
+			adminTickets.GET("/tiers", h.Ticket.GetAllTiersForAdmin)
+			adminTickets.POST("/tiers", h.Ticket.CreateTierForAdmin)
+			adminTickets.PATCH("/tiers/:id", h.Ticket.UpdateTierForAdmin)
+			adminTickets.DELETE("/tiers/:id", h.Ticket.DeleteTierForAdmin)
+			adminTickets.PATCH("/tiers/:id/activate", h.Ticket.ActivateTierForAdmin)
+			adminTickets.PATCH("/tiers/:id/deactivate", h.Ticket.DeactivateTierForAdmin)
 			adminTickets.GET("/:id", h.Ticket.GetTicketByID)
 			adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
 			adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
