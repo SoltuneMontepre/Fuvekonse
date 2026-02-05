@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"general-service/internal/common/constants"
 	"general-service/internal/dto/common"
 	"general-service/internal/dto/ticket/requests"
@@ -12,6 +13,7 @@ import (
 	"math"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 // Re-export sentinel errors from constants for backward compatibility
@@ -42,6 +44,15 @@ func (s *TicketService) GetAllTiers(ctx context.Context) ([]responses.TicketTier
 	return mappers.MapTicketTiersToResponse(tiers), nil
 }
 
+// GetAllTiersForAdmin returns all non-deleted tiers (active and inactive) for admin.
+func (s *TicketService) GetAllTiersForAdmin(ctx context.Context) ([]responses.TicketTierResponse, error) {
+	tiers, err := s.repos.Ticket.GetAllTiersForAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapTicketTiersToResponse(tiers), nil
+}
+
 // GetTierByID returns a specific ticket tier
 func (s *TicketService) GetTierByID(ctx context.Context, tierID string) (*responses.TicketTierResponse, error) {
 	id, err := uuid.Parse(tierID)
@@ -50,6 +61,112 @@ func (s *TicketService) GetTierByID(ctx context.Context, tierID string) (*respon
 	}
 
 	tier, err := s.repos.Ticket.GetTierByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapTicketTierToResponse(tier), nil
+}
+
+// CreateTierForAdmin creates a new ticket tier (admin only)
+func (s *TicketService) CreateTierForAdmin(ctx context.Context, req *requests.CreateTicketTierRequest) (*responses.TicketTierResponse, error) {
+	benefitsJSON := ""
+	if len(req.Benefits) > 0 {
+		b, err := json.Marshal(req.Benefits)
+		if err != nil {
+			return nil, err
+		}
+		benefitsJSON = string(b)
+	}
+
+	price := 0.0
+	if req.Price != nil {
+		price = *req.Price
+	}
+	stock := 0
+	if req.Stock != nil {
+		stock = *req.Stock
+	}
+
+	tier := &models.TicketTier{
+		TicketName:  req.TicketName,
+		Description: req.Description,
+		Benefits:    benefitsJSON,
+		Price:       decimal.NewFromFloat(price),
+		Stock:       stock,
+		IsActive:    req.IsActive,
+	}
+
+	created, err := s.repos.Ticket.CreateTier(ctx, tier)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapTicketTierToResponse(created), nil
+}
+
+// UpdateTierForAdmin updates a ticket tier (admin only). Only provided fields are updated.
+func (s *TicketService) UpdateTierForAdmin(ctx context.Context, tierID string, req *requests.UpdateTicketTierRequest) (*responses.TicketTierResponse, error) {
+	id, err := uuid.Parse(tierID)
+	if err != nil {
+		return nil, ErrInvalidTierID
+	}
+	updates := make(map[string]interface{})
+	if req.TicketName != nil {
+		updates["ticket_name"] = *req.TicketName
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Benefits != nil {
+		benefitsJSON := ""
+		if len(req.Benefits) > 0 {
+			b, err := json.Marshal(req.Benefits)
+			if err != nil {
+				return nil, err
+			}
+			benefitsJSON = string(b)
+		}
+		updates["benefits"] = benefitsJSON
+	}
+	if req.Price != nil {
+		updates["price"] = decimal.NewFromFloat(*req.Price)
+	}
+	if req.Stock != nil {
+		updates["stock"] = *req.Stock
+	}
+	if req.IsActive != nil {
+		updates["is_active"] = *req.IsActive
+	}
+	if len(updates) == 0 {
+		// No updates, just return current tier
+		tier, err := s.repos.Ticket.GetTierByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		return mappers.MapTicketTierToResponse(tier), nil
+	}
+	tier, err := s.repos.Ticket.UpdateTier(ctx, id, updates)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapTicketTierToResponse(tier), nil
+}
+
+// DeleteTierForAdmin permanently deletes a ticket tier and its user tickets (admin only).
+func (s *TicketService) DeleteTierForAdmin(ctx context.Context, tierID string) error {
+	id, err := uuid.Parse(tierID)
+	if err != nil {
+		return ErrInvalidTierID
+	}
+	return s.repos.Ticket.DeleteTier(ctx, id)
+}
+
+// SetTierActiveForAdmin sets is_active for a ticket tier (admin only).
+func (s *TicketService) SetTierActiveForAdmin(ctx context.Context, tierID string, active bool) (*responses.TicketTierResponse, error) {
+	id, err := uuid.Parse(tierID)
+	if err != nil {
+		return nil, ErrInvalidTierID
+	}
+	tier, err := s.repos.Ticket.SetTierActive(ctx, id, active)
 	if err != nil {
 		return nil, err
 	}
@@ -279,6 +396,31 @@ func (s *TicketService) GetTicketStatistics(ctx context.Context) (*responses.Tic
 	}
 
 	return mappers.MapTicketStatisticsToResponse(stats), nil
+}
+
+// CreateTicketForAdmin creates a ticket for a user (admin). Ticket is created as approved.
+func (s *TicketService) CreateTicketForAdmin(ctx context.Context, staffID string, req *requests.CreateTicketForAdminRequest) (*responses.UserTicketResponse, error) {
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+
+	tierID, err := uuid.Parse(req.TierID)
+	if err != nil {
+		return nil, ErrInvalidTierID
+	}
+
+	staffUUID, err := uuid.Parse(staffID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+
+	ticket, err := s.repos.Ticket.CreateTicketForAdmin(ctx, userID, tierID, staffUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mappers.MapUserTicketToResponse(ticket, true), nil
 }
 
 // ========== Blacklist Management ==========

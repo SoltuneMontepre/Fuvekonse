@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"general-service/internal/models"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +22,7 @@ var (
 	ErrUserAlreadyHasTicket   = errors.New("user already has a ticket")
 	ErrUserBlacklisted        = errors.New("user is blacklisted from purchasing tickets")
 	ErrInvalidTicketStatus    = errors.New("invalid ticket status for this operation")
+	ErrUserNotFound           = errors.New("user not found")
 )
 
 type TicketRepository struct {
@@ -36,6 +40,19 @@ func (r *TicketRepository) GetAllActiveTiers(ctx context.Context) ([]models.Tick
 	var tiers []models.TicketTier
 	err := r.db.WithContext(ctx).
 		Where("is_deleted = ? AND is_active = ?", false, true).
+		Order("price ASC").
+		Find(&tiers).Error
+	if err != nil {
+		return nil, err
+	}
+	return tiers, nil
+}
+
+// GetAllTiersForAdmin returns all non-deleted ticket tiers (active and inactive) for admin.
+func (r *TicketRepository) GetAllTiersForAdmin(ctx context.Context) ([]models.TicketTier, error) {
+	var tiers []models.TicketTier
+	err := r.db.WithContext(ctx).
+		Where("is_deleted = ?", false).
 		Order("price ASC").
 		Find(&tiers).Error
 	if err != nil {
@@ -71,6 +88,118 @@ func (r *TicketRepository) GetTierByCode(ctx context.Context, tierCode string) (
 		}
 		return nil, err
 	}
+	return &tier, nil
+}
+
+var tierCodeRegex = regexp.MustCompile(`^T(\d+)$`)
+
+// getNextTierCode returns the next available tier code (T1, T2, ...).
+// It considers all rows (including soft-deleted) so the code is unique and never reused.
+func (r *TicketRepository) getNextTierCode(ctx context.Context) (string, error) {
+	var codes []string
+	err := r.db.WithContext(ctx).
+		Model(&models.TicketTier{}).
+		Pluck("tier_code", &codes).Error
+	if err != nil {
+		return "", err
+	}
+	max := 0
+	for _, c := range codes {
+		if m := tierCodeRegex.FindStringSubmatch(c); len(m) == 2 {
+			if n, err := strconv.Atoi(m[1]); err == nil && n > max {
+				max = n
+			}
+		}
+	}
+	return "T" + strconv.Itoa(max+1), nil
+}
+
+// CreateTier creates a new ticket tier with the next available tier code. Returns the created tier.
+// Retries on duplicate tier_code (e.g. concurrent creates or codes from soft-deleted rows).
+func (r *TicketRepository) CreateTier(ctx context.Context, tier *models.TicketTier) (*models.TicketTier, error) {
+	const maxRetries = 3
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		tierCode, err := r.getNextTierCode(ctx)
+		if err != nil {
+			return nil, err
+		}
+		tier.Id = uuid.New()
+		tier.TierCode = tierCode
+		if tier.CreatedAt.IsZero() {
+			tier.CreatedAt = time.Now()
+		}
+		if tier.ModifiedAt.IsZero() {
+			tier.ModifiedAt = time.Now()
+		}
+		err = r.db.WithContext(ctx).Create(tier).Error
+		if err == nil {
+			return tier, nil
+		}
+		if !isDuplicateKeyError(err) {
+			return nil, err
+		}
+		// Duplicate tier_code; retry with a new code
+	}
+	return nil, errors.New("failed to create tier after retries (duplicate tier code)")
+}
+
+func isDuplicateKeyError(err error) bool {
+	return err != nil && (strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505"))
+}
+
+// UpdateTier updates an existing ticket tier (non-deleted). Returns the updated tier.
+func (r *TicketRepository) UpdateTier(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.TicketTier, error) {
+	var tier models.TicketTier
+	if err := r.db.WithContext(ctx).Where("id = ? AND is_deleted = ?", id, false).First(&tier).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTicketTierNotFound
+		}
+		return nil, err
+	}
+	if err := r.db.WithContext(ctx).Model(&tier).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	if err := r.db.WithContext(ctx).First(&tier, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &tier, nil
+}
+
+// DeleteTier permanently deletes a ticket tier and all user tickets for that tier.
+func (r *TicketRepository) DeleteTier(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var tier models.TicketTier
+		if err := tx.Where("id = ? AND is_deleted = ?", id, false).First(&tier).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketTierNotFound
+			}
+			return err
+		}
+		// Permanently delete all user tickets that reference this tier
+		if err := tx.Unscoped().Where("ticket_id = ?", id).Delete(&models.UserTicket{}).Error; err != nil {
+			return err
+		}
+		// Permanently delete the tier
+		if err := tx.Unscoped().Delete(&tier).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// SetTierActive sets is_active for a ticket tier.
+func (r *TicketRepository) SetTierActive(ctx context.Context, id uuid.UUID, active bool) (*models.TicketTier, error) {
+	var tier models.TicketTier
+	if err := r.db.WithContext(ctx).Where("id = ? AND is_deleted = ?", id, false).First(&tier).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTicketTierNotFound
+		}
+		return nil, err
+	}
+	if err := r.db.WithContext(ctx).Model(&tier).Update("is_active", active).Error; err != nil {
+		return nil, err
+	}
+	tier.IsActive = active
 	return &tier, nil
 }
 
@@ -210,6 +339,88 @@ func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uu
 		}
 
 		// 7. Load related data
+		if err := tx.Preload("Ticket").Preload("User").First(ticket, "id = ?", ticket.Id).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return ticket, nil
+}
+
+// CreateTicketForAdmin creates a ticket for a user (admin action). Skips blacklist check; creates as approved.
+func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tierID, staffID uuid.UUID) (*models.UserTicket, error) {
+	var ticket *models.UserTicket
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Check user exists
+		var user models.User
+		if err := tx.Where("id = ? AND is_deleted = ?", userID, false).First(&user).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrUserNotFound
+			}
+			return err
+		}
+
+		// 2. Check if user already has a non-denied ticket
+		var existingTicket models.UserTicket
+		err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).
+			First(&existingTicket).Error
+		if err == nil {
+			return ErrUserAlreadyHasTicket
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		// 3. Lock the tier row and check stock
+		var tier models.TicketTier
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND is_deleted = ? AND is_active = ?", tierID, false, true).
+			First(&tier).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketTierNotFound
+			}
+			return err
+		}
+
+		if tier.Stock <= 0 {
+			return ErrOutOfStock
+		}
+
+		// 4. Get next ticket number and decrement stock
+		ticketNumber, err := r.GetNextTicketNumber(ctx, tx, tierID)
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
+			return err
+		}
+
+		// 5. Create ticket as approved
+		now := time.Now()
+		referenceCode := fmt.Sprintf("%s-%04d", tier.TierCode, ticketNumber)
+		ticket = &models.UserTicket{
+			Id:            uuid.New(),
+			UserId:        userID,
+			TicketId:      tierID,
+			TicketNumber:  ticketNumber,
+			ReferenceCode: referenceCode,
+			Status:        models.TicketStatusApproved,
+			ApprovedAt:    &now,
+			ApprovedBy:    &staffID,
+		}
+
+		if err := tx.Create(ticket).Error; err != nil {
+			return err
+		}
+
+		// 6. Load related data
 		if err := tx.Preload("Ticket").Preload("User").First(ticket, "id = ?", ticket.Id).Error; err != nil {
 			return err
 		}
@@ -416,12 +627,8 @@ func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uu
 			return err
 		}
 
-		// Soft delete the ticket
-		now := time.Now()
-		ticket.IsDeleted = true
-		ticket.DeletedAt = &now
-
-		if err := tx.Save(&ticket).Error; err != nil {
+		// Permanently delete the user ticket
+		if err := tx.Unscoped().Delete(&ticket).Error; err != nil {
 			return err
 		}
 

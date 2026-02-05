@@ -597,6 +597,234 @@ func (h *TicketHandler) GetTicketStatistics(c *gin.Context) {
 	utils.RespondSuccess(c, stats, "Successfully retrieved ticket statistics")
 }
 
+// CreateTicketForAdmin godoc
+// @Summary Create a ticket for a user (admin)
+// @Description Create an approved ticket for a user. Skips blacklist. Decrements tier stock.
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.CreateTicketForAdminRequest true "User ID and Tier ID"
+// @Success 201 "Ticket created successfully"
+// @Failure 400 "Invalid user or tier ID"
+// @Failure 404 "User or tier not found"
+// @Failure 409 "User already has a ticket or tier out of stock"
+// @Router /admin/tickets [post]
+func (h *TicketHandler) CreateTicketForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	staffID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		utils.RespondUnauthorized(c, "Unauthorized")
+		return
+	}
+
+	var req requests.CreateTicketForAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	ticket, err := h.services.Ticket.CreateTicketForAdmin(ctx, staffID.String(), &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, repositories.ErrUserNotFound):
+			utils.RespondNotFound(c, "User not found")
+		case errors.Is(err, repositories.ErrTicketTierNotFound):
+			utils.RespondNotFound(c, "Ticket tier not found")
+		case errors.Is(err, repositories.ErrUserAlreadyHasTicket):
+			utils.RespondError(c, 409, "ALREADY_HAS_TICKET", "User already has a ticket")
+		case errors.Is(err, repositories.ErrOutOfStock):
+			utils.RespondError(c, 409, "OUT_OF_STOCK", "This ticket tier is out of stock")
+		default:
+			utils.RespondInternalServerError(c, "Failed to create ticket")
+		}
+		return
+	}
+
+	utils.RespondCreated(c, ticket, "Ticket created successfully")
+}
+
+// GetAllTiersForAdmin godoc
+// @Summary Get all ticket tiers for admin (including inactive)
+// @Description Returns all non-deleted tiers for management.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved tiers"
+// @Router /admin/tickets/tiers [get]
+func (h *TicketHandler) GetAllTiersForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tiers, err := h.services.Ticket.GetAllTiersForAdmin(ctx)
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve ticket tiers")
+		return
+	}
+	utils.RespondSuccess(c, &tiers, "Successfully retrieved ticket tiers")
+}
+
+// CreateTierForAdmin godoc
+// @Summary Create a ticket tier (admin)
+// @Description Create a new ticket tier. Tier code (T1, T2, ...) is assigned automatically.
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.CreateTicketTierRequest true "Tier details"
+// @Success 201 "Tier created successfully"
+// @Failure 400 "Invalid request"
+// @Router /admin/tickets/tiers [post]
+func (h *TicketHandler) CreateTierForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req requests.CreateTicketTierRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	tier, err := h.services.Ticket.CreateTierForAdmin(ctx, &req)
+	if err != nil {
+		log.Printf("[CreateTierForAdmin] failed: %v", err)
+		utils.RespondInternalServerError(c, "Failed to create ticket tier")
+		return
+	}
+
+	utils.RespondCreated(c, tier, "Ticket tier created successfully")
+}
+
+// UpdateTierForAdmin godoc
+// @Summary Update a ticket tier (admin)
+// @Description Update a ticket tier. Only provided fields are updated.
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Tier ID" format(uuid)
+// @Param request body requests.UpdateTicketTierRequest true "Tier updates"
+// @Success 200 "Tier updated successfully"
+// @Failure 400 "Invalid request"
+// @Failure 404 "Tier not found"
+// @Router /admin/tickets/tiers/{id} [patch]
+func (h *TicketHandler) UpdateTierForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tierID := c.Param("id")
+	if tierID == "" {
+		utils.RespondBadRequest(c, "Tier ID is required")
+		return
+	}
+
+	var req requests.UpdateTicketTierRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	tier, err := h.services.Ticket.UpdateTierForAdmin(ctx, tierID, &req)
+	if err != nil {
+		if errors.Is(err, repositories.ErrTicketTierNotFound) {
+			utils.RespondNotFound(c, "Ticket tier not found")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to update ticket tier")
+		return
+	}
+
+	utils.RespondSuccess(c, tier, "Ticket tier updated successfully")
+}
+
+// DeleteTierForAdmin godoc
+// @Summary Delete a ticket tier (admin)
+// @Description Permanently delete a ticket tier and all its user tickets.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Tier ID" format(uuid)
+// @Success 200 "Tier deleted successfully"
+// @Failure 404 "Tier not found"
+// @Router /admin/tickets/tiers/{id} [delete]
+func (h *TicketHandler) DeleteTierForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tierID := c.Param("id")
+	if tierID == "" {
+		utils.RespondBadRequest(c, "Tier ID is required")
+		return
+	}
+
+	err := h.services.Ticket.DeleteTierForAdmin(ctx, tierID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrTicketTierNotFound) {
+			utils.RespondNotFound(c, "Ticket tier not found")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to delete ticket tier")
+		return
+	}
+
+	utils.RespondSuccess[struct{}](c, nil, "Ticket tier deleted successfully")
+}
+
+// ActivateTierForAdmin godoc
+// @Summary Activate a ticket tier (admin)
+// @Description Set is_active to true so the tier can be purchased.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Tier ID" format(uuid)
+// @Success 200 "Tier activated successfully"
+// @Failure 404 "Tier not found"
+// @Router /admin/tickets/tiers/{id}/activate [patch]
+func (h *TicketHandler) ActivateTierForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tierID := c.Param("id")
+	if tierID == "" {
+		utils.RespondBadRequest(c, "Tier ID is required")
+		return
+	}
+
+	tier, err := h.services.Ticket.SetTierActiveForAdmin(ctx, tierID, true)
+	if err != nil {
+		if errors.Is(err, repositories.ErrTicketTierNotFound) {
+			utils.RespondNotFound(c, "Ticket tier not found")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to activate ticket tier")
+		return
+	}
+
+	utils.RespondSuccess(c, tier, "Ticket tier activated successfully")
+}
+
+// DeactivateTierForAdmin godoc
+// @Summary Deactivate a ticket tier (admin)
+// @Description Set is_active to false so the tier cannot be purchased.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Tier ID" format(uuid)
+// @Success 200 "Tier deactivated successfully"
+// @Failure 404 "Tier not found"
+// @Router /admin/tickets/tiers/{id}/deactivate [patch]
+func (h *TicketHandler) DeactivateTierForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tierID := c.Param("id")
+	if tierID == "" {
+		utils.RespondBadRequest(c, "Tier ID is required")
+		return
+	}
+
+	tier, err := h.services.Ticket.SetTierActiveForAdmin(ctx, tierID, false)
+	if err != nil {
+		if errors.Is(err, repositories.ErrTicketTierNotFound) {
+			utils.RespondNotFound(c, "Ticket tier not found")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to deactivate ticket tier")
+		return
+	}
+
+	utils.RespondSuccess(c, tier, "Ticket tier deactivated successfully")
+}
+
 // ========== Blacklist Management ==========
 
 // GetBlacklistedUsers godoc
