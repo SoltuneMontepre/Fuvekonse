@@ -23,55 +23,86 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 	ctx := context.Background()
 
 	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		log.Fatal("AWS_REGION is not set")
+	}
 
 	useLocalStack := os.Getenv("USE_LOCALSTACK") == "true"
-	var cfg aws.Config
-	var err error
+
+	var (
+		cfg aws.Config
+		err error
+	)
+
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
+	}
 
 	if useLocalStack {
+		localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
+		if localEndpoint == "" {
+			log.Fatal("USE_LOCALSTACK=true but LOCALSTACK_ENDPOINT is not set")
+		}
+
 		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if accessKey == "" || secretKey == "" {
-			log.Fatalf("USE_LOCALSTACK=true but AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not set")
+			log.Fatal("USE_LOCALSTACK=true but AWS credentials are missing")
 		}
 
-		localEndpoint := os.Getenv("LOCALSTACK_ENDPOINT")
+		log.Println("Using LocalStack for SES")
 
-		cfg, err = config.LoadDefaultConfig(ctx,
-			config.WithRegion(region),
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-			config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL:           localEndpoint,
-					SigningRegion: region,
-				}, nil
-			})),
+		opts = append(opts,
+			config.WithCredentialsProvider(
+				credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+			),
+			config.WithEndpointResolverWithOptions(
+				aws.EndpointResolverWithOptionsFunc(
+					func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+						return aws.Endpoint{
+							URL:           localEndpoint,
+							SigningRegion: region,
+						}, nil
+					},
+				),
+			),
 		)
 	} else {
-		cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
+		log.Println("Is now using prod environment for SES")
 	}
 
+	cfg, err = config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		log.Fatalf("failed to load AWS SDK config: %v", err)
 	}
 
 	client := ses.NewFromConfig(cfg)
-	return &MailService{repos: repos, sesClient: client}
+
+	return &MailService{
+		repos:     repos,
+		sesClient: client,
+	}
 }
 
-func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject, body string, cc, bcc []string) error {
-	// log the email content ...
-	// if os.Getenv("USE_LOCALSTACK") == "true" {
-	// 	log.Printf("[EMAIL CONTENT] From: %s To: %s Subject: %s\nBody:\n%s\n", fromEmail, toEmail, subject, body)
-	// }
-
+func (s *MailService) SendEmail(
+	ctx context.Context,
+	fromEmail string,
+	toEmail string,
+	subject string,
+	body string,
+	cc []string,
+	bcc []string,
+) error {
 	if s.sesClient == nil {
-		return fmt.Errorf("SES client not configured")
+		return fmt.Errorf("SES client not initialized")
 	}
+
+	log.Printf("Sending email (from=%s to=%s subject=%s)", fromEmail, toEmail, subject)
 
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
+
 	if len(cc) > 0 {
 		destination.CcAddresses = cc
 	}
@@ -98,12 +129,11 @@ func (s *MailService) SendEmail(ctx context.Context, fromEmail, toEmail, subject
 
 	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
-		log.Printf("failed to send email via SES: %v (from=%s to=%s)", err, fromEmail, toEmail)
-		return fmt.Errorf("failed to send email: %w", err)
+		log.Printf("Failed to send email (from=%s to=%s): %v", fromEmail, toEmail, err)
+		return fmt.Errorf("SES SendEmail failed: %w", err)
 	}
 
-	// Avoid dereferencing a potentially nil MessageId (can be nil in some SES responses)
-	log.Printf("Email sent successfully! Message ID: %s\n", aws.ToString(resp.MessageId))
+	log.Printf("Email sent successfully. MessageID=%s", aws.ToString(resp.MessageId))
 	return nil
 }
 
