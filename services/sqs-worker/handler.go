@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -44,13 +45,15 @@ func handler(request events.SQSEvent) (events.SQSEventResponse, error) {
 			batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
 			continue
 		}
-		resp.Body.Close()
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			log.Printf("general-service returned %d for message %s", resp.StatusCode, record.MessageId)
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			log.Printf("general-service returned %d for message %s; body: %s", resp.StatusCode, record.MessageId, string(body))
 			batchItemFailures = append(batchItemFailures, events.SQSBatchItemFailure{ItemIdentifier: record.MessageId})
 			continue
 		}
+		resp.Body.Close()
 		log.Printf("Processed ticket job message %s successfully", record.MessageId)
 	}
 
