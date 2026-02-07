@@ -21,6 +21,11 @@ locals {
   login_max_fail                  = local.secrets.LOGIN_MAX_FAIL
   login_fail_block_minutes        = local.secrets.LOGIN_FAIL_BLOCK_MINUTES
   frontend_url                    = local.secrets.FRONTEND_URL
-  
+
   ses_sender_email = local.secrets.SES_SENDER_EMAIL
+
+  # Mail: SES (default) or SendGrid
+  mail_provider   = lookup(local.secrets, "MAIL_PROVIDER", "ses")
+  sendgrid_api_key = lookup(local.secrets, "SENDGRID_API_KEY", "")
+  mail_from_name   = lookup(local.secrets, "MAIL_FROM_NAME", "Fuvekon")
 }
