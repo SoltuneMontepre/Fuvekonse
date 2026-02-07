@@ -6,33 +6,71 @@ import (
 	"general-service/internal/repositories"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
+)
+
+const (
+	mailProviderSES      = "ses"
+	mailProviderSendGrid = "sendgrid"
 )
 
 type MailService struct {
-	repos     *repositories.Repositories
-	sesClient *ses.Client
+	repos           *repositories.Repositories
+	sesClient       *ses.Client
+	sendgridClient  *sendgrid.Client
+	defaultFromName string
 }
 
 func NewMailService(repos *repositories.Repositories) *MailService {
-	ctx := context.Background()
+	provider := strings.ToLower(strings.TrimSpace(os.Getenv("MAIL_PROVIDER")))
+	if provider == "" {
+		provider = mailProviderSES
+	}
 
+	var sesClient *ses.Client
+	var sendgridClient *sendgrid.Client
+	defaultFromName := os.Getenv("MAIL_FROM_NAME")
+	if defaultFromName == "" {
+		defaultFromName = "Fuvekon"
+	}
+
+	switch provider {
+	case mailProviderSendGrid:
+		apiKey := os.Getenv("SENDGRID_API_KEY")
+		if apiKey == "" {
+			log.Fatal("MAIL_PROVIDER=sendgrid requires SENDGRID_API_KEY to be set")
+		}
+		sendgridClient = sendgrid.NewSendClient(apiKey)
+		log.Println("Mail service using SendGrid")
+	default:
+		sesClient = initSESClient()
+		log.Println("Mail service using AWS SES")
+	}
+
+	return &MailService{
+		repos:           repos,
+		sesClient:       sesClient,
+		sendgridClient:  sendgridClient,
+		defaultFromName: defaultFromName,
+	}
+}
+
+func initSESClient() *ses.Client {
+	ctx := context.Background()
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
-		log.Fatal("AWS_REGION is not set")
+		log.Fatal("AWS_REGION is not set (required when using SES)")
 	}
 
 	useLocalStack := os.Getenv("USE_LOCALSTACK") == "true"
-
-	var (
-		cfg aws.Config
-		err error
-	)
 
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(region),
@@ -43,15 +81,12 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 		if localEndpoint == "" {
 			log.Fatal("USE_LOCALSTACK=true but LOCALSTACK_ENDPOINT is not set")
 		}
-
 		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
 		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if accessKey == "" || secretKey == "" {
 			log.Fatal("USE_LOCALSTACK=true but AWS credentials are missing")
 		}
-
 		log.Println("Using LocalStack for SES")
-
 		opts = append(opts,
 			config.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
@@ -67,21 +102,13 @@ func NewMailService(repos *repositories.Repositories) *MailService {
 				),
 			),
 		)
-	} else {
-		log.Println("Is now using prod environment for SES")
 	}
 
-	cfg, err = config.LoadDefaultConfig(ctx, opts...)
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		log.Fatalf("failed to load AWS SDK config: %v", err)
 	}
-
-	client := ses.NewFromConfig(cfg)
-
-	return &MailService{
-		repos:     repos,
-		sesClient: client,
-	}
+	return ses.NewFromConfig(cfg)
 }
 
 func (s *MailService) SendEmail(
@@ -93,16 +120,25 @@ func (s *MailService) SendEmail(
 	cc []string,
 	bcc []string,
 ) error {
-	if s.sesClient == nil {
-		return fmt.Errorf("SES client not initialized")
+	if s.sendgridClient != nil {
+		return s.sendEmailSendGrid(ctx, fromEmail, toEmail, subject, body, cc, bcc)
 	}
+	if s.sesClient != nil {
+		return s.sendEmailSES(ctx, fromEmail, toEmail, subject, body, cc, bcc)
+	}
+	return fmt.Errorf("no mail provider configured")
+}
 
-	log.Printf("Sending email (from=%s to=%s subject=%s)", fromEmail, toEmail, subject)
+func (s *MailService) sendEmailSES(
+	ctx context.Context,
+	fromEmail, toEmail, subject, body string,
+	cc, bcc []string,
+) error {
+	log.Printf("Sending email via SES (from=%s to=%s subject=%s)", fromEmail, toEmail, subject)
 
 	destination := &types.Destination{
 		ToAddresses: []string{toEmail},
 	}
-
 	if len(cc) > 0 {
 		destination.CcAddresses = cc
 	}
@@ -129,12 +165,72 @@ func (s *MailService) SendEmail(
 
 	resp, err := s.sesClient.SendEmail(ctx, input)
 	if err != nil {
-		log.Printf("Failed to send email (from=%s to=%s): %v", fromEmail, toEmail, err)
+		log.Printf("Failed to send email via SES (from=%s to=%s): %v", fromEmail, toEmail, err)
 		return fmt.Errorf("SES SendEmail failed: %w", err)
 	}
-
-	log.Printf("Email sent successfully. MessageID=%s", aws.ToString(resp.MessageId))
+	log.Printf("Email sent via SES. MessageID=%s", aws.ToString(resp.MessageId))
 	return nil
+}
+
+func (s *MailService) sendEmailSendGrid(
+	ctx context.Context,
+	fromEmail, toEmail, subject, body string,
+	cc, bcc []string,
+) error {
+	log.Printf("Sending email via SendGrid (from=%s to=%s subject=%s)", fromEmail, toEmail, subject)
+
+	from := mail.NewEmail(s.defaultFromName, fromEmail)
+	to := mail.NewEmail("", toEmail)
+	// SendGrid expects plain text and HTML; use body as HTML and a stripped version for plain
+	plainText := stripHTML(body)
+	if plainText == "" {
+		plainText = subject
+	}
+	message := mail.NewSingleEmail(from, subject, to, plainText, body)
+
+	if len(cc) > 0 && len(message.Personalizations) > 0 {
+		ccEmails := make([]*mail.Email, 0, len(cc))
+		for _, addr := range cc {
+			ccEmails = append(ccEmails, mail.NewEmail("", addr))
+		}
+		message.Personalizations[0].AddCCs(ccEmails...)
+	}
+	if len(bcc) > 0 && len(message.Personalizations) > 0 {
+		bccEmails := make([]*mail.Email, 0, len(bcc))
+		for _, addr := range bcc {
+			bccEmails = append(bccEmails, mail.NewEmail("", addr))
+		}
+		message.Personalizations[0].AddBCCs(bccEmails...)
+	}
+
+	resp, err := s.sendgridClient.Send(message)
+	if err != nil {
+		log.Printf("Failed to send email via SendGrid (from=%s to=%s): %v", fromEmail, toEmail, err)
+		return fmt.Errorf("SendGrid Send failed: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		log.Printf("SendGrid returned %d (from=%s to=%s): %s", resp.StatusCode, fromEmail, toEmail, resp.Body)
+		return fmt.Errorf("SendGrid returned status %d: %s", resp.StatusCode, resp.Body)
+	}
+	log.Printf("Email sent via SendGrid successfully")
+	return nil
+}
+
+// stripHTML removes HTML tags for plain-text fallback.
+func stripHTML(s string) string {
+	var b strings.Builder
+	inTag := false
+	for _, r := range s {
+		switch {
+		case r == '<':
+			inTag = true
+		case r == '>':
+			inTag = false
+		case !inTag && (r == ' ' || r == '\n' || r >= 0x20):
+			b.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(b.String())
 }
 
 // SendOtpEmail sends an OTP verification email to the specified email address
