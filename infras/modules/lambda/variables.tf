@@ -145,3 +145,22 @@ variable "internal_api_key" {
   default     = ""
   sensitive   = true
 }
+
+variable "mail_provider" {
+  description = "Mail provider: ses (default) or sendgrid"
+  type        = string
+  default     = "ses"
+}
+
+variable "sendgrid_api_key" {
+  description = "SendGrid API key (required when mail_provider=sendgrid)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "mail_from_name" {
+  description = "Display name for sender (e.g. Fuvekon)"
+  type        = string
+  default     = "Fuvekon"
+}

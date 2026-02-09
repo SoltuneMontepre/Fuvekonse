@@ -30,12 +30,15 @@ resource "aws_lambda_function" "general_service" {
       GIN_MODE                        = var.gin_mode
       S3_BUCKET                       = var.s3_bucket_name
       SES_SENDER                      = var.ses_sender_email
+      SES_EMAIL_IDENTITY              = var.ses_sender_email
       SQS_QUEUE                       = var.sqs_queue_url
       INTERNAL_API_KEY                = var.internal_api_key
       COOKIE_DOMAIN                   = ""
       COOKIE_SECURE                   = "true"
       COOKIE_SAMESITE                 = "None"
-      INTERNAL_API_KEY                = var.internal_api_key
+      MAIL_PROVIDER                   = var.mail_provider
+      SENDGRID_API_KEY                = var.sendgrid_api_key
+      MAIL_FROM_NAME                  = var.mail_from_name
     }
   }
 
