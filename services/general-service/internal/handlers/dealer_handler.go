@@ -4,6 +4,7 @@ import (
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/dealer/requests"
 	"general-service/internal/services"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -201,8 +202,10 @@ func (h *DealerHandler) VerifyDealer(c *gin.Context) {
 		return
 	}
 
-	// Call service to verify dealer
-	booth, err := h.services.Dealer.VerifyDealer(boothID)
+	fromEmail := os.Getenv("SES_EMAIL_IDENTITY")
+
+	// Call service to verify dealer (sends approval email to booth owner with dealer den info)
+	booth, err := h.services.Dealer.VerifyDealer(c.Request.Context(), boothID, fromEmail)
 	if err != nil {
 		errMsg := err.Error()
 		switch errMsg {

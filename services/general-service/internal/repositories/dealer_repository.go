@@ -172,6 +172,36 @@ func (r *DealerRepository) CheckUserIsStaff(userID string) (bool, error) {
 	return count > 0, nil
 }
 
+// CheckUserIsStaffOfVerifiedBooth checks if a user is staff of a verified (and non-deleted) booth.
+// Used to return is_dealer correctly in GetMe: only true when the booth is verified.
+func (r *DealerRepository) CheckUserIsStaffOfVerifiedBooth(userID string) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.UserDealerStaff{}).
+		Joins("INNER JOIN dealer_booths ON dealer_booths.id = user_dealer_staffs.booth_id").
+		Where("user_dealer_staffs.user_id = ? AND user_dealer_staffs.is_deleted = ? AND dealer_booths.is_deleted = ? AND dealer_booths.is_verified = ?",
+			userID, false, false, true).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CheckUserIsOwnerOfBooth checks if a user is the owner (registrant) of a dealer booth.
+// Used to return is_dealer true for the user who registered the booth, even before it is verified.
+func (r *DealerRepository) CheckUserIsOwnerOfBooth(userID string) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.UserDealerStaff{}).
+		Joins("INNER JOIN dealer_booths ON dealer_booths.id = user_dealer_staffs.booth_id").
+		Where("user_dealer_staffs.user_id = ? AND user_dealer_staffs.is_deleted = ? AND user_dealer_staffs.is_owner = ? AND dealer_booths.is_deleted = ?",
+			userID, false, true, false).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 // FindStaffByUserAndBoothID finds a staff record by user ID and booth ID
 func (r *DealerRepository) FindStaffByUserAndBoothID(userID string, boothID string) (*models.UserDealerStaff, error) {
 	var staff models.UserDealerStaff

@@ -15,11 +15,12 @@ type Services struct {
 }
 
 func NewServices(repos *repositories.Repositories, redisClient *redis.Client, loginMaxFail int, loginFailBlockMinutes int) *Services {
+	mail := NewMailService(repos)
 	return &Services{
 		Auth:   NewAuthService(repos, redisClient, loginMaxFail, loginFailBlockMinutes),
 		User:   NewUserService(repos),
-		Mail:   NewMailService(repos),
+		Mail:   mail,
 		Ticket: NewTicketService(repos),
-		Dealer: NewDealerService(repos),
+		Dealer: NewDealerService(repos, mail),
 	}
 }

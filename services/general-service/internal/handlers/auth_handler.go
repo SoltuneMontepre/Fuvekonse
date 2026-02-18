@@ -122,24 +122,24 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err != nil {
 		// Check if it's a rate limit error using sentinel
 		if errors.Is(err, constants.ErrAccountLocked) {
-			utils.RespondTooManyRequests(c, "Too many failed login attempts")
+			utils.RespondErrorWithErrorMessage(c, 429, constants.ErrCodeTooManyRequests, "Too many failed login attempts", "accountLocked")
 			return
 		}
 
-		// Check for invalid credentials
+		// Check for invalid credentials — return i18n key for frontend
 		if errors.Is(err, constants.ErrInvalidCredentials) {
-			utils.RespondUnauthorized(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "Invalid credentials", "invalidEmailOrPassword")
 			return
 		}
 
 		// Check for unverified user
 		if errors.Is(err, constants.ErrUserNotVerified) {
-			utils.RespondForbidden(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 403, constants.ErrCodeForbidden, "User not verified", "userNotVerified")
 			return
 		}
 
 		// Default to internal server error
-		utils.RespondInternalServerError(c, "An error occurred during login")
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "An error occurred during login", "loginFailed")
 		return
 	}
 
@@ -204,6 +204,60 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password reset successful")
+}
+
+// ChangePassword godoc
+// @Summary Change password (authenticated)
+// @Description Allow authenticated users to change their password by providing current password and new password.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.ResetPasswordRequest true "Change password request (current_password, new_password, confirm_password)"
+// @Success 200 "Password changed successfully"
+// @Failure 400 "Bad request - validation error or new password same as current"
+// @Failure 401 "Unauthorized - missing/invalid token or wrong current password"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/change-password [post]
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	var req requests.ResetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
+		if errors.Is(err, constants.ErrUserNotFound) {
+			utils.RespondNotFound(c, err.Error())
+			return
+		}
+		if errors.Is(err, constants.ErrCurrentPasswordIncorrect) {
+			utils.RespondUnauthorized(c, err.Error())
+			return
+		}
+		if errors.Is(err, constants.ErrPasswordMismatch) || errors.Is(err, constants.ErrSamePassword) {
+			utils.RespondBadRequest(c, err.Error())
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to change password")
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Password changed successfully")
 }
 
 // Logout godoc

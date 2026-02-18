@@ -59,13 +59,16 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	// Check if user is a dealer (staff member of a dealer booth)
-	isDealer, err := s.repos.Dealer.CheckUserIsStaff(userID)
+	// Check if user is a dealer: staff of a verified booth, or the one who registered (owner) a booth
+	isDealerVerified, err := s.repos.Dealer.CheckUserIsStaffOfVerifiedBooth(userID)
 	if err != nil {
-		// If there's an error checking dealer status, default to false
-		// Log error but don't fail the request
-		isDealer = false
+		isDealerVerified = false
 	}
+	isDealerOwner, err := s.repos.Dealer.CheckUserIsOwnerOfBooth(userID)
+	if err != nil {
+		isDealerOwner = false
+	}
+	isDealer := isDealerVerified || isDealerOwner
 
 	// Check if user has a ticket (non-denied, non-deleted)
 	ticket, err := s.repos.Ticket.GetUserTicket(context.Background(), user.Id)

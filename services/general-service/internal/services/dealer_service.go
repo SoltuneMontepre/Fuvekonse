@@ -10,6 +10,7 @@ import (
 	"general-service/internal/mappers"
 	"general-service/internal/models"
 	"general-service/internal/repositories"
+	"log"
 	"math"
 
 	"github.com/google/uuid"
@@ -18,10 +19,11 @@ import (
 
 type DealerService struct {
 	repos *repositories.Repositories
+	mail  *MailService
 }
 
-func NewDealerService(repos *repositories.Repositories) *DealerService {
-	return &DealerService{repos: repos}
+func NewDealerService(repos *repositories.Repositories, mail *MailService) *DealerService {
+	return &DealerService{repos: repos, mail: mail}
 }
 
 // RegisterDealer creates a new dealer booth and assigns the creator as owner
@@ -134,8 +136,8 @@ func (s *DealerService) GetDealerByIDForAdmin(boothID string) (*responses.Dealer
 	return mappers.MapDealerBoothToDetailResponse(booth), nil
 }
 
-// VerifyDealer verifies a dealer booth and generates a unique booth code
-func (s *DealerService) VerifyDealer(boothID string) (*responses.DealerBoothDetailResponse, error) {
+// VerifyDealer verifies a dealer booth and generates a unique booth code. Sends an email to the booth owner with dealer den (booth) information.
+func (s *DealerService) VerifyDealer(ctx context.Context, boothID string, fromEmail string) (*responses.DealerBoothDetailResponse, error) {
 	// Check if booth exists
 	booth, err := s.repos.Dealer.FindBoothByID(boothID)
 	if err != nil {
@@ -186,6 +188,19 @@ func (s *DealerService) VerifyDealer(boothID string) (*responses.DealerBoothDeta
 	if err != nil {
 		// Fallback to verified booth without staffs
 		return mappers.MapDealerBoothToDetailResponse(verifiedBooth), nil
+	}
+
+	// Send approval email to the booth owner with dealer den information
+	if fromEmail != "" && s.mail != nil {
+		for i := range boothWithStaffs.Staffs {
+			staff := &boothWithStaffs.Staffs[i]
+			if staff.IsOwner && !staff.IsDeleted && staff.User.Email != "" {
+				if err := s.mail.SendDealerApprovedEmail(ctx, fromEmail, staff.User.Email, boothWithStaffs.BoothName, boothNumber); err != nil {
+					log.Printf("Failed to send dealer approved email to %s: %v", staff.User.Email, err)
+				}
+				break
+			}
+		}
 	}
 
 	return mappers.MapDealerBoothToDetailResponse(boothWithStaffs), nil

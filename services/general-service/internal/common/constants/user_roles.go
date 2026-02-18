@@ -12,6 +12,7 @@ const (
 	RoleUser   UserRole = 0 // User role
 	RoleAdmin  UserRole = 1 // Admin role
 	RoleDealer UserRole = 2 // Dealer role
+	RoleStaff  UserRole = 3 // Staff role
 )
 
 // String returns the string representation of the UserRole
@@ -23,6 +24,8 @@ func (r UserRole) String() string {
 		return "Admin"
 	case RoleDealer:
 		return "Dealer"
+	case RoleStaff:
+		return "Staff"
 	default:
 		return fmt.Sprintf("Unknown(%d)", int(r))
 	}
@@ -57,14 +60,16 @@ func ParseUserRole(s string) (UserRole, error) {
 		return RoleAdmin, nil
 	case "Dealer", "dealer", "DEALER":
 		return RoleDealer, nil
+	case "Staff", "staff", "STAFF":
+		return RoleStaff, nil
 	default:
-		return 0, fmt.Errorf("invalid user role: %s. Valid roles are: User, Admin, Dealer", s)
+		return 0, fmt.Errorf("invalid user role: %s. Valid roles are: User, Admin, Dealer, Staff", s)
 	}
 }
 
 // IsValid checks if the UserRole is a valid enum value
 func (r UserRole) IsValid() bool {
-	return r >= RoleUser && r <= RoleDealer
+	return r >= RoleUser && r <= RoleStaff
 }
 
 // Value implements driver.Valuer to convert UserRole to integer for database storage
