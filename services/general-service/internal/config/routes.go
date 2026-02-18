@@ -162,6 +162,8 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 			adminTickets.GET("/:id", h.Ticket.GetTicketByID)
 			adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
 			adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
+			adminTickets.PATCH("/:id", h.Ticket.UpdateTicketForAdmin)
+			adminTickets.DELETE("/:id", h.Ticket.DeleteTicketForAdmin)
 		}
 
 		// Admin dealer management routes
