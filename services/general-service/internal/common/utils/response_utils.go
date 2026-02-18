@@ -50,7 +50,12 @@ func RespondSuccessWithMeta[T any](c *gin.Context, data *T, meta interface{}, me
 
 // RespondError sends an error response
 func RespondError(c *gin.Context, statusCode int, errorCode string, message string) {
-	c.JSON(statusCode, common.ErrorApiResponse(errorCode, message, statusCode))
+	c.JSON(statusCode, common.ErrorApiResponse(errorCode, message, "", statusCode))
+}
+
+// RespondErrorWithErrorMessage sends an error response with an i18n key for the frontend (e.g. "invalidEmailOrPassword")
+func RespondErrorWithErrorMessage(c *gin.Context, statusCode int, errorCode string, message string, errorMessage string) {
+	c.JSON(statusCode, common.ErrorApiResponse(errorCode, message, errorMessage, statusCode))
 }
 
 // RespondBadRequest sends a 400 Bad Request response

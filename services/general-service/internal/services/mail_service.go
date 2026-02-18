@@ -254,3 +254,26 @@ func (s *MailService) SendOtpEmail(ctx context.Context, fromEmail, toEmail, otp 
 
 	return s.SendEmail(ctx, fromEmail, toEmail, subject, body, nil, nil)
 }
+
+// SendDealerApprovedEmail sends an email to the dealer (booth owner) when their registration is approved, including dealer den (booth) information.
+func (s *MailService) SendDealerApprovedEmail(ctx context.Context, fromEmail, toEmail, boothName, boothNumber string) error {
+	subject := "Your Dealer Registration Has Been Approved"
+	body := fmt.Sprintf(`
+		<html>
+			<body style="font-family: Arial, sans-serif; padding: 20px;">
+				<div style="max-width: 600px; margin: 0 auto; background-color: #f5f5f5; padding: 30px; border-radius: 10px;">
+					<h2 style="color: #333; text-align: center;">Dealer Registration Approved</h2>
+					<p style="color: #666; font-size: 16px;">Your dealer booth registration has been verified and approved.</p>
+					<div style="background-color: #fff; padding: 20px; border-radius: 5px; margin: 20px 0;">
+						<p style="color: #333; font-size: 14px; margin: 0 0 8px 0;"><strong>Booth name:</strong> %s</p>
+						<p style="color: #333; font-size: 14px; margin: 0 0 8px 0;"><strong>Dealer den / Booth number:</strong> <code style="background: #eee; padding: 4px 8px; border-radius: 4px;">%s</code></p>
+						<p style="color: #666; font-size: 13px; margin: 12px 0 0 0;">Share this booth code with staff so they can join your dealer booth.</p>
+					</div>
+					<p style="color: #999; font-size: 12px; margin-top: 30px;">If you have any questions, please contact the event organizers.</p>
+				</div>
+			</body>
+		</html>
+	`, boothName, boothNumber)
+
+	return s.SendEmail(ctx, fromEmail, toEmail, subject, body, nil, nil)
+}
