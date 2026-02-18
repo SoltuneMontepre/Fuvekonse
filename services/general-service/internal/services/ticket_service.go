@@ -10,7 +10,9 @@ import (
 	"general-service/internal/mappers"
 	"general-service/internal/models"
 	"general-service/internal/repositories"
+	"log"
 	"math"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -27,10 +29,11 @@ var (
 
 type TicketService struct {
 	repos *repositories.Repositories
+	mail  *MailService
 }
 
-func NewTicketService(repos *repositories.Repositories) *TicketService {
-	return &TicketService{repos: repos}
+func NewTicketService(repos *repositories.Repositories, mail *MailService) *TicketService {
+	return &TicketService{repos: repos, mail: mail}
 }
 
 // ========== Public User Endpoints ==========
@@ -333,19 +336,43 @@ func (s *TicketService) GetTicketsForAdmin(ctx context.Context, req *requests.Ad
 	return mappers.MapUserTicketsToResponse(tickets, true), meta, nil
 }
 
-// GetTicketByID returns a specific ticket by ID (admin)
-func (s *TicketService) GetTicketByID(ctx context.Context, ticketID string) (*responses.UserTicketResponse, error) {
-	id, err := uuid.Parse(ticketID)
-	if err != nil {
-		return nil, ErrInvalidTicketID
-	}
-
-	ticket, err := s.repos.Ticket.GetUserTicketByID(ctx, id)
+// GetTicketByID returns a specific ticket by ID (UUID) or by reference code (admin/staff).
+// If the input parses as a valid UUID, lookup is by ticket id; otherwise by reference code.
+func (s *TicketService) GetTicketByID(ctx context.Context, ticketIDOrRef string) (*responses.UserTicketResponse, error) {
+	ticket, err := s.getTicketByIDOrRef(ctx, ticketIDOrRef)
 	if err != nil {
 		return nil, err
 	}
-
 	return mappers.MapUserTicketToResponse(ticket, true), nil
+}
+
+// getTicketByIDOrRef returns the ticket model by UUID or reference code. Caller must not pass empty string.
+func (s *TicketService) getTicketByIDOrRef(ctx context.Context, ticketIDOrRef string) (*models.UserTicket, error) {
+	id, err := uuid.Parse(ticketIDOrRef)
+	if err == nil {
+		return s.repos.Ticket.GetUserTicketByID(ctx, id)
+	}
+	return s.repos.Ticket.GetUserTicketByReference(ctx, ticketIDOrRef)
+}
+
+// ConfirmCheckIn sets is_checked_in = true for a ticket (admin/staff). Accepts ticket ID or reference code.
+func (s *TicketService) ConfirmCheckIn(ctx context.Context, ticketIDOrRef, staffID string) (*responses.UserTicketResponse, error) {
+	if ticketIDOrRef == "" {
+		return nil, ErrInvalidTicketID
+	}
+	ticket, err := s.getTicketByIDOrRef(ctx, ticketIDOrRef)
+	if err != nil {
+		return nil, err
+	}
+	sid, err := uuid.Parse(staffID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+	updated, err := s.repos.Ticket.UpdateTicketForAdmin(ctx, ticket.Id, map[string]interface{}{"is_checked_in": true}, sid)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapUserTicketToResponse(updated, true), nil
 }
 
 // ApproveTicket approves a ticket (admin action)
@@ -363,6 +390,20 @@ func (s *TicketService) ApproveTicket(ctx context.Context, ticketID string, staf
 	ticket, err := s.repos.Ticket.ApproveTicket(ctx, tid, sid)
 	if err != nil {
 		return nil, err
+	}
+
+	// Send ticket approved email with QR code to the user
+	if s.mail != nil && ticket.User.Email != "" {
+		fromEmail := os.Getenv("SES_EMAIL_IDENTITY")
+		if fromEmail != "" {
+			tierName := ""
+			if ticket.Ticket.TicketName != "" {
+				tierName = ticket.Ticket.TicketName
+			}
+			if err := s.mail.SendTicketApprovedWithQREmail(ctx, fromEmail, ticket.User.Email, ticket.ReferenceCode, tierName, LangFromCountry(ticket.User.Country)); err != nil {
+				log.Printf("Failed to send ticket approved email with QR to %s: %v", ticket.User.Email, err)
+			}
+		}
 	}
 
 	return mappers.MapUserTicketToResponse(ticket, true), nil

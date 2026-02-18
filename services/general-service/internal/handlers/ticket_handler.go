@@ -504,6 +504,47 @@ func (h *TicketHandler) ApproveTicket(c *gin.Context) {
 	utils.RespondSuccess(c, ticket, "Ticket approved successfully")
 }
 
+// ConfirmCheckIn godoc
+// @Summary Confirm ticket check-in (admin/staff)
+// @Description Set is_checked_in = true for a ticket. Accepts ticket ID (UUID) or reference code in path.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Ticket ID or reference code"
+// @Success 200 "Check-in confirmed"
+// @Failure 400 "Invalid ticket ID or reference"
+// @Failure 401 "Unauthorized"
+// @Failure 403 "Forbidden"
+// @Failure 404 "Ticket not found"
+// @Failure 500 "Internal server error"
+// @Router /admin/tickets/{id}/check-in [patch]
+func (h *TicketHandler) ConfirmCheckIn(c *gin.Context) {
+	ctx := c.Request.Context()
+	ticketIDOrRef := c.Param("id")
+	if ticketIDOrRef == "" {
+		utils.RespondBadRequest(c, "Ticket ID or reference code is required")
+		return
+	}
+	staffID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "Staff ID not found in token")
+		return
+	}
+	ticket, err := h.services.Ticket.ConfirmCheckIn(ctx, ticketIDOrRef, staffID.(string))
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidTicketID), errors.Is(err, services.ErrInvalidUserID):
+			utils.RespondBadRequest(c, err.Error())
+		case errors.Is(err, repositories.ErrTicketNotFound):
+			utils.RespondNotFound(c, "Ticket not found")
+		default:
+			utils.RespondInternalServerError(c, "Failed to confirm check-in")
+		}
+		return
+	}
+	utils.RespondSuccess(c, ticket, "Check-in confirmed")
+}
+
 // DenyTicket godoc
 // @Summary Deny a ticket (admin)
 // @Description Deny a pending or self-confirmed ticket and return stock. When queue is enabled, request is queued (202).

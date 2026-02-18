@@ -109,7 +109,7 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		}, nil
 	}
 
-	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp); err != nil {
+	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp, LangFromCountry(newUser.Country)); err != nil {
 		// Log error but don't fail registration
 		fmt.Printf("[ERROR] Failed to send OTP email (email redacted) for user ID %s: %v\n", newUser.Id, err)
 		return &responses.RegisterResponse{
@@ -379,7 +379,7 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 	if mailService == nil {
 		return false, fmt.Errorf("mail service not available")
 	}
-	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp); err != nil {
+	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp, LangFromCountry(user.Country)); err != nil {
 		return false, fmt.Errorf("failed to send OTP email: %w", err)
 	}
 

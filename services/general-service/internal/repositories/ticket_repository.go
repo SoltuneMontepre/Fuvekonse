@@ -229,7 +229,7 @@ func (r *TicketRepository) GetUserTicketByID(ctx context.Context, id uuid.UUID) 
 	err := r.db.WithContext(ctx).
 		Preload("Ticket").
 		Preload("User").
-		Where("id = ? AND is_deleted = ?", id, false).
+		Where("(id = ? AND is_deleted = ?)", id, false).
 		First(&ticket).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

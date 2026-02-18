@@ -169,6 +169,9 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)
 
+	// Every API requires X-Internal-Api-Key header (INTERNAL_API_KEY env)
+	router.Use(middlewares.InternalAPIKeyMiddleware())
+
 	// Check if running in Lambda - if so, API Gateway includes /api/general in the path
 	isLambda := os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
 	if isLambda {

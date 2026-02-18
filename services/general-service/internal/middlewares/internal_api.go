@@ -11,9 +11,16 @@ const InternalAPIKeyHeader = "X-Internal-Api-Key"
 
 // InternalAPIKeyMiddleware requires X-Internal-Api-Key header to match INTERNAL_API_KEY env.
 // If INTERNAL_API_KEY is not set, all requests are rejected (internal jobs disabled).
+// In development (ENV=development), the check is skipped.
 func InternalAPIKeyMiddleware() gin.HandlerFunc {
 	expectedKey := os.Getenv("INTERNAL_API_KEY")
+	env := os.Getenv("USE_LOCALSTACK")
+	isDev := env == "true"
 	return func(c *gin.Context) {
+		if isDev {
+			c.Next()
+			return
+		}
 		if expectedKey == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"isSuccess":  false,
