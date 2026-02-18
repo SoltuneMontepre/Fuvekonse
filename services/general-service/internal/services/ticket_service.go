@@ -423,6 +423,74 @@ func (s *TicketService) CreateTicketForAdmin(ctx context.Context, staffID string
 	return mappers.MapUserTicketToResponse(ticket, true), nil
 }
 
+// UpdateTicketForAdmin updates any ticket fields without validation (admin back-door).
+func (s *TicketService) UpdateTicketForAdmin(ctx context.Context, ticketID, staffID string, req *requests.UpdateTicketForAdminRequest) (*responses.UserTicketResponse, error) {
+	tid, err := uuid.Parse(ticketID)
+	if err != nil {
+		return nil, ErrInvalidTicketID
+	}
+	sid, err := uuid.Parse(staffID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+
+	updates := make(map[string]interface{})
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.TierID != nil {
+		tierID, err := uuid.Parse(*req.TierID)
+		if err != nil {
+			return nil, ErrInvalidTierID
+		}
+		updates["ticket_id"] = tierID
+	}
+	if req.ConBadgeName != nil {
+		updates["con_badge_name"] = *req.ConBadgeName
+	}
+	if req.BadgeImage != nil {
+		updates["badge_image"] = *req.BadgeImage
+	}
+	if req.IsFursuiter != nil {
+		updates["is_fursuiter"] = *req.IsFursuiter
+	}
+	if req.IsFursuitStaff != nil {
+		updates["is_fursuit_staff"] = *req.IsFursuitStaff
+	}
+	if req.IsCheckedIn != nil {
+		updates["is_checked_in"] = *req.IsCheckedIn
+	}
+	if req.DenialReason != nil {
+		updates["denial_reason"] = *req.DenialReason
+	}
+
+	if len(updates) == 0 {
+		return s.GetTicketByID(ctx, ticketID)
+	}
+
+	ticket, err := s.repos.Ticket.UpdateTicketForAdmin(ctx, tid, updates, sid)
+	if err != nil {
+		return nil, err
+	}
+
+	return mappers.MapUserTicketToResponse(ticket, true), nil
+}
+
+// DeleteTicketForAdmin soft-deletes a ticket and re-increments stock if applicable.
+func (s *TicketService) DeleteTicketForAdmin(ctx context.Context, ticketID string) (*responses.UserTicketResponse, error) {
+	tid, err := uuid.Parse(ticketID)
+	if err != nil {
+		return nil, ErrInvalidTicketID
+	}
+
+	ticket, err := s.repos.Ticket.DeleteTicketForAdmin(ctx, tid)
+	if err != nil {
+		return nil, err
+	}
+
+	return mappers.MapUserTicketToResponse(ticket, true), nil
+}
+
 // ========== Blacklist Management ==========
 
 // GetBlacklistedUsers returns all blacklisted users

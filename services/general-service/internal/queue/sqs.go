@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -85,7 +86,8 @@ func NewSQSClient(ctx context.Context) (*SQSClient, error) {
 // PublishTicketJob sends a ticket job message to the queue.
 func (c *SQSClient) PublishTicketJob(ctx context.Context, msg *TicketJobMessage) error {
 	if c == nil {
-		return nil
+		log.Printf("ERROR: PublishTicketJob called on nil SQSClient (action=%s) — this indicates a nil interface bug", msg.Action)
+		return fmt.Errorf("SQS client is nil; cannot publish job")
 	}
 	body, err := json.Marshal(msg)
 	if err != nil {

@@ -598,8 +598,8 @@ func (h *TicketHandler) GetTicketStatistics(c *gin.Context) {
 }
 
 // CreateTicketForAdmin godoc
-// @Summary Create a ticket for a user (admin)
-// @Description Create an approved ticket for a user. Skips blacklist. Decrements tier stock.
+// @Summary Create a ticket for a user (admin back-door)
+// @Description Create an approved ticket for a user. Bypasses all validation (blacklist, 1-per-user, stock, tier active).
 // @Tags admin-tickets
 // @Accept json
 // @Produce json
@@ -608,7 +608,6 @@ func (h *TicketHandler) GetTicketStatistics(c *gin.Context) {
 // @Success 201 "Ticket created successfully"
 // @Failure 400 "Invalid user or tier ID"
 // @Failure 404 "User or tier not found"
-// @Failure 409 "User already has a ticket or tier out of stock"
 // @Router /admin/tickets [post]
 func (h *TicketHandler) CreateTicketForAdmin(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -631,10 +630,6 @@ func (h *TicketHandler) CreateTicketForAdmin(c *gin.Context) {
 			utils.RespondNotFound(c, "User not found")
 		case errors.Is(err, repositories.ErrTicketTierNotFound):
 			utils.RespondNotFound(c, "Ticket tier not found")
-		case errors.Is(err, repositories.ErrUserAlreadyHasTicket):
-			utils.RespondError(c, 409, "ALREADY_HAS_TICKET", "User already has a ticket")
-		case errors.Is(err, repositories.ErrOutOfStock):
-			utils.RespondError(c, 409, "OUT_OF_STOCK", "This ticket tier is out of stock")
 		default:
 			utils.RespondInternalServerError(c, "Failed to create ticket")
 		}
@@ -975,4 +970,94 @@ func (h *TicketHandler) UnblacklistUser(c *gin.Context) {
 	}
 
 	utils.RespondSuccess[any](c, nil, "User removed from blacklist successfully")
+}
+
+// ========== Admin Back-Door Operations ==========
+
+// UpdateTicketForAdmin godoc
+// @Summary Update a ticket (admin back-door)
+// @Description Update any ticket fields without validation constraints. No status transition rules enforced.
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Ticket ID"
+// @Param request body requests.UpdateTicketForAdminRequest true "Fields to update (all optional)"
+// @Success 200 "Ticket updated successfully"
+// @Failure 400 "Invalid ticket or tier ID"
+// @Failure 404 "Ticket or tier not found"
+// @Router /admin/tickets/{id} [patch]
+func (h *TicketHandler) UpdateTicketForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	ticketID := c.Param("id")
+	if ticketID == "" {
+		utils.RespondBadRequest(c, "Ticket ID is required")
+		return
+	}
+
+	staffID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		utils.RespondUnauthorized(c, "Unauthorized")
+		return
+	}
+
+	var req requests.UpdateTicketForAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	ticket, err := h.services.Ticket.UpdateTicketForAdmin(ctx, ticketID, staffID.String(), &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidTicketID):
+			utils.RespondBadRequest(c, "Invalid ticket ID format")
+		case errors.Is(err, services.ErrInvalidTierID):
+			utils.RespondBadRequest(c, "Invalid tier ID format")
+		case errors.Is(err, repositories.ErrTicketNotFound):
+			utils.RespondNotFound(c, "Ticket not found")
+		case errors.Is(err, repositories.ErrTicketTierNotFound):
+			utils.RespondNotFound(c, "Ticket tier not found")
+		default:
+			utils.RespondInternalServerError(c, "Failed to update ticket")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, ticket, "Ticket updated successfully")
+}
+
+// DeleteTicketForAdmin godoc
+// @Summary Delete a ticket (admin back-door)
+// @Description Soft-delete a ticket. Re-increments tier stock if ticket was pending/self_confirmed/approved.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Ticket ID"
+// @Success 200 "Ticket deleted successfully"
+// @Failure 400 "Invalid ticket ID"
+// @Failure 404 "Ticket not found"
+// @Router /admin/tickets/{id} [delete]
+func (h *TicketHandler) DeleteTicketForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	ticketID := c.Param("id")
+	if ticketID == "" {
+		utils.RespondBadRequest(c, "Ticket ID is required")
+		return
+	}
+
+	ticket, err := h.services.Ticket.DeleteTicketForAdmin(ctx, ticketID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidTicketID):
+			utils.RespondBadRequest(c, "Invalid ticket ID format")
+		case errors.Is(err, repositories.ErrTicketNotFound):
+			utils.RespondNotFound(c, "Ticket not found")
+		default:
+			utils.RespondInternalServerError(c, "Failed to delete ticket")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, ticket, "Ticket deleted successfully")
 }

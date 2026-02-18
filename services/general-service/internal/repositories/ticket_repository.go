@@ -353,7 +353,9 @@ func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uu
 	return ticket, nil
 }
 
-// CreateTicketForAdmin creates a ticket for a user (admin action). Skips blacklist check; creates as approved.
+// CreateTicketForAdmin creates a ticket for a user (admin back-door).
+// Bypasses all validation: no blacklist check, no 1-per-user check, no stock check, no tier active check.
+// Stock is NOT decremented — admin manages stock separately via tier updates.
 func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tierID, staffID uuid.UUID) (*models.UserTicket, error) {
 	var ticket *models.UserTicket
 
@@ -367,21 +369,9 @@ func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tie
 			return err
 		}
 
-		// 2. Check if user already has a non-denied ticket
-		var existingTicket models.UserTicket
-		err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).
-			First(&existingTicket).Error
-		if err == nil {
-			return ErrUserAlreadyHasTicket
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-
-		// 3. Lock the tier row and check stock
+		// 2. Get tier (no active/stock checks — admin back-door)
 		var tier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ?", tierID, false, true).
+		if err := tx.Where("id = ? AND is_deleted = ?", tierID, false).
 			First(&tier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
@@ -389,20 +379,13 @@ func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tie
 			return err
 		}
 
-		if tier.Stock <= 0 {
-			return ErrOutOfStock
-		}
-
-		// 4. Get next ticket number and decrement stock
+		// 3. Get next ticket number (no stock decrement for admin creates)
 		ticketNumber, err := r.GetNextTicketNumber(ctx, tx, tierID)
 		if err != nil {
 			return err
 		}
-		if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
-			return err
-		}
 
-		// 5. Create ticket as approved
+		// 4. Create ticket as approved
 		now := time.Now()
 		referenceCode := fmt.Sprintf("%s-%04d", tier.TierCode, ticketNumber)
 		ticket = &models.UserTicket{
@@ -905,4 +888,119 @@ func (r *TicketRepository) UnblacklistUser(ctx context.Context, userID uuid.UUID
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+// ========== Admin Back-Door Operations ==========
+
+// UpdateTicketForAdmin updates any ticket fields without validation (admin back-door).
+// No status transition rules, no stock changes, no active/blacklist checks.
+func (r *TicketRepository) UpdateTicketForAdmin(ctx context.Context, ticketID uuid.UUID, updates map[string]interface{}, staffID uuid.UUID) (*models.UserTicket, error) {
+	var ticket models.UserTicket
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Find and lock the ticket
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND is_deleted = ?", ticketID, false).
+			First(&ticket).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketNotFound
+			}
+			return err
+		}
+
+		// 2. If tier is being changed, validate new tier exists
+		if newTierID, ok := updates["ticket_id"]; ok {
+			var tier models.TicketTier
+			if err := tx.Where("id = ? AND is_deleted = ?", newTierID, false).
+				First(&tier).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrTicketTierNotFound
+				}
+				return err
+			}
+		}
+
+		// 3. Auto-set audit timestamps when status changes
+		if newStatus, ok := updates["status"]; ok {
+			now := time.Now()
+			status := models.TicketStatus(newStatus.(string))
+			if status == models.TicketStatusApproved {
+				updates["approved_at"] = &now
+				updates["approved_by"] = &staffID
+			}
+			if status == models.TicketStatusDenied {
+				updates["denied_at"] = &now
+				updates["denied_by"] = &staffID
+			}
+		}
+
+		// 4. Apply all updates
+		if err := tx.Model(&ticket).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Reload with relations
+	if err := r.db.WithContext(ctx).Preload("Ticket").Preload("User").
+		First(&ticket, "id = ?", ticketID).Error; err != nil {
+		return nil, err
+	}
+
+	return &ticket, nil
+}
+
+// DeleteTicketForAdmin soft-deletes a ticket (admin back-door).
+// Re-increments tier stock if ticket was in a stock-consuming state (pending, self_confirmed, approved).
+func (r *TicketRepository) DeleteTicketForAdmin(ctx context.Context, ticketID uuid.UUID) (*models.UserTicket, error) {
+	var ticket models.UserTicket
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Find and lock the ticket
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Preload("Ticket").Preload("User").
+			Where("id = ? AND is_deleted = ?", ticketID, false).
+			First(&ticket).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketNotFound
+			}
+			return err
+		}
+
+		// 2. Re-increment stock if ticket was in a stock-consuming state
+		if ticket.Status == models.TicketStatusPending ||
+			ticket.Status == models.TicketStatusSelfConfirmed ||
+			ticket.Status == models.TicketStatusApproved {
+			var tier models.TicketTier
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("id = ?", ticket.TicketId).
+				First(&tier).Error; err == nil {
+				if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
+					return err
+				}
+			}
+		}
+
+		// 3. Soft delete
+		now := time.Now()
+		if err := tx.Model(&ticket).Updates(map[string]interface{}{
+			"is_deleted": true,
+			"deleted_at": &now,
+		}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ticket, nil
 }

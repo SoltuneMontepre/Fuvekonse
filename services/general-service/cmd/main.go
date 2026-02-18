@@ -140,16 +140,24 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	loginFailBlockMinutes := config.GetLoginFailBlockMinutes()
 
 	// Initialize SQS queue client (optional; if not set, ticket writes are synchronous)
-	queueClient, err := queue.NewSQSClient(context.Background())
+	// NOTE: Must assign to the interface type directly to avoid the Go nil interface trap.
+	// A nil *SQSClient passed as queue.Publisher creates a non-nil interface ({type, nil}),
+	// causing handlers to take the queue path without actually publishing.
+	var queuePublisher queue.Publisher
+	sqsClient, err := queue.NewSQSClient(context.Background())
 	if err != nil {
 		log.Printf("WARNING: SQS queue client failed: %v (ticket writes will be synchronous)", err)
-		queueClient = nil
+	} else if sqsClient != nil {
+		queuePublisher = sqsClient
+		log.Println("SQS queue client initialized successfully")
+	} else {
+		log.Println("SQS queue disabled (no SQS_QUEUE_URL set); ticket writes will be synchronous")
 	}
 
 	// Initialize repositories and services
 	repos := repositories.NewRepositories(db)
 	svc := services.NewServices(repos, database.RedisClient, loginMaxFail, loginFailBlockMinutes)
-	h := handlers.NewHandlers(svc, queueClient)
+	h := handlers.NewHandlers(svc, queuePublisher)
 
 	// Setup router with middleware
 	router := gin.Default()

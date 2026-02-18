@@ -58,6 +58,18 @@ type UpdateTicketTierRequest struct {
 	IsActive    *bool     `json:"is_active"`
 }
 
+// UpdateTicketForAdminRequest is the request body for admin updating a ticket (back-door, all fields optional).
+type UpdateTicketForAdminRequest struct {
+	Status         *string `json:"status" binding:"omitempty,oneof=pending self_confirmed approved denied"`
+	TierID         *string `json:"tier_id" binding:"omitempty,uuid"`
+	ConBadgeName   *string `json:"con_badge_name" binding:"omitempty,max=255"`
+	BadgeImage     *string `json:"badge_image" binding:"omitempty,max=500"`
+	IsFursuiter    *bool   `json:"is_fursuiter"`
+	IsFursuitStaff *bool   `json:"is_fursuit_staff"`
+	IsCheckedIn    *bool   `json:"is_checked_in"`
+	DenialReason   *string `json:"denial_reason" binding:"omitempty,max=500"`
+}
+
 // BlacklistUserRequest is the request body for blacklisting a user
 type BlacklistUserRequest struct {
 	Reason string `json:"reason" binding:"required,min=1,max=500"`
