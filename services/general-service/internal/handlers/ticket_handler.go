@@ -26,7 +26,7 @@ func NewTicketHandler(services *services.Services, queuePublisher queue.Publishe
 
 // GetTiers godoc
 // @Summary Get all available ticket tiers
-// @Description Get a list of all active ticket tiers with pricing and benefits
+// @Description Get a list of all ticket tiers (active and deactivated) with pricing and benefits
 // @Tags tickets
 // @Accept json
 // @Produce json
@@ -444,14 +444,13 @@ func (h *TicketHandler) GetTicketByID(c *gin.Context) {
 
 // ApproveTicket godoc
 // @Summary Approve a ticket (admin)
-// @Description Approve a pending or self-confirmed ticket. When queue is enabled, request is queued (202).
+// @Description Approve a pending or self-confirmed ticket. Admin approval is always processed synchronously (not queued).
 // @Tags admin-tickets
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Ticket ID" format(uuid)
 // @Success 200 "Ticket approved successfully"
-// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid ticket ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -470,19 +469,6 @@ func (h *TicketHandler) ApproveTicket(c *gin.Context) {
 	staffID, exists := c.Get("user_id")
 	if !exists {
 		utils.RespondUnauthorized(c, "Staff ID not found in token")
-		return
-	}
-
-	if h.queue != nil {
-		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action:   queue.ActionApproveTicket,
-			StaffID:  staffID.(string),
-			TicketID: ticketID,
-		}); err != nil {
-			utils.RespondInternalServerError(c, "Failed to queue ticket approval")
-			return
-		}
-		utils.RespondAccepted(c, "Ticket approval queued for processing.")
 		return
 	}
 

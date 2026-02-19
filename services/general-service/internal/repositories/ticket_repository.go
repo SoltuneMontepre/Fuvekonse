@@ -205,8 +205,8 @@ func (r *TicketRepository) SetTierActive(ctx context.Context, id uuid.UUID, acti
 
 // ========== User Ticket Operations ==========
 
-// GetUserTicket returns the user's current ticket (if any)
-// Excludes denied tickets since they are no longer considered "active"
+// GetUserTicket returns the user's current ticket (if any).
+// Excludes denied tickets since they are no longer considered "active".
 func (r *TicketRepository) GetUserTicket(ctx context.Context, userID uuid.UUID) (*models.UserTicket, error) {
 	var ticket models.UserTicket
 	err := r.db.WithContext(ctx).

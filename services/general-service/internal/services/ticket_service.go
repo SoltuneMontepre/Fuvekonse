@@ -38,9 +38,9 @@ func NewTicketService(repos *repositories.Repositories, mail *MailService) *Tick
 
 // ========== Public User Endpoints ==========
 
-// GetAllTiers returns all active ticket tiers
+// GetAllTiers returns all ticket tiers (active and deactivated; excludes deleted).
 func (s *TicketService) GetAllTiers(ctx context.Context) ([]responses.TicketTierResponse, error) {
-	tiers, err := s.repos.Ticket.GetAllActiveTiers(ctx)
+	tiers, err := s.repos.Ticket.GetAllTiersForAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}
