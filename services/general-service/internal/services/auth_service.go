@@ -495,6 +495,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
+	lang := LangFromCountry(user.Country)
+
 	// if frontendURL provided, create link; otherwise include token in email body
 	var link string
 	if frontendURL != "" {
@@ -506,28 +508,39 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 			link = u.String()
 		}
 	}
-
-	// Compose email body: when a frontend reset link is provided, include only the link; otherwise include the raw token
-	var body string
-	if link != "" {
-		body = fmt.Sprintf(
-			"Hello,\n\nUse the following link to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
-			int(utils.GetForgotPasswordTokenExpiry().Minutes()),
-			link,
-		)
+	var subject, body string
+	expiryMin := int(utils.GetForgotPasswordTokenExpiry().Minutes())
+	if lang == "vi" {
+		subject = "Yêu cầu đặt lại mật khẩu"
+		if link != "" {
+			body = fmt.Sprintf(
+				`Xin chào,<br><br>
+			Vui lòng nhấn nút bên dưới để đặt lại mật khẩu (hết hạn sau %d phút):<br><br>
+			<a href="%s" style="display:inline-block;padding:12px 24px;background-color:#e6c200;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Đặt lại mật khẩu</a><br><br>
+			Nếu bạn không yêu cầu việc này, hãy bỏ qua email này.`,
+				expiryMin,
+				link,
+			)
+		}
 	} else {
-		// body = fmt.Sprintf(
-		// 	"Hello,\n\nUse the following token to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
-		// 	int(utils.GetForgotPasswordTokenExpiry().Minutes()),
-		// 	token,
-		// )
+		subject = "Password Reset Request"
+		if link != "" {
+			body = fmt.Sprintf(
+				`Hello,<br><br>
+			Please click the button below to reset your password (expires in %d minutes):<br><br>
+			<a href="%s" style="display:inline-block;padding:12px 24px;background-color:#e6c200;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a><br><br>
+			If you did not request this, ignore this message.`,
+				expiryMin,
+				link,
+			)
+		}
 	}
 
 	if mailService == nil {
 		return fmt.Errorf("mail service not available")
 	}
 
-	if err := mailService.SendEmail(ctx, fromEmail, user.Email, "Password Reset Request", body, nil, nil); err != nil {
+	if err := mailService.SendEmail(ctx, fromEmail, user.Email, subject, body, nil, nil); err != nil {
 		return fmt.Errorf("failed to send reset email: %w", err)
 	}
 
