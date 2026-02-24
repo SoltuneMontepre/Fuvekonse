@@ -8,6 +8,7 @@ import (
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -263,6 +264,54 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password changed successfully")
+}
+
+// GoogleLogin godoc
+// @Summary Login or register with Google
+// @Description Verify Google ID token (credential from Sign-In). If user exists (by Google ID or email), log in; otherwise create account and log in. Sets access token cookie.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.GoogleLoginRequest true "Google ID token (credential)"
+// @Success 200 "Logged in or registered successfully"
+// @Failure 400 "Bad request - missing or invalid credential"
+// @Failure 401 "Invalid Google token"
+// @Failure 500 "Internal server error"
+// @Router /auth/google [post]
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	var req requests.GoogleLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+		return
+	}
+	googleClientID := getEnvOr("GOOGLE_CLIENT_ID", "")
+	if googleClientID == "" {
+		utils.RespondErrorWithErrorMessage(c, 503, "SERVICE_UNAVAILABLE", "Google sign-in is not configured", "googleNotConfigured")
+		return
+	}
+	response, err := h.services.Auth.GoogleLoginOrRegister(c.Request.Context(), &req, googleClientID)
+	if err != nil {
+		if errors.Is(err, constants.ErrGoogleRegistrationDetailsRequired) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "googleRegistrationDetailsRequired")
+			return
+		}
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Passwords do not match", "passwordsDoNotMatch")
+			return
+		}
+		if strings.Contains(err.Error(), "invalid google token") {
+			utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "Invalid Google token", "invalidGoogleToken")
+			return
+		}
+		if strings.Contains(err.Error(), "password must be at least 6") {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+			return
+		}
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Google sign-in failed", "googleLoginFailed")
+		return
+	}
+	utils.SetAuthCookie(c, response.AccessToken, h.cookieConfig)
+	utils.RespondSuccess[any](c, nil, "Login successful")
 }
 
 // Logout godoc

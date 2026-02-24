@@ -280,6 +280,11 @@ func main() {
 	}()
 	defer database.CloseRedis()
 
+	// Run auto-migration so schema stays in sync (e.g. adds new columns like google_id)
+	if err := database.AutoMigrate(db); err != nil {
+		log.Fatalf("Failed to run database migration: %v", err)
+	}
+
 	// Setup HTTP server
 	router, err := setupRouter(db)
 	if err != nil {

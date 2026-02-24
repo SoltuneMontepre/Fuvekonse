@@ -33,6 +33,7 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	{
 		auth.POST("/register", h.Auth.Register)
 		auth.POST("/login", h.Auth.Login)
+		auth.POST("/google", h.Auth.GoogleLogin)
 		auth.POST("/logout", middlewares.JWTAuthMiddleware(), h.Auth.Logout)
 
 		//add jwt auth

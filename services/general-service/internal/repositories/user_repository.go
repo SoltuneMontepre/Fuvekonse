@@ -31,6 +31,19 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+// FindByGoogleId finds a user by Google OAuth subject ID
+func (r *UserRepository) FindByGoogleId(googleId string) (*models.User, error) {
+	if googleId == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var user models.User
+	err := r.db.Where("google_id = ? AND is_deleted = ?", googleId, false).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // FindByID finds a user by ID
 func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	var user models.User

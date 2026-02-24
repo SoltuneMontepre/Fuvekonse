@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/api/idtoken"
 	"gorm.io/gorm"
 )
 
@@ -163,6 +164,96 @@ func splitName(name string) []string {
 		parts = append(parts, current)
 	}
 	return parts
+}
+
+// GoogleLoginOrRegister verifies the Google ID token, finds or creates the user, and returns access token.
+// One endpoint handles both login (existing user) and register (new user created and logged in).
+func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.GoogleLoginRequest, googleClientID string) (*responses.LoginResponse, error) {
+	if googleClientID == "" {
+		return nil, fmt.Errorf("google client ID not configured")
+	}
+	payload, err := idtoken.Validate(ctx, req.Credential, googleClientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid google token: %w", err)
+	}
+	googleSub := payload.Subject
+	email, _ := payload.Claims["email"].(string)
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return nil, fmt.Errorf("google token missing email")
+	}
+
+	// Find by Google ID first, then by email (to link existing account)
+	user, err := s.repos.User.FindByGoogleId(googleSub)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+	if user == nil {
+		user, err = s.repos.User.FindByEmail(email)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to find user: %w", err)
+		}
+		if user != nil {
+			// Link Google to existing account
+			user.GoogleId = &googleSub
+			if err := s.repos.User.UpdateUserProfile(user); err != nil {
+				return nil, fmt.Errorf("failed to link google account: %w", err)
+			}
+		}
+	}
+	if user == nil {
+		// New user: require same body as normal register (fullName, nickname, country, idCard)
+		fullName := strings.TrimSpace(req.FullName)
+		nickname := strings.TrimSpace(req.Nickname)
+		country := strings.TrimSpace(req.Country)
+		idCard := strings.TrimSpace(req.IdCard)
+		if fullName == "" || nickname == "" || country == "" || idCard == "" {
+			return nil, constants.ErrGoogleRegistrationDetailsRequired
+		}
+		firstName, lastName := parseFullName(fullName)
+		var hashedPassword string
+		if req.Password != "" && req.ConfirmPassword != "" && req.Password == req.ConfirmPassword {
+			if len(req.Password) < 6 {
+				return nil, fmt.Errorf("password must be at least 6 characters")
+			}
+			var errPwd error
+			hashedPassword, errPwd = utils.HashPassword(req.Password)
+			if errPwd != nil {
+				return nil, fmt.Errorf("failed to hash password: %w", errPwd)
+			}
+		} else {
+			if req.Password != "" || req.ConfirmPassword != "" {
+				return nil, constants.ErrPasswordMismatch
+			}
+			// No password: unguessable hash so email/password login is disabled
+			hashedPassword, _ = utils.HashPassword(uuid.New().String() + string(rune(time.Now().UnixNano()%256)))
+		}
+		newUser := &models.User{
+			Id:          uuid.New(),
+			FursonaName: nickname,
+			FirstName:   firstName,
+			LastName:    lastName,
+			Email:       email,
+			Password:    hashedPassword,
+			Country:     country,
+			IdCard:      idCard,
+			GoogleId:    &googleSub,
+			IsVerified:  true,
+			Role:        constants.RoleUser,
+			CreatedAt:   time.Now(),
+			ModifiedAt:  time.Now(),
+		}
+		if err := s.repos.User.Create(newUser); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+		user = newUser
+	}
+
+	accessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, user.Role.String())
+	if err != nil {
+		return nil, err
+	}
+	return &responses.LoginResponse{AccessToken: accessToken}, nil
 }
 
 // Login authenticates a user and returns tokens
