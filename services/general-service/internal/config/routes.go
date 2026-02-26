@@ -110,14 +110,14 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				users.PATCH("/me/avatar", h.User.UpdateAvatar)
 			}
 
-		// Dealer routes
-		dealer := protected.Group("/dealer")
-		{
-			dealer.GET("/me", h.Dealer.GetMyDealer)
-			dealer.POST("/register", h.Dealer.RegisterDealer)
-			dealer.POST("/join", h.Dealer.JoinDealerBooth)
-			dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)
-		}
+			// Dealer routes
+			dealer := protected.Group("/dealer")
+			{
+				dealer.GET("/me", h.Dealer.GetMyDealer)
+				dealer.POST("/register", h.Dealer.RegisterDealer)
+				dealer.POST("/join", h.Dealer.JoinDealerBooth)
+				dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)
+			}
 
 			// Protected ticket routes (require auth)
 			protectedTickets := protected.Group("/tickets")
@@ -127,6 +127,16 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				protectedTickets.PATCH("/me/confirm", h.Ticket.ConfirmPayment)
 				protectedTickets.DELETE("/me/cancel", h.Ticket.CancelTicket)
 				protectedTickets.PATCH("/me/badge", h.Ticket.UpdateBadgeDetails)
+			}
+
+			// Protected conbook routes (require auth)
+			protectedConbooks := protected.Group("/conbooks")
+			{
+				protectedConbooks.POST("", h.Conbook.UploadConbook)
+				protectedConbooks.GET("", h.Conbook.GetMyConbooks)
+				protectedConbooks.GET("/:id", h.Conbook.GetConbookByID)
+				protectedConbooks.PUT("/:id", h.Conbook.EditConbook)
+				protectedConbooks.DELETE("/:id", h.Conbook.DeleteConbook)
 			}
 		}
 
@@ -182,6 +192,14 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminDealers.GET("", h.Dealer.GetDealersForAdmin)
 				adminDealers.GET("/:id", h.Dealer.GetDealerByIDForAdmin)
 				adminDealers.PATCH("/:id/verify", h.Dealer.VerifyDealer)
+			}
+
+			// Admin/Staff conbook management (pending review and verification)
+			adminConbooks := admin.Group("/conbooks")
+			adminConbooks.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
+			{
+				adminConbooks.GET("/pending", h.Conbook.GetPendingConbooks)
+				adminConbooks.PATCH("/:id/verify", h.Conbook.VerifyConbook)
 			}
 		}
 	}

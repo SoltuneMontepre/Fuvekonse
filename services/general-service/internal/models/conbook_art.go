@@ -13,6 +13,7 @@ type ConBookArt struct {
 	Description string     `gorm:"type:varchar(500)"`
 	Handle      string     `gorm:"type:varchar(255)"`
 	ImageUrl    string     `gorm:"type:varchar(500)"`
+	IsVerified  bool       `gorm:"default:false"`
 	CreatedAt   time.Time  `gorm:"autoCreateTime"`
 	ModifiedAt  time.Time  `gorm:"autoUpdateTime"`
 	DeletedAt   *time.Time `gorm:"index"`
