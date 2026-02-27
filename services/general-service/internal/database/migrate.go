@@ -26,6 +26,11 @@ func AutoMigrate(db *gorm.DB) error {
 		return fmt.Errorf("failed to auto-migrate base tables: %w", err)
 	}
 
+	// Ensure google_id exists on users (handles DBs created before this column was added, e.g. CI)
+	if err := ensureUsersGoogleIdColumn(db); err != nil {
+		return fmt.Errorf("failed to ensure users.google_id column: %w", err)
+	}
+
 	// Drop columns that are no longer in the model
 	// WARNING: This will permanently DELETE DATA!
 	if err := dropUnusedColumns(db, allModels); err != nil {
@@ -38,6 +43,19 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 
 	log.Println("Database migration completed successfully")
+	return nil
+}
+
+// ensureUsersGoogleIdColumn adds the google_id column to users if it does not exist.
+// This covers databases created before GoogleId was added to the User model (e.g. CI).
+func ensureUsersGoogleIdColumn(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if migrator.HasTable("users") && !migrator.HasColumn("users", "google_id") {
+		if err := migrator.AddColumn(&models.User{}, "GoogleId"); err != nil {
+			return err
+		}
+		log.Println("Added users.google_id column (migration)")
+	}
 	return nil
 }
 

@@ -25,6 +25,7 @@ func handler(request events.SQSEvent) (events.SQSEventResponse, error) {
 	}
 
 	jobURL := strings.TrimSuffix(baseURL, "/") + "/internal/jobs/ticket"
+	log.Printf("Calling general-service: %s", jobURL)
 	client := &http.Client{}
 
 	var batchItemFailures []events.SQSBatchItemFailure
