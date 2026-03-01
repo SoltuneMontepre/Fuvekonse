@@ -68,6 +68,8 @@ module "lambda" {
   mail_provider                   = local.mail_provider
   sendgrid_api_key                = local.sendgrid_api_key
   mail_from_name                  = local.mail_from_name
+  google_client_id                = local.google_client_id
+  google_client_secret            = local.google_client_secret
 }
 
 module "networking" {
