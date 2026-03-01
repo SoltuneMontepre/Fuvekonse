@@ -39,19 +39,21 @@ func MapTicketTiersToResponse(tiers []models.TicketTier) []responses.TicketTierR
 // MapUserTicketToResponse maps a UserTicket model to a UserTicketResponse DTO
 func MapUserTicketToResponse(ticket *models.UserTicket, includeUser bool) *responses.UserTicketResponse {
 	response := &responses.UserTicketResponse{
-		ID:             ticket.Id,
-		ReferenceCode:  ticket.ReferenceCode,
-		Status:         string(ticket.Status),
-		TicketNumber:   ticket.TicketNumber,
-		ConBadgeName:   ticket.ConBadgeName,
-		BadgeImage:     ticket.BadgeImage,
-		IsFursuiter:    ticket.IsFursuiter,
-		IsFursuitStaff: ticket.IsFursuitStaff,
-		IsCheckedIn:    ticket.IsCheckedIn,
-		DenialReason:   ticket.DenialReason,
-		CreatedAt:      ticket.CreatedAt,
-		ApprovedAt:     ticket.ApprovedAt,
-		DeniedAt:       ticket.DeniedAt,
+		ID:                    ticket.Id,
+		ReferenceCode:         ticket.ReferenceCode,
+		Status:                string(ticket.Status),
+		TicketNumber:          ticket.TicketNumber,
+		ConBadgeName:          ticket.ConBadgeName,
+		BadgeImage:            ticket.BadgeImage,
+		IsFursuiter:           ticket.IsFursuiter,
+		IsFursuitStaff:        ticket.IsFursuitStaff,
+		IsCheckedIn:           ticket.IsCheckedIn,
+		DenialReason:          ticket.DenialReason,
+		CreatedAt:             ticket.CreatedAt,
+		ApprovedAt:            ticket.ApprovedAt,
+		DeniedAt:              ticket.DeniedAt,
+		UpgradedFromTierID:    ticket.UpgradedFromTierID,
+		PreviousReferenceCode: ticket.PreviousReferenceCode,
 	}
 
 	// Include tier info if available
@@ -129,4 +131,14 @@ func MapUsersToBlacklistedResponse(users []models.User) []responses.BlacklistedU
 		result[i] = *MapUserToBlacklistedResponse(&user)
 	}
 	return result
+}
+
+// MapUpgradeResultToResponse maps a repository UpgradeResult to an UpgradeTicketResponse DTO
+func MapUpgradeResultToResponse(result *repositories.UpgradeResult) *responses.UpgradeTicketResponse {
+	return &responses.UpgradeTicketResponse{
+		Ticket:          MapUserTicketToResponse(result.Ticket, false),
+		OldTierPrice:    result.OldTierPrice,
+		NewTierPrice:    result.NewTierPrice,
+		PriceDifference: result.PriceDifference,
+	}
 }

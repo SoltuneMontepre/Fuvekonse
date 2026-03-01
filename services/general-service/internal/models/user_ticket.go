@@ -32,8 +32,10 @@ type UserTicket struct {
 	ApprovedAt     *time.Time   `gorm:"index" json:"approved_at,omitempty"`
 	DeniedAt       *time.Time   `gorm:"index" json:"denied_at,omitempty"`
 	ApprovedBy     *uuid.UUID   `gorm:"type:uuid" json:"approved_by,omitempty"`                         // Staff who approved
-	DeniedBy       *uuid.UUID   `gorm:"type:uuid" json:"denied_by,omitempty"`                           // Staff who denied
-	CreatedAt      time.Time    `gorm:"autoCreateTime" json:"created_at"`
+	DeniedBy              *uuid.UUID   `gorm:"type:uuid" json:"denied_by,omitempty"`                     // Staff who denied
+	UpgradedFromTierID    *uuid.UUID   `gorm:"type:uuid" json:"upgraded_from_tier_id,omitempty"`        // Tier ID before upgrade (nil for fresh purchases)
+	PreviousReferenceCode string       `gorm:"type:varchar(50)" json:"previous_reference_code,omitempty"` // Reference code before upgrade
+	CreatedAt             time.Time    `gorm:"autoCreateTime" json:"created_at"`
 	ModifiedAt     time.Time    `gorm:"autoUpdateTime" json:"modified_at"`
 	DeletedAt      *time.Time   `gorm:"index" json:"deleted_at,omitempty"`
 	IsDeleted      bool         `gorm:"default:false" json:"is_deleted"`

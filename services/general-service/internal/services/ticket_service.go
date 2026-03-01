@@ -280,6 +280,27 @@ func (s *TicketService) UpdateBadgeDetails(ctx context.Context, userID string, r
 	return mappers.MapUserTicketToResponse(ticket, false), nil
 }
 
+// UpgradeTicket upgrades the user's ticket to a higher-priced tier.
+// Returns the upgraded ticket with price difference information.
+func (s *TicketService) UpgradeTicket(ctx context.Context, userID string, req *requests.UpgradeTicketRequest) (*responses.UpgradeTicketResponse, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, ErrInvalidUserID
+	}
+
+	newTierID, err := uuid.Parse(req.NewTierID)
+	if err != nil {
+		return nil, ErrInvalidTierID
+	}
+
+	result, err := s.repos.Ticket.UpgradeTicketTier(ctx, uid, newTierID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mappers.MapUpgradeResultToResponse(result), nil
+}
+
 // ========== Admin Endpoints ==========
 
 // GetTicketsForAdmin returns tickets with filters for admin view
