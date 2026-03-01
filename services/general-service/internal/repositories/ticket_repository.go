@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -23,6 +24,8 @@ var (
 	ErrUserBlacklisted        = errors.New("user is blacklisted from purchasing tickets")
 	ErrInvalidTicketStatus    = errors.New("invalid ticket status for this operation")
 	ErrUserNotFound           = errors.New("user not found")
+	ErrCannotDowngrade        = errors.New("cannot downgrade: new tier price must be higher than current tier price")
+	ErrTicketDenied           = errors.New("cannot upgrade a denied ticket")
 )
 
 type TicketRepository struct {
@@ -1003,4 +1006,131 @@ func (r *TicketRepository) DeleteTicketForAdmin(ctx context.Context, ticketID uu
 	}
 
 	return &ticket, nil
+}
+
+// ========== Ticket Upgrade Operations ==========
+
+// UpgradeResult contains the upgraded ticket and pricing info for the API response.
+type UpgradeResult struct {
+	Ticket          *models.UserTicket
+	OldTierPrice    decimal.Decimal
+	NewTierPrice    decimal.Decimal
+	PriceDifference decimal.Decimal
+}
+
+// UpgradeTicketTier atomically upgrades a user's ticket to a higher-priced tier.
+// Validates: ticket exists and is non-denied, new tier is active with stock, price > current.
+// Stock: increments old tier, decrements new tier.
+// Ticket: updates tier, generates new ticket_number + reference_code, resets to pending.
+func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID) (*UpgradeResult, error) {
+	var result *UpgradeResult
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Find and lock the user's current non-deleted ticket
+		var ticket models.UserTicket
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ? AND is_deleted = ?", userID, false).
+			First(&ticket).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketNotFound
+			}
+			return err
+		}
+
+		// 2. Denied tickets cannot be upgraded
+		if ticket.Status == models.TicketStatusDenied {
+			return ErrTicketDenied
+		}
+
+		// 3. Lock the OLD tier row to get price and increment stock
+		var oldTier models.TicketTier
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", ticket.TicketId).
+			First(&oldTier).Error; err != nil {
+			return err
+		}
+
+		// 4. Cannot upgrade to the same tier
+		if oldTier.Id == newTierID {
+			return ErrCannotDowngrade
+		}
+
+		// 5. Lock the NEW tier row, validate active + stock
+		var newTier models.TicketTier
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND is_deleted = ? AND is_active = ?", newTierID, false, true).
+			First(&newTier).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTicketTierNotFound
+			}
+			return err
+		}
+
+		if newTier.Stock <= 0 {
+			return ErrOutOfStock
+		}
+
+		// 6. Validate: new tier price must be strictly higher (upgrade only)
+		if newTier.Price.LessThanOrEqual(oldTier.Price) {
+			return ErrCannotDowngrade
+		}
+
+		// 7. Increment old tier stock (+1 returned)
+		if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
+			return err
+		}
+
+		// 8. Decrement new tier stock (-1 consumed)
+		if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
+			return err
+		}
+
+		// 9. Generate new ticket number + reference code for the new tier
+		newTicketNumber, err := r.GetNextTicketNumber(ctx, tx, newTierID)
+		if err != nil {
+			return err
+		}
+		newReferenceCode := fmt.Sprintf("%s-%04d", newTier.TierCode, newTicketNumber)
+
+		// 10. Save audit trail
+		previousRefCode := ticket.ReferenceCode
+		oldTierID := ticket.TicketId
+
+		// 11. Update the ticket record in-place
+		if err := tx.Model(&ticket).Updates(map[string]interface{}{
+			"ticket_id":               newTierID,
+			"ticket_number":           newTicketNumber,
+			"reference_code":          newReferenceCode,
+			"status":                  models.TicketStatusPending,
+			"upgraded_from_tier_id":   oldTierID,
+			"previous_reference_code": previousRefCode,
+			"approved_at":             nil,
+			"approved_by":             nil,
+			"denied_at":               nil,
+			"denied_by":               nil,
+			"denial_reason":           "",
+		}).Error; err != nil {
+			return err
+		}
+
+		// 12. Reload with relations
+		if err := tx.Preload("Ticket").Preload("User").First(&ticket, "id = ?", ticket.Id).Error; err != nil {
+			return err
+		}
+
+		result = &UpgradeResult{
+			Ticket:          &ticket,
+			OldTierPrice:    oldTier.Price,
+			NewTierPrice:    newTier.Price,
+			PriceDifference: newTier.Price.Sub(oldTier.Price),
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

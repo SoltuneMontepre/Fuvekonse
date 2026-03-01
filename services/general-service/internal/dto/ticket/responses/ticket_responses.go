@@ -30,16 +30,26 @@ type UserTicketResponse struct {
 	IsFursuiter    bool       `json:"is_fursuiter"`
 	IsFursuitStaff bool       `json:"is_fursuit_staff"`
 	IsCheckedIn    bool       `json:"is_checked_in"`
-	DenialReason   string     `json:"denial_reason,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	ApprovedAt     *time.Time `json:"approved_at,omitempty"`
-	DeniedAt       *time.Time `json:"denied_at,omitempty"`
+	DenialReason          string     `json:"denial_reason,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	ApprovedAt            *time.Time `json:"approved_at,omitempty"`
+	DeniedAt              *time.Time `json:"denied_at,omitempty"`
+	UpgradedFromTierID    *uuid.UUID `json:"upgraded_from_tier_id,omitempty"`
+	PreviousReferenceCode string     `json:"previous_reference_code,omitempty"`
 
 	// Tier info
 	Tier *TicketTierResponse `json:"tier,omitempty"`
 
 	// User info (for admin view)
 	User *TicketUserResponse `json:"user,omitempty"`
+}
+
+// UpgradeTicketResponse contains the upgraded ticket plus pricing info for the frontend.
+type UpgradeTicketResponse struct {
+	Ticket          *UserTicketResponse `json:"ticket"`
+	OldTierPrice    decimal.Decimal     `json:"old_tier_price"`
+	NewTierPrice    decimal.Decimal     `json:"new_tier_price"`
+	PriceDifference decimal.Decimal     `json:"price_difference"`
 }
 
 // TicketUserResponse represents user info in ticket context (minimal PII for admin)

@@ -70,6 +70,11 @@ type UpdateTicketForAdminRequest struct {
 	DenialReason   *string `json:"denial_reason" binding:"omitempty,max=500"`
 }
 
+// UpgradeTicketRequest is the request body for upgrading a ticket to a higher tier
+type UpgradeTicketRequest struct {
+	NewTierID string `json:"new_tier_id" binding:"required,uuid"`
+}
+
 // BlacklistUserRequest is the request body for blacklisting a user
 type BlacklistUserRequest struct {
 	Reason string `json:"reason" binding:"required,min=1,max=500"`
