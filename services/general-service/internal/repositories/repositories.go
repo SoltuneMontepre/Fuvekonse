@@ -3,15 +3,17 @@ package repositories
 import "gorm.io/gorm"
 
 type Repositories struct {
-	User   *UserRepository
-	Ticket *TicketRepository
-	Dealer *DealerRepository
+	User    *UserRepository
+	Ticket  *TicketRepository
+	Dealer  *DealerRepository
+	Conbook *ConbookRepository
 }
 
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		User:   NewUserRepository(db),
-		Ticket: NewTicketRepository(db),
-		Dealer: NewDealerRepository(db),
+		User:    NewUserRepository(db),
+		Ticket:  NewTicketRepository(db),
+		Dealer:  NewDealerRepository(db),
+		Conbook: NewConbookRepository(db),
 	}
 }
