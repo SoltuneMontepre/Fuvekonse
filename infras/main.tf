@@ -64,7 +64,7 @@ module "lambda" {
   sqs_queue_arn                   = module.sqs.queue_arn
   cors_allowed_origins            = var.s3_cors_allowed_origins
   general_service_url             = var.general_service_url
-  internal_api_key                = var.internal_api_key
+  internal_api_key                = local.internal_api_key
   mail_provider                   = local.mail_provider
   sendgrid_api_key                = local.sendgrid_api_key
   mail_from_name                  = local.mail_from_name

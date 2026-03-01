@@ -32,4 +32,5 @@ locals {
   # Google OAuth2
   google_client_id     = local.secrets.GOOGLE_CLIENT_ID
   google_client_secret = local.secrets.GOOGLE_CLIENT_SECRET
+  internal_api_key     = local.secrets.INTERNAL_API_KEY
 }
