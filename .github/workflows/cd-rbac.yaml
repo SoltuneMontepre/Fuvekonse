@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "services/rbac-service/**"
-      - "infras/**"
       - ".github/workflows/cd-rbac.yaml"
 
 jobs:

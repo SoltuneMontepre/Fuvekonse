@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "services/sqs-worker/**"
-      - "infras/**"
       - ".github/workflows/cd-sqs-worker.yaml"
 
 jobs:
