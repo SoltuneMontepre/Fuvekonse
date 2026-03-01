@@ -7,6 +7,7 @@ import (
 	"general-service/internal/queue"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -73,6 +74,13 @@ func (h *TicketHandler) ProcessTicketJob(c *gin.Context) {
 			return
 		}
 		utils.RespondSuccess(c, ticket, "Deny processed")
+	case queue.ActionUpgradeTicket:
+		result, err := h.services.Ticket.UpgradeTicket(ctx, msg.UserID, &requests.UpgradeTicketRequest{NewTierID: msg.TierID})
+		if err != nil {
+			respondTicketJobError(c, err)
+			return
+		}
+		utils.RespondSuccess(c, result, "Upgrade processed")
 	case queue.ActionBlacklistUser:
 		req := &requests.BlacklistUserRequest{Reason: msg.Reason}
 		err := h.services.Ticket.BlacklistUser(ctx, msg.TargetUserID, req)
@@ -109,7 +117,12 @@ func respondTicketJobError(c *gin.Context, err error) {
 		utils.RespondForbidden(c, err.Error())
 	case errors.Is(err, repositories.ErrInvalidTicketStatus):
 		utils.RespondError(c, http.StatusConflict, "INVALID_STATUS", err.Error())
+	case errors.Is(err, repositories.ErrCannotDowngrade):
+		utils.RespondError(c, http.StatusConflict, "CANNOT_DOWNGRADE", err.Error())
+	case errors.Is(err, repositories.ErrTicketDenied):
+		utils.RespondError(c, http.StatusConflict, "TICKET_DENIED", err.Error())
 	default:
+		log.Printf("Job processing failed (unhandled error): %v", err)
 		utils.RespondInternalServerError(c, "Job processing failed")
 	}
 }

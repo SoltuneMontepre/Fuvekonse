@@ -164,3 +164,16 @@ variable "mail_from_name" {
   type        = string
   default     = "Fuvekon"
 }
+
+variable "google_client_id" {
+  description = "Google client Id for Oauth2"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google client secret for OAuth2"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

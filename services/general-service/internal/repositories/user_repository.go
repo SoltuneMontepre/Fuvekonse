@@ -58,8 +58,8 @@ func (r *UserRepository) UpdateUserProfile(user *models.User) error {
 	return r.db.Save(user).Error
 }
 
-// FindAll finds all users with pagination support
-func (r *UserRepository) FindAll(page, pageSize int) ([]*models.User, int64, error) {
+// FindAll finds all users with pagination and optional search (email, first_name, last_name, fursona_name)
+func (r *UserRepository) FindAll(page, pageSize int, search string) ([]*models.User, int64, error) {
 	// Validate pagination parameters
 	if page < 1 {
 		return nil, 0, errors.New("page must be >= 1")
@@ -68,20 +68,32 @@ func (r *UserRepository) FindAll(page, pageSize int) ([]*models.User, int64, err
 		return nil, 0, errors.New("pageSize must be > 0")
 	}
 
-	var users []*models.User
-	var total int64
+	// Use a fresh session for count so no Limit/Offset from other chains can affect it
+	countDB := r.db.Session(&gorm.Session{}).Model(&models.User{}).Where("is_deleted = ?", false)
+	if search != "" {
+		pattern := "%" + search + "%"
+		countDB = countDB.Where(
+			"email ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR fursona_name ILIKE ?",
+			pattern, pattern, pattern, pattern,
+		)
+	}
 
-	// Count total records
-	if err := r.db.Model(&models.User{}).Where("is_deleted = ?", false).Count(&total).Error; err != nil {
+	var total int64
+	if err := countDB.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Calculate offset
 	offset := (page - 1) * pageSize
-
-	// Fetch users with pagination
-	if err := r.db.Where("is_deleted = ?", false).
-		Order("created_at DESC").
+	var users []*models.User
+	query := r.db.Session(&gorm.Session{}).Where("is_deleted = ?", false)
+	if search != "" {
+		pattern := "%" + search + "%"
+		query = query.Where(
+			"email ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ? OR fursona_name ILIKE ?",
+			pattern, pattern, pattern, pattern,
+		)
+	}
+	if err := query.Order("created_at DESC").
 		Offset(offset).
 		Limit(pageSize).
 		Find(&users).Error; err != nil {

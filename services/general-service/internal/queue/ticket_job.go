@@ -10,6 +10,7 @@ const (
 	ActionUpdateBadge      TicketJobAction = "update_badge"
 	ActionApproveTicket    TicketJobAction = "approve"
 	ActionDenyTicket       TicketJobAction = "deny"
+	ActionUpgradeTicket    TicketJobAction = "upgrade_ticket"
 	ActionBlacklistUser    TicketJobAction = "blacklist_user"
 	ActionUnblacklistUser  TicketJobAction = "unblacklist_user"
 )
@@ -22,7 +23,7 @@ type TicketJobMessage struct {
 	TicketID string         `json:"ticket_id,omitempty"` // For approve/deny
 	TargetUserID string     `json:"target_user_id,omitempty"` // For blacklist/unblacklist
 	// Request body payloads (JSON-marshalled)
-	TierID     string `json:"tier_id,omitempty"`     // For purchase
+	TierID     string `json:"tier_id,omitempty"`     // For purchase, upgrade_ticket
 	Reason     string `json:"reason,omitempty"`      // For deny, blacklist
 	ConBadgeName   string `json:"con_badge_name,omitempty"`
 	BadgeImage     string `json:"badge_image,omitempty"`

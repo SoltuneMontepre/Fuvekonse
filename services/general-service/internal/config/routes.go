@@ -127,6 +127,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				protectedTickets.PATCH("/me/confirm", h.Ticket.ConfirmPayment)
 				protectedTickets.DELETE("/me/cancel", h.Ticket.CancelTicket)
 				protectedTickets.PATCH("/me/badge", h.Ticket.UpdateBadgeDetails)
+				protectedTickets.PATCH("/me/upgrade", h.Ticket.UpgradeTicket)
 			}
 
 			// Protected conbook routes (require auth)

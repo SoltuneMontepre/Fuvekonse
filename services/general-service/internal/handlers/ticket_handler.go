@@ -339,6 +339,76 @@ func (h *TicketHandler) UpdateBadgeDetails(c *gin.Context) {
 	utils.RespondSuccess(c, ticket, "Badge details updated successfully")
 }
 
+// UpgradeTicket godoc
+// @Summary Upgrade ticket to a higher tier
+// @Description Upgrade the user's ticket to a higher-priced tier. Resets status to pending.
+// @Tags tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.UpgradeTicketRequest true "Upgrade request with new tier ID"
+// @Success 200 "Ticket upgraded successfully"
+// @Success 202 "Request queued for processing"
+// @Failure 400 "Invalid request or tier ID"
+// @Failure 401 "Unauthorized"
+// @Failure 404 "No ticket found or tier not found"
+// @Failure 409 "Cannot downgrade, out of stock, or denied ticket"
+// @Failure 500 "Internal server error"
+// @Router /tickets/me/upgrade [patch]
+func (h *TicketHandler) UpgradeTicket(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	var req requests.UpgradeTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	if h.queue != nil {
+		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
+			Action: queue.ActionUpgradeTicket,
+			UserID: userID.(string),
+			TierID: req.NewTierID,
+		}); err != nil {
+			log.Printf("SQS PublishTicketJob (upgrade) failed: %v", err)
+			utils.RespondInternalServerError(c, "Failed to queue ticket upgrade")
+			return
+		}
+		utils.RespondAccepted(c, "Ticket upgrade request queued for processing.")
+		return
+	}
+
+	result, err := h.services.Ticket.UpgradeTicket(ctx, userID.(string), &req)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidTierID):
+			utils.RespondBadRequest(c, "Invalid tier ID format")
+		case errors.Is(err, services.ErrInvalidUserID):
+			utils.RespondBadRequest(c, "Invalid user ID format")
+		case errors.Is(err, repositories.ErrTicketNotFound):
+			utils.RespondNotFound(c, "No ticket found")
+		case errors.Is(err, repositories.ErrTicketTierNotFound):
+			utils.RespondNotFound(c, "Ticket tier not found")
+		case errors.Is(err, repositories.ErrOutOfStock):
+			utils.RespondError(c, 409, "OUT_OF_STOCK", "Target tier is sold out")
+		case errors.Is(err, repositories.ErrCannotDowngrade):
+			utils.RespondError(c, 409, "CANNOT_DOWNGRADE", "Can only upgrade to a higher-priced tier")
+		case errors.Is(err, repositories.ErrTicketDenied):
+			utils.RespondError(c, 409, "TICKET_DENIED", "Cannot upgrade a denied ticket")
+		default:
+			utils.RespondInternalServerError(c, "Failed to upgrade ticket")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, result, "Ticket upgraded successfully. Please pay the price difference.")
+}
+
 // ========== Admin Endpoints ==========
 
 // GetTicketsForAdmin godoc
