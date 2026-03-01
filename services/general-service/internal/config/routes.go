@@ -33,6 +33,7 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	{
 		auth.POST("/register", h.Auth.Register)
 		auth.POST("/login", h.Auth.Login)
+		auth.POST("/google", h.Auth.GoogleLogin)
 		auth.POST("/logout", middlewares.JWTAuthMiddleware(), h.Auth.Logout)
 
 		//add jwt auth
@@ -46,8 +47,8 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 
 func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	// Internal job endpoint (called by SQS worker) - no /v1 prefix for clarity
+	// INTERNAL_API_KEY is enforced at router level in main.go for all APIs
 	internal := router.Group("/internal")
-	internal.Use(middlewares.InternalAPIKeyMiddleware())
 	{
 		internal.POST("/jobs/ticket", h.Ticket.ProcessTicketJob)
 	}
@@ -130,13 +131,13 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 			}
 		}
 
-		// Admin only routes - require JWT authentication and admin role
+		// Admin routes - require JWT; role enforced per subgroup (admin, or admin+staff for ticket get/approve)
 		admin := v1.Group("/admin")
 		admin.Use(middlewares.JWTAuthMiddleware())
-		admin.Use(middlewares.RequireRole(role.RoleAdmin))
 		{
-			// Admin user management routes
+			// Admin-only user management
 			adminUsers := admin.Group("/users")
+			adminUsers.Use(middlewares.RequireRole(role.RoleAdmin))
 			{
 				adminUsers.GET("", h.User.GetAllUsers)
 				adminUsers.GET("/:id", h.User.GetUserByIDForAdmin)
@@ -148,32 +149,41 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminUsers.PATCH("/:id/unblacklist", h.Ticket.UnblacklistUser)
 			}
 
-		// Admin ticket management routes (literal /tiers paths before /:id)
-		adminTickets := admin.Group("/tickets")
-		{
-			adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
-			adminTickets.POST("", h.Ticket.CreateTicketForAdmin)
-			adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
-			adminTickets.GET("/tiers", h.Ticket.GetAllTiersForAdmin)
-			adminTickets.POST("/tiers", h.Ticket.CreateTierForAdmin)
-			adminTickets.PATCH("/tiers/:id", h.Ticket.UpdateTierForAdmin)
-			adminTickets.DELETE("/tiers/:id", h.Ticket.DeleteTierForAdmin)
-			adminTickets.PATCH("/tiers/:id/activate", h.Ticket.ActivateTierForAdmin)
-			adminTickets.PATCH("/tiers/:id/deactivate", h.Ticket.DeactivateTierForAdmin)
-			adminTickets.GET("/:id", h.Ticket.GetTicketByID)
-			adminTickets.PATCH("/:id/approve", h.Ticket.ApproveTicket)
-			adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
-			adminTickets.PATCH("/:id", h.Ticket.UpdateTicketForAdmin)
-			adminTickets.DELETE("/:id", h.Ticket.DeleteTicketForAdmin)
-		}
+			// Admin-only ticket management (literal paths first so /statistics, /tiers etc. don’t match as :id)
+			adminTickets := admin.Group("/tickets")
+			adminTickets.Use(middlewares.RequireRole(role.RoleAdmin))
+			{
+				adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
+				adminTickets.POST("", h.Ticket.CreateTicketForAdmin)
+				adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
+				adminTickets.GET("/tiers", h.Ticket.GetAllTiersForAdmin)
+				adminTickets.POST("/tiers", h.Ticket.CreateTierForAdmin)
+				adminTickets.PATCH("/tiers/:id", h.Ticket.UpdateTierForAdmin)
+				adminTickets.DELETE("/tiers/:id", h.Ticket.DeleteTierForAdmin)
+				adminTickets.PATCH("/tiers/:id/activate", h.Ticket.ActivateTierForAdmin)
+				adminTickets.PATCH("/tiers/:id/deactivate", h.Ticket.DeactivateTierForAdmin)
+				adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
+				adminTickets.PATCH("/:id", h.Ticket.UpdateTicketForAdmin)
+				adminTickets.DELETE("/:id", h.Ticket.DeleteTicketForAdmin)
+			}
 
-		// Admin dealer management routes
-		adminDealers := admin.Group("/dealers")
-		{
-			adminDealers.GET("", h.Dealer.GetDealersForAdmin)
-			adminDealers.GET("/:id", h.Dealer.GetDealerByIDForAdmin)
-			adminDealers.PATCH("/:id/verify", h.Dealer.VerifyDealer)
+			// Get by ID, approve, confirm check-in: allowed for admin or staff (registered after so literal paths above match first)
+			adminTicketsStaffOK := admin.Group("/tickets")
+			adminTicketsStaffOK.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
+			{
+				adminTicketsStaffOK.GET("/:id", h.Ticket.GetTicketByID)
+				adminTicketsStaffOK.PATCH("/:id/approve", h.Ticket.ApproveTicket)
+				adminTicketsStaffOK.PATCH("/:id/check-in", h.Ticket.ConfirmCheckIn)
+			}
+
+			// Admin-only dealer management
+			adminDealers := admin.Group("/dealers")
+			adminDealers.Use(middlewares.RequireRole(role.RoleAdmin))
+			{
+				adminDealers.GET("", h.Dealer.GetDealersForAdmin)
+				adminDealers.GET("/:id", h.Dealer.GetDealerByIDForAdmin)
+				adminDealers.PATCH("/:id/verify", h.Dealer.VerifyDealer)
+			}
 		}
 	}
-}
 }

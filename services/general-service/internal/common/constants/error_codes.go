@@ -11,8 +11,9 @@ var (
 	ErrUserNotFound             = errors.New("user not found")
 	ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
 	ErrPasswordMismatch         = errors.New("new password and confirm password do not match")
-	ErrSamePassword             = errors.New("new password cannot be the same as the old password")
-	ErrInternalServer           = errors.New("internal server error")
+	ErrSamePassword                    = errors.New("new password cannot be the same as the old password")
+	ErrGoogleRegistrationDetailsRequired = errors.New("fullName, nickname, country, and idCard are required to complete Google sign-up")
+	ErrInternalServer                  = errors.New("internal server error")
 
 	// Ticket errors
 	ErrInvalidTierID       = errors.New("invalid tier ID format")

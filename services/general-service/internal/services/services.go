@@ -20,7 +20,7 @@ func NewServices(repos *repositories.Repositories, redisClient *redis.Client, lo
 		Auth:   NewAuthService(repos, redisClient, loginMaxFail, loginFailBlockMinutes),
 		User:   NewUserService(repos),
 		Mail:   mail,
-		Ticket: NewTicketService(repos),
+		Ticket: NewTicketService(repos, mail),
 		Dealer: NewDealerService(repos, mail),
 	}
 }

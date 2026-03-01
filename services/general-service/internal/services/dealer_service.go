@@ -195,7 +195,7 @@ func (s *DealerService) VerifyDealer(ctx context.Context, boothID string, fromEm
 		for i := range boothWithStaffs.Staffs {
 			staff := &boothWithStaffs.Staffs[i]
 			if staff.IsOwner && !staff.IsDeleted && staff.User.Email != "" {
-				if err := s.mail.SendDealerApprovedEmail(ctx, fromEmail, staff.User.Email, boothWithStaffs.BoothName, boothNumber); err != nil {
+				if err := s.mail.SendDealerApprovedEmail(ctx, fromEmail, staff.User.Email, boothWithStaffs.BoothName, boothNumber, LangFromCountry(staff.User.Country)); err != nil {
 					log.Printf("Failed to send dealer approved email to %s: %v", staff.User.Email, err)
 				}
 				break

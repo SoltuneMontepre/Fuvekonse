@@ -169,6 +169,9 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	// Setup Swagger (disabled in production)
 	setupSwagger(router)
 
+	// Every API requires X-Internal-Api-Key header (INTERNAL_API_KEY env)
+	router.Use(middlewares.InternalAPIKeyMiddleware())
+
 	// Check if running in Lambda - if so, API Gateway includes /api/general in the path
 	isLambda := os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
 	if isLambda {
@@ -180,6 +183,12 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 		config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
 		log.Println("Routes configured without prefix for local development")
 	}
+
+	// Log 404s to help debug routing (e.g. SQS worker calling wrong path)
+	router.NoRoute(func(c *gin.Context) {
+		log.Printf("404 NoRoute: method=%s path=%s rawPath=%s", c.Request.Method, c.Request.URL.Path, c.Request.URL.RawPath)
+		c.JSON(404, gin.H{"message": "Not Found"})
+	})
 
 	return router, nil
 }
@@ -276,6 +285,11 @@ func main() {
 		}
 	}()
 	defer database.CloseRedis()
+
+	// Run auto-migration so schema stays in sync (e.g. adds new columns like google_id)
+	if err := database.AutoMigrate(db); err != nil {
+		log.Fatalf("Failed to run database migration: %v", err)
+	}
 
 	// Setup HTTP server
 	router, err := setupRouter(db)

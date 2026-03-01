@@ -208,8 +208,8 @@ func (r *TicketRepository) SetTierActive(ctx context.Context, id uuid.UUID, acti
 
 // ========== User Ticket Operations ==========
 
-// GetUserTicket returns the user's current ticket (if any)
-// Excludes denied tickets since they are no longer considered "active"
+// GetUserTicket returns the user's current ticket (if any).
+// Excludes denied tickets since they are no longer considered "active".
 func (r *TicketRepository) GetUserTicket(ctx context.Context, userID uuid.UUID) (*models.UserTicket, error) {
 	var ticket models.UserTicket
 	err := r.db.WithContext(ctx).
@@ -232,7 +232,7 @@ func (r *TicketRepository) GetUserTicketByID(ctx context.Context, id uuid.UUID) 
 	err := r.db.WithContext(ctx).
 		Preload("Ticket").
 		Preload("User").
-		Where("id = ? AND is_deleted = ?", id, false).
+		Where("(id = ? AND is_deleted = ?)", id, false).
 		First(&ticket).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

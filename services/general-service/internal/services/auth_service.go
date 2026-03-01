@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/api/idtoken"
 	"gorm.io/gorm"
 )
 
@@ -109,7 +110,7 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		}, nil
 	}
 
-	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp); err != nil {
+	if err := mailService.SendOtpEmail(ctx, fromEmail, newUser.Email, otp, LangFromCountry(newUser.Country)); err != nil {
 		// Log error but don't fail registration
 		fmt.Printf("[ERROR] Failed to send OTP email (email redacted) for user ID %s: %v\n", newUser.Id, err)
 		return &responses.RegisterResponse{
@@ -163,6 +164,96 @@ func splitName(name string) []string {
 		parts = append(parts, current)
 	}
 	return parts
+}
+
+// GoogleLoginOrRegister verifies the Google ID token, finds or creates the user, and returns access token.
+// One endpoint handles both login (existing user) and register (new user created and logged in).
+func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.GoogleLoginRequest, googleClientID string) (*responses.LoginResponse, error) {
+	if googleClientID == "" {
+		return nil, fmt.Errorf("google client ID not configured")
+	}
+	payload, err := idtoken.Validate(ctx, req.Credential, googleClientID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid google token: %w", err)
+	}
+	googleSub := payload.Subject
+	email, _ := payload.Claims["email"].(string)
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return nil, fmt.Errorf("google token missing email")
+	}
+
+	// Find by Google ID first, then by email (to link existing account)
+	user, err := s.repos.User.FindByGoogleId(googleSub)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+	if user == nil {
+		user, err = s.repos.User.FindByEmail(email)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to find user: %w", err)
+		}
+		if user != nil {
+			// Link Google to existing account
+			user.GoogleId = &googleSub
+			if err := s.repos.User.UpdateUserProfile(user); err != nil {
+				return nil, fmt.Errorf("failed to link google account: %w", err)
+			}
+		}
+	}
+	if user == nil {
+		// New user: require same body as normal register (fullName, nickname, country, idCard)
+		fullName := strings.TrimSpace(req.FullName)
+		nickname := strings.TrimSpace(req.Nickname)
+		country := strings.TrimSpace(req.Country)
+		idCard := strings.TrimSpace(req.IdCard)
+		if fullName == "" || nickname == "" || country == "" || idCard == "" {
+			return nil, constants.ErrGoogleRegistrationDetailsRequired
+		}
+		firstName, lastName := parseFullName(fullName)
+		var hashedPassword string
+		if req.Password != "" && req.ConfirmPassword != "" && req.Password == req.ConfirmPassword {
+			if len(req.Password) < 6 {
+				return nil, fmt.Errorf("password must be at least 6 characters")
+			}
+			var errPwd error
+			hashedPassword, errPwd = utils.HashPassword(req.Password)
+			if errPwd != nil {
+				return nil, fmt.Errorf("failed to hash password: %w", errPwd)
+			}
+		} else {
+			if req.Password != "" || req.ConfirmPassword != "" {
+				return nil, constants.ErrPasswordMismatch
+			}
+			// No password: unguessable hash so email/password login is disabled
+			hashedPassword, _ = utils.HashPassword(uuid.New().String() + string(rune(time.Now().UnixNano()%256)))
+		}
+		newUser := &models.User{
+			Id:          uuid.New(),
+			FursonaName: nickname,
+			FirstName:   firstName,
+			LastName:    lastName,
+			Email:       email,
+			Password:    hashedPassword,
+			Country:     country,
+			IdCard:      idCard,
+			GoogleId:    &googleSub,
+			IsVerified:  true,
+			Role:        constants.RoleUser,
+			CreatedAt:   time.Now(),
+			ModifiedAt:  time.Now(),
+		}
+		if err := s.repos.User.Create(newUser); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+		user = newUser
+	}
+
+	accessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, user.Role.String())
+	if err != nil {
+		return nil, err
+	}
+	return &responses.LoginResponse{AccessToken: accessToken}, nil
 }
 
 // Login authenticates a user and returns tokens
@@ -379,7 +470,7 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 	if mailService == nil {
 		return false, fmt.Errorf("mail service not available")
 	}
-	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp); err != nil {
+	if err := mailService.SendOtpEmail(ctx, fromEmail, user.Email, newOtp, LangFromCountry(user.Country)); err != nil {
 		return false, fmt.Errorf("failed to send OTP email: %w", err)
 	}
 
@@ -404,6 +495,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 		return fmt.Errorf("failed to create reset token: %w", err)
 	}
 
+	lang := LangFromCountry(user.Country)
+
 	// if frontendURL provided, create link; otherwise include token in email body
 	var link string
 	if frontendURL != "" {
@@ -415,28 +508,39 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 			link = u.String()
 		}
 	}
-
-	// Compose email body: when a frontend reset link is provided, include only the link; otherwise include the raw token
-	var body string
-	if link != "" {
-		body = fmt.Sprintf(
-			"Hello,\n\nUse the following link to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
-			int(utils.GetForgotPasswordTokenExpiry().Minutes()),
-			link,
-		)
+	var subject, body string
+	expiryMin := int(utils.GetForgotPasswordTokenExpiry().Minutes())
+	if lang == "vi" {
+		subject = "Yêu cầu đặt lại mật khẩu"
+		if link != "" {
+			body = fmt.Sprintf(
+				`Xin chào,<br><br>
+			Vui lòng nhấn nút bên dưới để đặt lại mật khẩu (hết hạn sau %d phút):<br><br>
+			<a href="%s" style="display:inline-block;padding:12px 24px;background-color:#e6c200;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Đặt lại mật khẩu</a><br><br>
+			Nếu bạn không yêu cầu việc này, hãy bỏ qua email này.`,
+				expiryMin,
+				link,
+			)
+		}
 	} else {
-		// body = fmt.Sprintf(
-		// 	"Hello,\n\nUse the following token to reset your password (expires in %d minutes):\n\n%s\n\nIf you did not request this, ignore this message.",
-		// 	int(utils.GetForgotPasswordTokenExpiry().Minutes()),
-		// 	token,
-		// )
+		subject = "Password Reset Request"
+		if link != "" {
+			body = fmt.Sprintf(
+				`Hello,<br><br>
+			Please click the button below to reset your password (expires in %d minutes):<br><br>
+			<a href="%s" style="display:inline-block;padding:12px 24px;background-color:#e6c200;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a><br><br>
+			If you did not request this, ignore this message.`,
+				expiryMin,
+				link,
+			)
+		}
 	}
 
 	if mailService == nil {
 		return fmt.Errorf("mail service not available")
 	}
 
-	if err := mailService.SendEmail(ctx, fromEmail, user.Email, "Password Reset Request", body, nil, nil); err != nil {
+	if err := mailService.SendEmail(ctx, fromEmail, user.Email, subject, body, nil, nil); err != nil {
 		return fmt.Errorf("failed to send reset email: %w", err)
 	}
 

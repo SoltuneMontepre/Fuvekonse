@@ -70,13 +70,12 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 	}
 	isDealer := isDealerVerified || isDealerOwner
 
-	// Check if user has a ticket (non-denied, non-deleted)
+	// Check if user has a ticket: true only when the ticket is approved (not pending/self_confirmed/denied).
 	ticket, err := s.repos.Ticket.GetUserTicket(context.Background(), user.Id)
 	if err != nil {
-		// Default to false on error; don't fail the request
 		ticket = nil
 	}
-	isHasTicket := ticket != nil
+	isHasTicket := ticket != nil && ticket.Status == models.TicketStatusApproved
 
 	return mappers.MapUserToDetailedResponseWithDealer(user, isDealer, isHasTicket), nil
 }

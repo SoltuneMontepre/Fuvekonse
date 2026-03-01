@@ -8,6 +8,7 @@ import (
 	"general-service/internal/dto/auth/requests"
 	"general-service/internal/services"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -60,7 +61,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	// Validate request body
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
@@ -70,14 +71,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err != nil {
 		errMsg := err.Error()
 		if errMsg == "user with this email already exists" {
-			utils.RespondError(c, 409, "USER_EXISTS", errMsg)
+			utils.RespondErrorWithErrorMessage(c, 409, "USER_EXISTS", errMsg, "userExists")
 			return
 		}
 		if errors.Is(err, constants.ErrPasswordMismatch) {
-			utils.RespondBadRequest(c, "Passwords do not match")
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Passwords do not match", "passwordsDoNotMatch")
 			return
 		}
-		utils.RespondInternalServerError(c, "Failed to register user")
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to register user", "registerFailed")
 		return
 	}
 
@@ -106,14 +107,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Validate request body
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
 	// Guard: ensure services are initialized
 	if h.services == nil || h.services.Auth == nil {
 		fmt.Printf("[ERROR] Auth handler called but services.Auth is nil: services=%v\n", h.services)
-		utils.RespondInternalServerError(c, "An error occurred during login")
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "An error occurred during login", "loginFailed")
 		return
 	}
 
@@ -166,40 +167,41 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req requests.ResetPasswordRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
 	// Extract user ID from context (stored as string from JWT)
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
-		utils.RespondUnauthorized(c, "User ID not found in token")
+		utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "User ID not found in token", "unauthorized")
 		return
 	}
 
 	userID, ok := userIDRaw.(string)
 	if !ok {
-		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "Invalid user ID in token", "unauthorized")
 		return
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
-		// Use sentinel errors for consistent error handling
 		if errors.Is(err, constants.ErrUserNotFound) {
-			utils.RespondNotFound(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, err.Error(), "userNotFound")
 			return
 		}
 		if errors.Is(err, constants.ErrCurrentPasswordIncorrect) {
-			utils.RespondUnauthorized(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, err.Error(), "currentPasswordIncorrect")
 			return
 		}
-		if errors.Is(err, constants.ErrPasswordMismatch) || errors.Is(err, constants.ErrSamePassword) {
-			utils.RespondBadRequest(c, err.Error())
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "passwordsDoNotMatch")
 			return
 		}
-
-		// Default to internal server error for unknown errors
-		utils.RespondInternalServerError(c, "Failed to reset password")
+		if errors.Is(err, constants.ErrSamePassword) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "samePassword")
+			return
+		}
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to reset password", "resetPasswordFailed")
 		return
 	}
 
@@ -224,40 +226,92 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req requests.ResetPasswordRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
 	userIDRaw, exists := c.Get("user_id")
 	if !exists {
-		utils.RespondUnauthorized(c, "User ID not found in token")
+		utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "User ID not found in token", "unauthorized")
 		return
 	}
 
 	userID, ok := userIDRaw.(string)
 	if !ok {
-		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "Invalid user ID in token", "unauthorized")
 		return
 	}
 
 	if err := h.services.Auth.ResetPassword(userID, &req); err != nil {
 		if errors.Is(err, constants.ErrUserNotFound) {
-			utils.RespondNotFound(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, err.Error(), "userNotFound")
 			return
 		}
 		if errors.Is(err, constants.ErrCurrentPasswordIncorrect) {
-			utils.RespondUnauthorized(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, err.Error(), "currentPasswordIncorrect")
 			return
 		}
-		if errors.Is(err, constants.ErrPasswordMismatch) || errors.Is(err, constants.ErrSamePassword) {
-			utils.RespondBadRequest(c, err.Error())
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "passwordsDoNotMatch")
 			return
 		}
-		utils.RespondInternalServerError(c, "Failed to change password")
+		if errors.Is(err, constants.ErrSamePassword) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "samePassword")
+			return
+		}
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to change password", "changePasswordFailed")
 		return
 	}
 
 	utils.RespondSuccess[any](c, nil, "Password changed successfully")
+}
+
+// GoogleLogin godoc
+// @Summary Login or register with Google
+// @Description Verify Google ID token (credential from Sign-In). If user exists (by Google ID or email), log in; otherwise create account and log in. Sets access token cookie.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.GoogleLoginRequest true "Google ID token (credential)"
+// @Success 200 "Logged in or registered successfully"
+// @Failure 400 "Bad request - missing or invalid credential"
+// @Failure 401 "Invalid Google token"
+// @Failure 500 "Internal server error"
+// @Router /auth/google [post]
+func (h *AuthHandler) GoogleLogin(c *gin.Context) {
+	var req requests.GoogleLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+		return
+	}
+	googleClientID := getEnvOr("GOOGLE_CLIENT_ID", "")
+	if googleClientID == "" {
+		utils.RespondErrorWithErrorMessage(c, 503, "SERVICE_UNAVAILABLE", "Google sign-in is not configured", "googleNotConfigured")
+		return
+	}
+	response, err := h.services.Auth.GoogleLoginOrRegister(c.Request.Context(), &req, googleClientID)
+	if err != nil {
+		if errors.Is(err, constants.ErrGoogleRegistrationDetailsRequired) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "googleRegistrationDetailsRequired")
+			return
+		}
+		if errors.Is(err, constants.ErrPasswordMismatch) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Passwords do not match", "passwordsDoNotMatch")
+			return
+		}
+		if strings.Contains(err.Error(), "invalid google token") {
+			utils.RespondErrorWithErrorMessage(c, 401, constants.ErrCodeUnauthorized, "Invalid Google token", "invalidGoogleToken")
+			return
+		}
+		if strings.Contains(err.Error(), "password must be at least 6") {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+			return
+		}
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Google sign-in failed", "googleLoginFailed")
+		return
+	}
+	utils.SetAuthCookie(c, response.AccessToken, h.cookieConfig)
+	utils.RespondSuccess[any](c, nil, "Login successful")
 }
 
 // Logout godoc
@@ -292,7 +346,7 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 
 	// Validate request body
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
@@ -302,15 +356,15 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 	if err != nil {
 		errMsg := err.Error()
 		if constants.ErrCodeNotFound == errMsg {
-			utils.RespondNotFound(c, errMsg)
+			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, errMsg, "userNotFound")
 			return
 		}
-		utils.RespondInternalServerError(c, errMsg)
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, errMsg, "verifyOtpFailed")
 		return
 	}
 
 	if !success {
-		utils.RespondBadRequest(c, "Invalid or expired OTP")
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Invalid or expired OTP", "invalidOrExpiredOtp")
 		return
 	}
 
@@ -327,7 +381,7 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req requests.ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
@@ -335,7 +389,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	frontendURL := getEnvOr("FRONTEND_URL", "")
 
 	if err := h.services.Auth.ForgotPassword(c.Request.Context(), req.Email, h.services.Mail, frontendURL, fromEmail); err != nil {
-		utils.RespondInternalServerError(c, "Failed to process password reset request")
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to process password reset request", "forgotPasswordFailed")
 		return
 	}
 
@@ -352,20 +406,20 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 func (h *AuthHandler) ResetPasswordConfirm(c *gin.Context) {
 	var req requests.ResetPasswordTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.RespondValidationError(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 		return
 	}
 
 	if err := h.services.Auth.ResetPasswordWithToken(req.Token, &req); err != nil {
 		if errors.Is(err, constants.ErrPasswordMismatch) {
-			utils.RespondBadRequest(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "passwordsDoNotMatch")
 			return
 		}
 		if errors.Is(err, constants.ErrUserNotFound) {
-			utils.RespondNotFound(c, err.Error())
+			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, err.Error(), "userNotFound")
 			return
 		}
-		utils.RespondBadRequest(c, err.Error())
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "resetPasswordConfirmFailed")
 		return
 	}
 

@@ -19,6 +19,7 @@ type User struct {
 	Avatar          string        `gorm:"type:varchar(500)" json:"avatar"` // image url
 	Role            role.UserRole `gorm:"type:integer;default:0" json:"role"`
 	IdCard          string        `gorm:"type:varchar(255)" json:"id_card"`
+	GoogleId        *string       `gorm:"type:varchar(255);uniqueIndex" json:"-"` // Google OAuth subject ID; unique when set
 	IsVerified      bool          `gorm:"default:false" json:"is_verified"`
 	DenialCount     int           `gorm:"type:int;default:0" json:"denial_count"`                   // Ticket denial count (0-3)
 	IsBlacklisted   bool          `gorm:"default:false;index" json:"is_blacklisted"`                // User cannot purchase tickets
