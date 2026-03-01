@@ -146,8 +146,8 @@ func (s *UserService) UpdateAvatar(userID string, req *requests.UpdateAvatarRequ
 	return mappers.MapUserToDetailedResponse(user), nil
 }
 
-// GetAllUsers retrieves all users with pagination (admin only)
-func (s *UserService) GetAllUsers(page, pageSize int) ([]*responses.UserDetailedResponse, *common.PaginationMeta, error) {
+// GetAllUsers retrieves all users with pagination and optional search (admin only)
+func (s *UserService) GetAllUsers(page, pageSize int, search string) ([]*responses.UserDetailedResponse, *common.PaginationMeta, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -158,7 +158,7 @@ func (s *UserService) GetAllUsers(page, pageSize int) ([]*responses.UserDetailed
 		pageSize = 100
 	}
 
-	users, total, err := s.repos.User.FindAll(page, pageSize)
+	users, total, err := s.repos.User.FindAll(page, pageSize, search)
 	if err != nil {
 		return nil, nil, err
 	}

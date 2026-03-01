@@ -6,6 +6,7 @@ import (
 	"general-service/internal/dto/user/requests"
 	"general-service/internal/services"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -183,7 +184,9 @@ func (h *UserHandler) UpdateAvatar(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param page query int false "Page number" default(1) minimum(1)
-// @Param pageSize query int false "Page size" default(10) minimum(1) maximum(100)
+// @Param page_size query int false "Page size" default(10) minimum(1) maximum(100)
+// @Param pageSize query int false "Page size (alias)" default(10) minimum(1) maximum(100)
+// @Param search query string false "Search by email, name, or fursona name"
 // @Success 200 "Successfully retrieved users list"
 // @Failure 401 "Unauthorized - missing or invalid token"
 // @Failure 403 "Forbidden - insufficient permissions"
@@ -200,14 +203,21 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 		}
 	}
 
+	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
+		if parsed, err := strconv.Atoi(pageSizeStr); err == nil && parsed > 0 && parsed <= 100 {
+			pageSize = parsed
+		}
+	}
 	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
-		if parsed, err := strconv.Atoi(pageSizeStr); err == nil && parsed > 0 {
+		if parsed, err := strconv.Atoi(pageSizeStr); err == nil && parsed > 0 && parsed <= 100 {
 			pageSize = parsed
 		}
 	}
 
+	search := strings.TrimSpace(c.Query("search"))
+
 	// Call service
-	users, meta, err := h.services.User.GetAllUsers(page, pageSize)
+	users, meta, err := h.services.User.GetAllUsers(page, pageSize, search)
 	if err != nil {
 		utils.RespondInternalServerError(c, "Failed to retrieve users")
 		return

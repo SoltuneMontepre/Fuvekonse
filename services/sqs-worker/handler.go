@@ -28,6 +28,9 @@ func getDB() (*gorm.DB, error) {
 		if dbErr != nil {
 			return
 		}
+		if dbErr = db.AutoMigrate(gormDB); dbErr != nil {
+			return
+		}
 		dbErr = db.ValidateSchema(context.Background(), gormDB)
 	})
 	return gormDB, dbErr
