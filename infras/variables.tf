@@ -12,11 +12,11 @@ variable "project_name" {
 }
 
 # Doppler Variable
-variable "doppler_token" {
-  description = "Doppler service token for accessing secrets"
-  type        = string
-  sensitive   = true
-}
+# variable "doppler_token" {
+#   description = "Doppler service token for accessing secrets"
+#   type        = string
+#   sensitive   = true
+# }
 
 variable "doppler_project" {
   description = "Doppler project name"

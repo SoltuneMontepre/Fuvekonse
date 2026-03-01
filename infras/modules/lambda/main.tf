@@ -8,7 +8,7 @@ resource "aws_lambda_function" "general_service" {
   memory_size   = 512
 
   filename         = var.general_service_zip_path
-  source_code_hash = filebase64sha256(var.general_service_zip_path)
+  source_code_hash = try(filebase64sha256(var.general_service_zip_path), null)
 
   environment {
     variables = {
@@ -39,6 +39,8 @@ resource "aws_lambda_function" "general_service" {
       MAIL_PROVIDER                   = var.mail_provider
       SENDGRID_API_KEY                = var.sendgrid_api_key
       MAIL_FROM_NAME                  = var.mail_from_name
+      GOOGLE_CLIENT_ID                = var.google_client_id
+      GOOGLE_CLIENT_SECRET            = var.google_client_secret
     }
   }
 
@@ -59,7 +61,7 @@ resource "aws_lambda_function" "rbac_service" {
   memory_size   = 512
 
   filename         = var.rbac_service_zip_path
-  source_code_hash = filebase64sha256(var.rbac_service_zip_path)
+  source_code_hash = try(filebase64sha256(var.rbac_service_zip_path), null)
 
   environment {
     variables = {
@@ -86,8 +88,6 @@ resource "aws_lambda_function" "rbac_service" {
       COOKIE_SECURE                   = "true"
       COOKIE_SAMESITE                 = "None"
       INTERNAL_API_KEY                = var.internal_api_key
-      GOOGLE_CLIENT_ID                = var.google_client_id
-      GOOGLE_CLIENT_SECRET            = var.google_client_secret
     }
   }
 
@@ -129,7 +129,7 @@ resource "aws_lambda_function" "sqs_worker" {
   memory_size   = 256
 
   filename         = var.sqs_worker_zip_path
-  source_code_hash = filebase64sha256(var.sqs_worker_zip_path)
+  source_code_hash = try(filebase64sha256(var.sqs_worker_zip_path), null)
 
   environment {
     variables = {

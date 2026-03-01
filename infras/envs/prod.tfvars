@@ -8,7 +8,7 @@ doppler_config  = "github-actions"
 # S3 Configuration
 bucket_name = "fuvekon-bucket"
 bucket_acl  = "private"
-s3_cors_allowed_origins = ["https://fuve.netlify.app", "http://localhost:3000", "http://localhost:5173"]
+s3_cors_allowed_origins = ["https://fuve.netlify.app", "http://localhost:3000", "http://localhost:5173", "https://fuve.vn", "https://www.fuve.vn"]
 
 # IAM Configuration
 iam_bucket_access_username = "bucket"

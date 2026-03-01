@@ -1,7 +1,8 @@
 # HTTP API Gateway
 resource "aws_apigatewayv2_api" "main" {
-  name          = "${var.project_name}-api"
-  protocol_type = "HTTP"
+  name                         = "${var.project_name}-api"
+  protocol_type                = "HTTP"
+  disable_execute_api_endpoint = true
 
   cors_configuration {
     allow_origins     = var.cors_allowed_origins
