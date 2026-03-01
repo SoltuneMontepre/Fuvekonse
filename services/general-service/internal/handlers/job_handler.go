@@ -7,6 +7,7 @@ import (
 	"general-service/internal/queue"
 	"general-service/internal/repositories"
 	"general-service/internal/services"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -110,6 +111,7 @@ func respondTicketJobError(c *gin.Context, err error) {
 	case errors.Is(err, repositories.ErrInvalidTicketStatus):
 		utils.RespondError(c, http.StatusConflict, "INVALID_STATUS", err.Error())
 	default:
+		log.Printf("Job processing failed (unhandled error): %v", err)
 		utils.RespondInternalServerError(c, "Job processing failed")
 	}
 }

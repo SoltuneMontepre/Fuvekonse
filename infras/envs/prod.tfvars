@@ -25,5 +25,4 @@ gin_mode = "release"
 # Internal API (general-service + sqs-worker). Must include /api/general so SQS worker
 # can reach POST /internal/jobs/ticket (full path: .../api/general/internal/jobs/ticket).
 # internal_api_key   = "<secret>"
-general_service_url = "https://riw96amgn7.execute-api.ap-southeast-1.amazonaws.com/api/general"
 # internal_api_key set via TF_VAR_internal_api_key or -var to avoid committing secrets
