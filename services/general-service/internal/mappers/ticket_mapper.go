@@ -24,6 +24,7 @@ func MapTicketTierToResponse(tier *models.TicketTier) *responses.TicketTierRespo
 		Price:       tier.Price,
 		Stock:       tier.Stock,
 		IsActive:    tier.IsActive,
+		IsVisible:   tier.IsVisible,
 	}
 }
 

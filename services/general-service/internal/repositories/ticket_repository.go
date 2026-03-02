@@ -38,11 +38,24 @@ func NewTicketRepository(db *gorm.DB) *TicketRepository {
 
 // ========== Ticket Tier Operations ==========
 
-// GetAllActiveTiers returns all active (non-deleted) ticket tiers
+// GetAllActiveTiers returns all active (non-deleted) ticket tiers for purchase (is_active and is_visible).
 func (r *TicketRepository) GetAllActiveTiers(ctx context.Context) ([]models.TicketTier, error) {
 	var tiers []models.TicketTier
 	err := r.db.WithContext(ctx).
-		Where("is_deleted = ? AND is_active = ?", false, true).
+		Where("is_deleted = ? AND is_active = ? AND is_visible = ?", false, true, true).
+		Order("price ASC").
+		Find(&tiers).Error
+	if err != nil {
+		return nil, err
+	}
+	return tiers, nil
+}
+
+// GetVisibleTiers returns all non-deleted, visible ticket tiers (for public listing).
+func (r *TicketRepository) GetVisibleTiers(ctx context.Context) ([]models.TicketTier, error) {
+	var tiers []models.TicketTier
+	err := r.db.WithContext(ctx).
+		Where("is_deleted = ? AND is_visible = ?", false, true).
 		Order("price ASC").
 		Find(&tiers).Error
 	if err != nil {
@@ -206,6 +219,22 @@ func (r *TicketRepository) SetTierActive(ctx context.Context, id uuid.UUID, acti
 	return &tier, nil
 }
 
+// SetTierVisible sets is_visible for a ticket tier.
+func (r *TicketRepository) SetTierVisible(ctx context.Context, id uuid.UUID, visible bool) (*models.TicketTier, error) {
+	var tier models.TicketTier
+	if err := r.db.WithContext(ctx).Where("id = ? AND is_deleted = ?", id, false).First(&tier).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTicketTierNotFound
+		}
+		return nil, err
+	}
+	if err := r.db.WithContext(ctx).Model(&tier).Update("is_visible", visible).Error; err != nil {
+		return nil, err
+	}
+	tier.IsVisible = visible
+	return &tier, nil
+}
+
 // ========== User Ticket Operations ==========
 
 // GetUserTicket returns the user's current ticket (if any).
@@ -300,10 +329,10 @@ func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uu
 			return err
 		}
 
-		// 3. Lock the tier row for update and check stock
+		// 3. Lock the tier row for update and check stock (must be active and visible to purchase)
 		var tier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ?", tierID, false, true).
+			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", tierID, false, true, true).
 			First(&tier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
@@ -819,6 +848,86 @@ func (r *TicketRepository) GetTicketStatistics(ctx context.Context) (*TicketStat
 	return stats, nil
 }
 
+// SalesByDayItem holds date and count for timeline
+type SalesByDayItem struct {
+	Date  string
+	Count int64
+}
+
+// GetTicketSalesTimeline returns ticket sales count grouped by day (created_at date) for the last N days.
+// Counts non-deleted tickets (any status) created each day.
+func (r *TicketRepository) GetTicketSalesTimeline(ctx context.Context, days int) ([]SalesByDayItem, error) {
+	if days <= 0 {
+		days = 90
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	var result []SalesByDayItem
+	// PostgreSQL: group by date(created_at), count. Exclude deleted.
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT DATE(created_at)::text AS date, COUNT(*)::bigint AS count
+		FROM user_tickets
+		WHERE is_deleted = ?
+		  AND created_at >= (CURRENT_DATE - ? * INTERVAL '1 day')
+		GROUP BY DATE(created_at)
+		ORDER BY date ASC
+	`, false, days).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// RevenueByDayItem holds date and revenue for timeline
+type RevenueByDayItem struct {
+	Date    string
+	Revenue decimal.Decimal
+}
+
+// GetTicketRevenue returns total revenue from all non-deleted, non-denied tickets (sum of tier price).
+func (r *TicketRepository) GetTicketRevenue(ctx context.Context) (decimal.Decimal, error) {
+	var out struct {
+		Total decimal.Decimal `gorm:"column:total"`
+	}
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT COALESCE(SUM(t.price), 0) AS total
+		FROM user_tickets ut
+		INNER JOIN ticket_tiers t ON ut.ticket_id = t.id AND t.is_deleted = ?
+		WHERE ut.is_deleted = ? AND ut.status != ?
+	`, false, false, models.TicketStatusDenied).Scan(&out).Error
+	if err != nil {
+		return decimal.Zero, err
+	}
+	return out.Total, nil
+}
+
+// GetTicketRevenueTimeline returns revenue grouped by day (created_at date) for the last N days.
+func (r *TicketRepository) GetTicketRevenueTimeline(ctx context.Context, days int) ([]RevenueByDayItem, error) {
+	if days <= 0 {
+		days = 90
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	var result []RevenueByDayItem
+	err := r.db.WithContext(ctx).Raw(`
+		SELECT DATE(ut.created_at)::text AS date, COALESCE(SUM(t.price), 0) AS revenue
+		FROM user_tickets ut
+		INNER JOIN ticket_tiers t ON ut.ticket_id = t.id AND t.is_deleted = ?
+		WHERE ut.is_deleted = ? AND ut.status != ?
+		  AND ut.created_at >= (CURRENT_DATE - ? * INTERVAL '1 day')
+		GROUP BY DATE(ut.created_at)
+		ORDER BY date ASC
+	`, false, false, models.TicketStatusDenied, days).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // ========== Blacklist Operations ==========
 
 // GetBlacklistedUsers returns all blacklisted users
@@ -1055,10 +1164,10 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return ErrCannotDowngrade
 		}
 
-		// 5. Lock the NEW tier row, validate active + stock
+		// 5. Lock the NEW tier row, validate active + visible + stock
 		var newTier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ?", newTierID, false, true).
+			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", newTierID, false, true, true).
 			First(&newTier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound

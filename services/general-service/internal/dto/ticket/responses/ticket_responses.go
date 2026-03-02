@@ -17,6 +17,7 @@ type TicketTierResponse struct {
 	Price       decimal.Decimal `json:"price"`
 	Stock       int             `json:"stock"`
 	IsActive    bool            `json:"is_active"`
+	IsVisible   bool            `json:"is_visible"`
 }
 
 // UserTicketResponse represents a user's ticket
@@ -81,6 +82,24 @@ type TierStatisticsResponse struct {
 	TotalStock int       `json:"total_stock"`
 	Sold       int64     `json:"sold"`
 	Available  int       `json:"available"`
+}
+
+// SalesByDayResponse is one item for ticket sales timeline
+type SalesByDayResponse struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+// RevenueResponse is the admin revenue API response (total + optional by-day)
+type RevenueResponse struct {
+	TotalRevenue float64                 `json:"total_revenue"`
+	ByDay        []RevenueByDayResponse  `json:"by_day,omitempty"`
+}
+
+// RevenueByDayResponse is one day in revenue timeline
+type RevenueByDayResponse struct {
+	Date    string  `json:"date"`
+	Revenue float64 `json:"revenue"`
 }
 
 // BlacklistedUserResponse represents a blacklisted user

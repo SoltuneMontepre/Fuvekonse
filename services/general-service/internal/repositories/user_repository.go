@@ -58,6 +58,12 @@ func (r *UserRepository) UpdateUserProfile(user *models.User) error {
 	return r.db.Save(user).Error
 }
 
+// SetVerified sets the is_verified flag for a user by ID (used after OTP verification).
+func (r *UserRepository) SetVerified(userID string, verified bool) error {
+	return r.db.Model(&models.User{}).Where("id = ? AND is_deleted = ?", userID, false).
+		Update("is_verified", verified).Error
+}
+
 // FindAll finds all users with pagination and optional search (email, first_name, last_name, fursona_name)
 func (r *UserRepository) FindAll(page, pageSize int, search string) ([]*models.User, int64, error) {
 	// Validate pagination parameters

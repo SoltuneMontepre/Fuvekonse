@@ -398,11 +398,8 @@ func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (
 		return false, nil
 	}
 
-	// Update user verification status
-	user.IsVerified = true
-
-	// Update user in database
-	if err := s.repos.User.UpdateUserProfile(user); err != nil {
+	// Update user verification status in database (explicit update so is_verified is persisted)
+	if err := s.repos.User.SetVerified(user.Id.String(), true); err != nil {
 		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
 	}
 

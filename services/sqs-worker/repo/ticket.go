@@ -96,7 +96,7 @@ func (r *TicketRepo) PurchaseTicket(ctx context.Context, userID, tierID uuid.UUI
 		}
 		var tier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ?", tierID, false, true).
+			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", tierID, false, true, true).
 			First(&tier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
@@ -318,7 +318,7 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 		}
 		var newTier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ?", newTierID, false, true).
+			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", newTierID, false, true, true).
 			First(&newTier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound

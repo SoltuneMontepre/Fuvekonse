@@ -34,6 +34,7 @@ type TicketTier struct {
 	Stock     int             `gorm:"type:int"`
 	Price     decimal.Decimal `gorm:"type:decimal(10,2)"`
 	IsActive  bool            `gorm:"default:true"`
+	IsVisible bool            `gorm:"default:true"`
 	IsDeleted bool            `gorm:"default:false"`
 }
 

@@ -355,7 +355,7 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 
 	if err != nil {
 		errMsg := err.Error()
-		if constants.ErrCodeNotFound == errMsg {
+		if errMsg == "user not found" {
 			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, errMsg, "userNotFound")
 			return
 		}
@@ -369,6 +369,52 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 	}
 
 	utils.RespondSuccess[any](c, nil, "Email verified successfully")
+}
+
+// ResendOtp godoc
+// @Summary Resend OTP to email
+// @Description Resend verification OTP to the user's email. Only for unverified accounts.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body requests.ResendOtpRequest true "Resend OTP request"
+// @Success 200 "OTP sent successfully"
+// @Failure 400 "Bad request - validation error or account already verified"
+// @Failure 404 "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/resend-otp [post]
+func (h *AuthHandler) ResendOtp(c *gin.Context) {
+	var req requests.ResendOtpRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+		return
+	}
+
+	fromEmail := getEnvOr("SES_EMAIL_IDENTITY", "")
+	ctx := c.Request.Context()
+	ok, err := h.services.Auth.ResendOtp(ctx, req.Email, h.services.Mail, fromEmail)
+
+	if err != nil {
+		errMsg := err.Error()
+		if errMsg == "user not found" {
+			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, errMsg, "userNotFound")
+			return
+		}
+		if errMsg == "account is already verified" {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, errMsg, "alreadyVerified")
+			return
+		}
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, errMsg, "resendOtpFailed")
+		return
+	}
+
+	if !ok {
+		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to resend OTP", "resendOtpFailed")
+		return
+	}
+
+	utils.RespondSuccess[any](c, nil, "Verification code sent to your email")
 }
 
 // ForgotPassword godoc

@@ -694,6 +694,66 @@ func (h *TicketHandler) GetTicketStatistics(c *gin.Context) {
 	utils.RespondSuccess(c, stats, "Successfully retrieved ticket statistics")
 }
 
+// GetTicketSalesTimeline godoc
+// @Summary Get ticket sales timeline (admin)
+// @Description Get ticket sales count grouped by day for the last N days
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param days query int false "Number of days (default 90, max 365)"
+// @Success 200 "Array of { date, count }"
+// @Router /admin/tickets/statistics/timeline [get]
+func (h *TicketHandler) GetTicketSalesTimeline(c *gin.Context) {
+	ctx := c.Request.Context()
+	days := 90
+	if d := c.Query("days"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && v > 0 {
+			days = v
+			if days > 365 {
+				days = 365
+			}
+		}
+	}
+
+	timeline, err := h.services.Ticket.GetTicketSalesTimeline(ctx, days)
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve ticket sales timeline")
+		return
+	}
+	utils.RespondSuccess(c, &timeline, "Successfully retrieved ticket sales timeline")
+}
+
+// GetTicketRevenue godoc
+// @Summary Get ticket revenue (admin)
+// @Description Get total revenue and optional revenue-by-day timeline. Revenue = sum of tier price for all non-denied tickets.
+// @Tags admin-tickets
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param days query int false "If set, include by_day timeline for this many days (e.g. 90)"
+// @Success 200 "Revenue response with total_revenue and optional by_day"
+// @Router /admin/tickets/statistics/revenue [get]
+func (h *TicketHandler) GetTicketRevenue(c *gin.Context) {
+	ctx := c.Request.Context()
+	days := 0
+	if d := c.Query("days"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && v > 0 {
+			days = v
+			if days > 365 {
+				days = 365
+			}
+		}
+	}
+
+	revenue, err := h.services.Ticket.GetTicketRevenue(ctx, days)
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve revenue")
+		return
+	}
+	utils.RespondSuccess(c, revenue, "Successfully retrieved revenue")
+}
+
 // CreateTicketForAdmin godoc
 // @Summary Create a ticket for a user (admin back-door)
 // @Description Create an approved ticket for a user. Bypasses all validation (blacklist, 1-per-user, stock, tier active).
@@ -915,6 +975,52 @@ func (h *TicketHandler) DeactivateTierForAdmin(c *gin.Context) {
 	}
 
 	utils.RespondSuccess(c, tier, "Ticket tier deactivated successfully")
+}
+
+// SetTierVisibleForAdmin godoc
+// @Summary Set ticket tier visibility (admin)
+// @Description Set is_visible so the tier is shown or hidden in the public listing.
+// @Tags admin-tickets
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Tier ID" format(uuid)
+// @Param visible query bool true "Visible (true to show, false to hide)"
+// @Success 200 "Tier visibility updated"
+// @Failure 400 "Invalid request"
+// @Failure 404 "Tier not found"
+// @Router /admin/tickets/tiers/{id}/visibility [patch]
+func (h *TicketHandler) SetTierVisibleForAdmin(c *gin.Context) {
+	ctx := c.Request.Context()
+	tierID := c.Param("id")
+	if tierID == "" {
+		utils.RespondBadRequest(c, "Tier ID is required")
+		return
+	}
+	var visible bool
+	if v := c.Query("visible"); v == "true" {
+		visible = true
+	} else if v == "false" {
+		visible = false
+	} else {
+		utils.RespondBadRequest(c, "Query parameter 'visible' must be true or false")
+		return
+	}
+
+	tier, err := h.services.Ticket.SetTierVisibleForAdmin(ctx, tierID, visible)
+	if err != nil {
+		if errors.Is(err, repositories.ErrTicketTierNotFound) {
+			utils.RespondNotFound(c, "Ticket tier not found")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to update ticket tier visibility")
+		return
+	}
+
+	msg := "Ticket tier hidden from listing"
+	if visible {
+		msg = "Ticket tier visible in listing"
+	}
+	utils.RespondSuccess(c, tier, msg)
 }
 
 // ========== Blacklist Management ==========
