@@ -182,6 +182,7 @@ func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.G
 	if email == "" {
 		return nil, fmt.Errorf("google token missing email")
 	}
+	emailVerified, _ := payload.Claims["email_verified"].(bool)
 
 	// Find by Google ID first, then by email (to link existing account)
 	user, err := s.repos.User.FindByGoogleId(googleSub)
@@ -196,6 +197,9 @@ func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.G
 		if user != nil {
 			// Link Google to existing account
 			user.GoogleId = &googleSub
+			if emailVerified {
+				user.IsVerified = true
+			}
 			if err := s.repos.User.UpdateUserProfile(user); err != nil {
 				return nil, fmt.Errorf("failed to link google account: %w", err)
 			}
