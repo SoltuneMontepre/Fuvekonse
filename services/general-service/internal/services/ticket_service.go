@@ -38,9 +38,9 @@ func NewTicketService(repos *repositories.Repositories, mail *MailService) *Tick
 
 // ========== Public User Endpoints ==========
 
-// GetAllTiers returns all ticket tiers (active and deactivated; excludes deleted).
+// GetAllTiers returns all visible ticket tiers for public listing (excludes deleted and hidden).
 func (s *TicketService) GetAllTiers(ctx context.Context) ([]responses.TicketTierResponse, error) {
-	tiers, err := s.repos.Ticket.GetAllTiersForAdmin(ctx)
+	tiers, err := s.repos.Ticket.GetVisibleTiers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +97,7 @@ func (s *TicketService) CreateTierForAdmin(ctx context.Context, req *requests.Cr
 		Price:       decimal.NewFromFloat(price),
 		Stock:       stock,
 		IsActive:    req.IsActive,
+		IsVisible:   true,
 	}
 
 	created, err := s.repos.Ticket.CreateTier(ctx, tier)
@@ -170,6 +171,19 @@ func (s *TicketService) SetTierActiveForAdmin(ctx context.Context, tierID string
 		return nil, ErrInvalidTierID
 	}
 	tier, err := s.repos.Ticket.SetTierActive(ctx, id, active)
+	if err != nil {
+		return nil, err
+	}
+	return mappers.MapTicketTierToResponse(tier), nil
+}
+
+// SetTierVisibleForAdmin sets is_visible for a ticket tier (admin only).
+func (s *TicketService) SetTierVisibleForAdmin(ctx context.Context, tierID string, visible bool) (*responses.TicketTierResponse, error) {
+	id, err := uuid.Parse(tierID)
+	if err != nil {
+		return nil, ErrInvalidTierID
+	}
+	tier, err := s.repos.Ticket.SetTierVisible(ctx, id, visible)
 	if err != nil {
 		return nil, err
 	}
@@ -458,6 +472,44 @@ func (s *TicketService) GetTicketStatistics(ctx context.Context) (*responses.Tic
 	}
 
 	return mappers.MapTicketStatisticsToResponse(stats), nil
+}
+
+// GetTicketSalesTimeline returns ticket sales count by day for the last N days (admin).
+func (s *TicketService) GetTicketSalesTimeline(ctx context.Context, days int) ([]responses.SalesByDayResponse, error) {
+	items, err := s.repos.Ticket.GetTicketSalesTimeline(ctx, days)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]responses.SalesByDayResponse, len(items))
+	for i := range items {
+		out[i] = responses.SalesByDayResponse{Date: items[i].Date, Count: items[i].Count}
+	}
+	return out, nil
+}
+
+// GetTicketRevenue returns total revenue and optional revenue-by-day timeline (admin).
+func (s *TicketService) GetTicketRevenue(ctx context.Context, days int) (*responses.RevenueResponse, error) {
+	total, err := s.repos.Ticket.GetTicketRevenue(ctx)
+	if err != nil {
+		return nil, err
+	}
+	totalFloat, _ := total.Float64()
+
+	resp := &responses.RevenueResponse{
+		TotalRevenue: totalFloat,
+	}
+	if days > 0 {
+		byDay, err := s.repos.Ticket.GetTicketRevenueTimeline(ctx, days)
+		if err != nil {
+			return nil, err
+		}
+		resp.ByDay = make([]responses.RevenueByDayResponse, len(byDay))
+		for i := range byDay {
+			rev, _ := byDay[i].Revenue.Float64()
+			resp.ByDay[i] = responses.RevenueByDayResponse{Date: byDay[i].Date, Revenue: rev}
+		}
+	}
+	return resp, nil
 }
 
 // CreateTicketForAdmin creates a ticket for a user (admin). Ticket is created as approved.

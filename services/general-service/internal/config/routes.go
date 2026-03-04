@@ -39,6 +39,7 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 		//add jwt auth
 		auth.POST("/reset-password", middlewares.JWTAuthMiddleware(), h.Auth.ResetPassword)
 		auth.POST("/verify-otp", h.Auth.VerifyOtp)
+		auth.POST("/resend-otp", h.Auth.ResendOtp)
 
 		auth.POST("/forgot-password", h.Auth.ForgotPassword)
 		auth.POST("/reset-password/confirm", h.Auth.ResetPasswordConfirm)
@@ -75,6 +76,9 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 		c.JSON(200, gin.H{"status": "database healthy"})
 	})
 
+	// Redis health: call this HTTP endpoint (e.g. GET /health/redis). Do NOT point HTTP
+	// probes at the Redis port (6379)—Redis speaks RESP, not HTTP. Sending HTTP to Redis
+	// triggers "Possible SECURITY ATTACK" and aborts the connection.
 	router.GET("/health/redis", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -165,6 +169,8 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 			{
 				adminTickets.GET("", h.Ticket.GetTicketsForAdmin)
 				adminTickets.POST("", h.Ticket.CreateTicketForAdmin)
+				adminTickets.GET("/statistics/timeline", h.Ticket.GetTicketSalesTimeline)
+				adminTickets.GET("/statistics/revenue", h.Ticket.GetTicketRevenue)
 				adminTickets.GET("/statistics", h.Ticket.GetTicketStatistics)
 				adminTickets.GET("/tiers", h.Ticket.GetAllTiersForAdmin)
 				adminTickets.POST("/tiers", h.Ticket.CreateTierForAdmin)
@@ -172,6 +178,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 				adminTickets.DELETE("/tiers/:id", h.Ticket.DeleteTierForAdmin)
 				adminTickets.PATCH("/tiers/:id/activate", h.Ticket.ActivateTierForAdmin)
 				adminTickets.PATCH("/tiers/:id/deactivate", h.Ticket.DeactivateTierForAdmin)
+				adminTickets.PATCH("/tiers/:id/visibility", h.Ticket.SetTierVisibleForAdmin)
 				adminTickets.PATCH("/:id/deny", h.Ticket.DenyTicket)
 				adminTickets.PATCH("/:id", h.Ticket.UpdateTicketForAdmin)
 				adminTickets.DELETE("/:id", h.Ticket.DeleteTicketForAdmin)

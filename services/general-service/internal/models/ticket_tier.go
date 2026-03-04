@@ -16,6 +16,7 @@ type TicketTier struct {
 	Benefits    string          `gorm:"type:text" json:"benefits"` // JSON array of benefit strings
 	Stock       int             `gorm:"type:int;check:stock >= 0" json:"stock"`
 	IsActive    bool            `gorm:"default:true" json:"is_active"`
+	IsVisible   bool            `gorm:"default:true" json:"is_visible"`
 	CreatedAt   time.Time       `gorm:"autoCreateTime" json:"created_at"`
 	ModifiedAt  time.Time       `gorm:"autoUpdateTime" json:"modified_at"`
 	DeletedAt   *time.Time      `gorm:"index" json:"deleted_at,omitempty"`

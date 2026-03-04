@@ -649,7 +649,21 @@ docker exec -it fuvekon-cache redis-cli ping
 docker compose logs fuvekon-cache
 ```
 
-#### 6. Migration fails
+#### 6. Redis "Possible SECURITY ATTACK" in logs
+
+**Symptoms:** Redis logs show: `Possible SECURITY ATTACK detected. It looks like somebody is sending POST or Host: commands to Redis... Connection from 172.18.0.1:xxxxx aborted`
+
+**Cause:** Something is sending **HTTP** traffic to the Redis port (6379). Redis uses the RESP protocol, not HTTP. When it sees lines like `POST ...` or `Host: ...`, it treats this as a cross-protocol attack and closes the connection.
+
+**This is not from the application code** (the app uses the Redis client correctly). The connection is usually from:
+
+- A **load balancer or orchestrator health check** configured to probe Redis with HTTP (e.g. GET/POST to `redis-host:6379`). Fix: do not use HTTP for Redis. Either remove the probe for port 6379 or use a Redis PING (e.g. `redis-cli ping`) from the probe script.
+- **Wrong port in another service** (e.g. a service that should call the API is pointing at Redis host:6379 with an HTTP client). Fix: correct the target URL/port so HTTP goes to the API port (e.g. 8085), not 6379.
+- **Docker/Kubernetes readiness/liveness** probing the Redis container port with HTTP. Fix: use TCP socket check only, or call the API’s `GET /health/redis` endpoint instead of connecting to Redis directly with HTTP.
+
+**Recommendations:** Bind Redis to an internal network only, set `requirepass` (REDIS_PASSWORD), and ensure no HTTP probes hit the Redis port.
+
+#### 7. Migration fails
 
 **Symptoms:** Database migration errors
 
@@ -666,7 +680,7 @@ docker compose ps fuvekon-db
 go run ./cmd/migrate
 ```
 
-#### 7. Hot reload not working (Air)
+#### 8. Hot reload not working (Air)
 
 **Symptoms:** Changes don't trigger rebuild
 
