@@ -133,7 +133,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 			// Protected conbook routes (require auth)
 			protectedConbooks := protected.Group("/conbooks")
 			{
-				protectedConbooks.POST("", h.Conbook.UploadConbook)
+				protectedConbooks.POST("/upload", h.Conbook.UploadConbook)
 				protectedConbooks.GET("", h.Conbook.GetMyConbooks)
 				protectedConbooks.GET("/:id", h.Conbook.GetConbookByID)
 				protectedConbooks.PUT("/:id", h.Conbook.EditConbook)
