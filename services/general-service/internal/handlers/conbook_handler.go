@@ -31,7 +31,7 @@ func NewConbookHandler(services *services.Services) *ConbookHandler {
 // @Failure 401 "Unauthorized"
 // @Failure 409 "Maximum conbook uploads (10) reached"
 // @Failure 500 "Internal server error"
-// @Router /conbooks [post]
+// @Router /conbooks/upload [post]
 func (h *ConbookHandler) UploadConbook(c *gin.Context) {
 	ctx := c.Request.Context()
 	userID, exists := c.Get("user_id")
