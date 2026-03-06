@@ -176,11 +176,11 @@ func setupRouter(db *gorm.DB) (*gin.Engine, error) {
 	isLambda := os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != ""
 	if isLambda {
 		generalGroup := router.Group("/api/general")
-		config.SetupAPIRoutes(generalGroup, h, db, database.SetWithExpiration)
+		config.SetupAPIRoutes(generalGroup, h, db, repos, database.SetWithExpiration)
 		log.Println("Routes configured with /api/general prefix for Lambda deployment")
 	} else {
 		// In local development mode, routes start from root
-		config.SetupAPIRoutes(router, h, db, database.SetWithExpiration)
+		config.SetupAPIRoutes(router, h, db, repos, database.SetWithExpiration)
 		log.Println("Routes configured without prefix for local development")
 	}
 

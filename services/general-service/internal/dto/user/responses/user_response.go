@@ -36,6 +36,7 @@ type UserDetailedResponse struct {
 	Avatar      string        `json:"avatar"`
 	Role        role.UserRole `json:"role"`
 	IdCard      string        `json:"id_card,omitempty"`
+	DateOfBirth string        `json:"date_of_birth,omitempty"` // "2006-01-02"
 	IsVerified  bool          `json:"is_verified"`
 	IsDealer    bool          `json:"is_dealer"`
 	IsHasTicket bool          `json:"is_has_ticket"`

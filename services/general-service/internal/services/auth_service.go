@@ -65,6 +65,12 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		return nil, fmt.Errorf("failed to generate OTP: %w", err)
 	}
 
+	// Parse and validate date of birth (must be at least 16 years old)
+	dob, err := utils.ParseAndValidateDateOfBirth(req.DateOfBirth)
+	if err != nil {
+		return nil, err
+	}
+
 	// Parse full name into first and last name
 	firstName, lastName := parseFullName(req.FullName)
 
@@ -78,6 +84,7 @@ func (s *AuthService) Register(ctx context.Context, req *requests.RegisterReques
 		Password:    hashedPassword,
 		Country:     req.Country,
 		IdCard:      req.IdCard,
+		DateOfBirth: dob,
 		IsVerified:  false,
 		Role:        constants.RoleUser,
 		CreatedAt:   time.Now(),
@@ -206,14 +213,18 @@ func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.G
 		}
 	}
 	if user == nil {
-		// New user: require same body as normal register (fullName, nickname, country, idCard)
+		// New user: require same body as normal register (fullName, nickname, dateOfBirth, country)
 		fullName := strings.TrimSpace(req.FullName)
 		nickname := strings.TrimSpace(req.Nickname)
 		country := strings.TrimSpace(req.Country)
-		idCard := strings.TrimSpace(req.IdCard)
-		if fullName == "" || nickname == "" || country == "" || idCard == "" {
+		if fullName == "" || nickname == "" || country == "" || strings.TrimSpace(req.DateOfBirth) == "" {
 			return nil, constants.ErrGoogleRegistrationDetailsRequired
 		}
+		dob, err := utils.ParseAndValidateDateOfBirth(req.DateOfBirth)
+		if err != nil {
+			return nil, err
+		}
+		idCard := strings.TrimSpace(req.IdCard)
 		firstName, lastName := parseFullName(fullName)
 		var hashedPassword string
 		if req.Password != "" && req.ConfirmPassword != "" && req.Password == req.ConfirmPassword {
@@ -241,6 +252,7 @@ func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.G
 			Password:    hashedPassword,
 			Country:     country,
 			IdCard:      idCard,
+			DateOfBirth: dob,
 			GoogleId:    &googleSub,
 			IsVerified:  true,
 			Role:        constants.RoleUser,

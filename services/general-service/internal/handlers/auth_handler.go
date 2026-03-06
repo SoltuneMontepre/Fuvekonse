@@ -78,6 +78,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Passwords do not match", "passwordsDoNotMatch")
 			return
 		}
+		if errors.Is(err, constants.ErrAgeRequirement) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validation.ageRequirement")
+			return
+		}
+		if errors.Is(err, constants.ErrInvalidDateOfBirth) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+			return
+		}
 		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, "Failed to register user", "registerFailed")
 		return
 	}
@@ -293,6 +301,14 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, constants.ErrGoogleRegistrationDetailsRequired) {
 			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "googleRegistrationDetailsRequired")
+			return
+		}
+		if errors.Is(err, constants.ErrAgeRequirement) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validation.ageRequirement")
+			return
+		}
+		if errors.Is(err, constants.ErrInvalidDateOfBirth) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
 			return
 		}
 		if errors.Is(err, constants.ErrPasswordMismatch) {

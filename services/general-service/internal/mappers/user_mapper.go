@@ -3,7 +3,15 @@ package mappers
 import (
 	"general-service/internal/dto/user/responses"
 	"general-service/internal/models"
+	"time"
 )
+
+func formatDateOfBirth(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
+}
 
 // MapUserToResponse maps a User model to a public UserResponse DTO (without sensitive fields)
 func MapUserToResponse(user *models.User) *responses.UserResponse {
@@ -38,6 +46,7 @@ func MapUserToDetailedResponseWithDealer(user *models.User, isDealer bool, isHas
 		Avatar:      user.Avatar,
 		Role:        user.Role,
 		IdCard:      user.IdCard,
+		DateOfBirth: formatDateOfBirth(user.DateOfBirth), // "2006-01-02" or ""
 		IsVerified:  user.IsVerified,
 		IsDealer:    isDealer,
 		IsHasTicket: isHasTicket,

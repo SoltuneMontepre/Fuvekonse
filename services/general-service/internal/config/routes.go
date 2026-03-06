@@ -6,6 +6,7 @@ import (
 	"general-service/internal/dto/common"
 	"general-service/internal/handlers"
 	"general-service/internal/middlewares"
+	"general-service/internal/repositories"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -46,7 +47,7 @@ func SetupAuthRoutes(router *gin.RouterGroup, h *handlers.Handlers) {
 	}
 }
 
-func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
+func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos *repositories.Repositories, redisSetFunc func(ctx context.Context, key string, value interface{}, expiration time.Duration) error) {
 	// Internal job endpoint (called by SQS worker) - no /v1 prefix for clarity
 	// INTERNAL_API_KEY is enforced at router level in main.go for all APIs
 	internal := router.Group("/internal")
@@ -102,9 +103,10 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, redis
 			tickets.GET("/tiers/:id", h.Ticket.GetTierByID)
 		}
 
-		// Protected routes - require JWT authentication
+		// Protected routes - require JWT authentication; verified users may call all, unverified only profile/verify whitelist
 		protected := v1.Group("")
 		protected.Use(middlewares.JWTAuthMiddleware())
+		protected.Use(middlewares.RequireVerifiedOrWhitelist(repos.User))
 		{
 			// User routes
 			users := protected.Group("/users")

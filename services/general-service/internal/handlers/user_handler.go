@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/user/requests"
 	"general-service/internal/services"
@@ -107,6 +108,14 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	// Call service to update profile
 	user, err := h.services.User.UpdateProfile(userID, &req)
 	if err != nil {
+		if errors.Is(err, constants.ErrAgeRequirement) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validation.ageRequirement")
+			return
+		}
+		if errors.Is(err, constants.ErrInvalidDateOfBirth) {
+			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeValidationFailed, err.Error(), "validationFailed")
+			return
+		}
 		errMsg := err.Error()
 		switch errMsg {
 		case "user not found":

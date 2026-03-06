@@ -12,8 +12,10 @@ var (
 	ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
 	ErrPasswordMismatch         = errors.New("new password and confirm password do not match")
 	ErrSamePassword                    = errors.New("new password cannot be the same as the old password")
-	ErrGoogleRegistrationDetailsRequired = errors.New("fullName, nickname, country, and idCard are required to complete Google sign-up")
-	ErrInternalServer                  = errors.New("internal server error")
+	ErrGoogleRegistrationDetailsRequired = errors.New("fullName, nickname, dateOfBirth, and country are required to complete Google sign-up")
+	ErrAgeRequirement                   = errors.New("must be at least 16 years old")
+	ErrInvalidDateOfBirth               = errors.New("invalid date of birth format")
+	ErrInternalServer                   = errors.New("internal server error")
 
 	// Ticket errors
 	ErrInvalidTierID       = errors.New("invalid tier ID format")

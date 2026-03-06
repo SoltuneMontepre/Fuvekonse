@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"general-service/internal/common/constants"
+	"general-service/internal/common/utils"
 	"general-service/internal/dto/common"
 	"general-service/internal/dto/user/requests"
 	"general-service/internal/dto/user/responses"
@@ -11,6 +12,7 @@ import (
 	"general-service/internal/models"
 	"general-service/internal/repositories"
 	"math"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -106,6 +108,18 @@ func (s *UserService) UpdateProfile(userID string, req *requests.UpdateProfileRe
 	}
 	if req.IdCard != nil {
 		user.IdCard = *req.IdCard
+	}
+	if req.DateOfBirth != nil {
+		sTrim := strings.TrimSpace(*req.DateOfBirth)
+		if sTrim == "" {
+			user.DateOfBirth = nil
+		} else {
+			dob, err := utils.ParseAndValidateDateOfBirth(sTrim)
+			if err != nil {
+				return nil, err
+			}
+			user.DateOfBirth = dob
+		}
 	}
 
 	// Save updated user

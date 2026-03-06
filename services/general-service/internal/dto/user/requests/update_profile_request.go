@@ -8,4 +8,5 @@ type UpdateProfileRequest struct {
 	LastName    *string `json:"last_name,omitempty" binding:"omitempty,max=255" example:"Doe"`
 	Country     *string `json:"country,omitempty" binding:"omitempty,max=255" example:"USA"`
 	IdCard      *string `json:"id_card,omitempty" binding:"omitempty,max=255" example:"ID123456"`
+	DateOfBirth *string `json:"date_of_birth,omitempty" example:"2000-01-15"`
 }
