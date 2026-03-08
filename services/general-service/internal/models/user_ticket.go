@@ -35,6 +35,7 @@ type UserTicket struct {
 	DeniedBy              *uuid.UUID   `gorm:"type:uuid" json:"denied_by,omitempty"`                     // Staff who denied
 	UpgradedFromTierID    *uuid.UUID   `gorm:"type:uuid" json:"upgraded_from_tier_id,omitempty"`        // Tier ID before upgrade (nil for fresh purchases)
 	PreviousReferenceCode string       `gorm:"type:varchar(50)" json:"previous_reference_code,omitempty"` // Reference code before upgrade
+	UpgradeDenialReason   string       `gorm:"type:varchar(500)" json:"upgrade_denial_reason,omitempty"`  // Reason for upgrade denial (set when upgrade is rolled back)
 	CreatedAt             time.Time    `gorm:"autoCreateTime" json:"created_at"`
 	ModifiedAt     time.Time    `gorm:"autoUpdateTime" json:"modified_at"`
 	DeletedAt      *time.Time   `gorm:"index" json:"deleted_at,omitempty"`

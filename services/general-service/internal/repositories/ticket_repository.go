@@ -537,7 +537,9 @@ func (r *TicketRepository) ApproveTicket(ctx context.Context, ticketID, staffID 
 	return &ticket, nil
 }
 
-// DenyTicket denies a ticket and re-increments stock (staff action)
+// DenyTicket denies a ticket and re-increments stock (staff action).
+// If the ticket is an upgrade (has UpgradedFromTierID), it rolls back to the
+// previous tier instead of fully denying — the user keeps their original ticket.
 func (r *TicketRepository) DenyTicket(ctx context.Context, ticketID, staffID uuid.UUID, reason string) (*models.UserTicket, error) {
 	var ticket models.UserTicket
 
@@ -558,46 +560,13 @@ func (r *TicketRepository) DenyTicket(ctx context.Context, ticketID, staffID uui
 			return ErrInvalidTicketStatus
 		}
 
-		// Lock and update the tier (re-increment stock)
-		var tier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ?", ticket.TicketId).
-			First(&tier).Error; err != nil {
-			return err
-		}
-		if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
-			return err
+		// Check if this is an upgraded ticket that should be rolled back
+		if ticket.UpgradedFromTierID != nil {
+			return r.rollbackUpgrade(tx, &ticket, staffID, reason)
 		}
 
-		// Update ticket
-		now := time.Now()
-		ticket.Status = models.TicketStatusDenied
-		ticket.DeniedAt = &now
-		ticket.DeniedBy = &staffID
-		ticket.DenialReason = reason
-
-		if err := tx.Save(&ticket).Error; err != nil {
-			return err
-		}
-
-		// Update user's denial count and check for blacklist (only for non-deleted users)
-		var user models.User
-		if err := tx.Where("id = ? AND is_deleted = ?", ticket.UserId, false).First(&user).Error; err != nil {
-			return err
-		}
-
-		user.DenialCount++
-		if user.DenialCount >= 3 {
-			user.IsBlacklisted = true
-			user.BlacklistedAt = &now
-			user.BlacklistReason = "Automatically blacklisted after 3 ticket denials"
-		}
-
-		if err := tx.Save(&user).Error; err != nil {
-			return err
-		}
-
-		return nil
+		// Standard deny flow for non-upgrade tickets
+		return r.denyTicketStandard(tx, &ticket, staffID, reason)
 	})
 
 	if err != nil {
@@ -610,6 +579,138 @@ func (r *TicketRepository) DenyTicket(ctx context.Context, ticketID, staffID uui
 	}
 
 	return &ticket, nil
+}
+
+// rollbackUpgrade reverts an upgraded ticket to its previous tier instead of denying it.
+// The user keeps their original ticket with approved status.
+func (r *TicketRepository) rollbackUpgrade(tx *gorm.DB, ticket *models.UserTicket, staffID uuid.UUID, reason string) error {
+	oldTierID := *ticket.UpgradedFromTierID
+	previousRefCode := ticket.PreviousReferenceCode
+
+	// 1. Re-increment the NEW (upgraded) tier stock
+	var newTier models.TicketTier
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", ticket.TicketId).
+		First(&newTier).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&newTier).Update("stock", newTier.Stock+1).Error; err != nil {
+		return err
+	}
+
+	// 2. Decrement the OLD tier stock (restoring the old ticket consumes one)
+	var oldTier models.TicketTier
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", oldTierID).
+		First(&oldTier).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&oldTier).Update("stock", oldTier.Stock-1).Error; err != nil {
+		return err
+	}
+
+	// 3. Parse old ticket number from previous reference code (format: "T1-0042")
+	oldTicketNumber := 0
+	if previousRefCode != "" {
+		parts := splitReferenceCode(previousRefCode)
+		if parts > 0 {
+			oldTicketNumber = parts
+		}
+	}
+
+	// 4. Rollback the ticket to previous tier with approved status
+	now := time.Now()
+	if err := tx.Model(ticket).Updates(map[string]interface{}{
+		"ticket_id":               oldTierID,
+		"ticket_number":           oldTicketNumber,
+		"reference_code":          previousRefCode,
+		"status":                  models.TicketStatusApproved,
+		"upgraded_from_tier_id":   nil,
+		"previous_reference_code": "",
+		"upgrade_denial_reason":   reason,
+		"approved_at":             &now, // Re-stamp approval
+		"denied_at":               nil,
+		"denied_by":               nil,
+		"denial_reason":           "",
+	}).Error; err != nil {
+		return err
+	}
+
+	// Update in-memory struct for the returned response
+	ticket.TicketId = oldTierID
+	ticket.TicketNumber = oldTicketNumber
+	ticket.ReferenceCode = previousRefCode
+	ticket.Status = models.TicketStatusApproved
+	ticket.UpgradedFromTierID = nil
+	ticket.PreviousReferenceCode = ""
+	ticket.UpgradeDenialReason = reason
+	ticket.ApprovedAt = &now
+	ticket.DeniedAt = nil
+	ticket.DeniedBy = nil
+	ticket.DenialReason = ""
+
+	return nil
+}
+
+// denyTicketStandard is the original deny logic for non-upgrade tickets.
+func (r *TicketRepository) denyTicketStandard(tx *gorm.DB, ticket *models.UserTicket, staffID uuid.UUID, reason string) error {
+	// Lock and update the tier (re-increment stock)
+	var tier models.TicketTier
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", ticket.TicketId).
+		First(&tier).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
+		return err
+	}
+
+	// Update ticket
+	now := time.Now()
+	ticket.Status = models.TicketStatusDenied
+	ticket.DeniedAt = &now
+	ticket.DeniedBy = &staffID
+	ticket.DenialReason = reason
+
+	if err := tx.Save(ticket).Error; err != nil {
+		return err
+	}
+
+	// Update user's denial count and check for blacklist (only for non-deleted users)
+	var user models.User
+	if err := tx.Where("id = ? AND is_deleted = ?", ticket.UserId, false).First(&user).Error; err != nil {
+		return err
+	}
+
+	user.DenialCount++
+	if user.DenialCount >= 3 {
+		user.IsBlacklisted = true
+		user.BlacklistedAt = &now
+		user.BlacklistReason = "Automatically blacklisted after 3 ticket denials"
+	}
+
+	if err := tx.Save(&user).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// splitReferenceCode extracts the ticket number from a reference code like "T1-0042" → 42
+func splitReferenceCode(refCode string) int {
+	for i := len(refCode) - 1; i >= 0; i-- {
+		if refCode[i] == '-' {
+			numStr := refCode[i+1:]
+			num := 0
+			for _, c := range numStr {
+				if c >= '0' && c <= '9' {
+					num = num*10 + int(c-'0')
+				}
+			}
+			return num
+		}
+	}
+	return 0
 }
 
 // CancelTicket cancels a pending ticket and re-increments stock
@@ -1213,6 +1314,7 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			"status":                  models.TicketStatusPending,
 			"upgraded_from_tier_id":   oldTierID,
 			"previous_reference_code": previousRefCode,
+			"upgrade_denial_reason":   "", // Clear any previous upgrade denial
 			"approved_at":             nil,
 			"approved_by":             nil,
 			"denied_at":               nil,

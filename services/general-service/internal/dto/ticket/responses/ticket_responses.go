@@ -37,6 +37,7 @@ type UserTicketResponse struct {
 	DeniedAt              *time.Time `json:"denied_at,omitempty"`
 	UpgradedFromTierID    *uuid.UUID `json:"upgraded_from_tier_id,omitempty"`
 	PreviousReferenceCode string     `json:"previous_reference_code,omitempty"`
+	UpgradeDenialReason   string     `json:"upgrade_denial_reason,omitempty"`
 
 	// Tier info
 	Tier *TicketTierResponse `json:"tier,omitempty"`

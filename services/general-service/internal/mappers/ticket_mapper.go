@@ -55,6 +55,7 @@ func MapUserTicketToResponse(ticket *models.UserTicket, includeUser bool) *respo
 		DeniedAt:              ticket.DeniedAt,
 		UpgradedFromTierID:    ticket.UpgradedFromTierID,
 		PreviousReferenceCode: ticket.PreviousReferenceCode,
+		UpgradeDenialReason:   ticket.UpgradeDenialReason,
 	}
 
 	// Include tier info if available
