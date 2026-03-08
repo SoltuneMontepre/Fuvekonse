@@ -89,8 +89,6 @@ func Local() {
 				log.Printf("DeleteMessage %s failed: %v (message may be processed again)", *msg.MessageId, err)
 			}
 		}
-
-		time.Sleep(time.Second)
 	}
 }
 
