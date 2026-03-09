@@ -209,6 +209,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 			adminConbooks.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
 			{
 				adminConbooks.GET("/pending", h.Conbook.GetPendingConbooks)
+				adminConbooks.GET("/verified", h.Conbook.GetVerifiedConbooks)
 				adminConbooks.PATCH("/:id/verify", h.Conbook.VerifyConbook)
 			}
 		}

@@ -195,6 +195,17 @@ func (s *ConbookService) GetUnverifiedConbooks(ctx context.Context) ([]responses
 	return mappers.MapConbooksToResponse(conbooks), nil
 }
 
+// GetVerifiedConbooks retrieves all verified conbooks
+func (s *ConbookService) GetVerifiedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
+	conbooks, err := s.repos.Conbook.GetVerifiedConbooks(ctx)
+	if err != nil {
+		log.Printf("Error retrieving verified conbooks: %v", err)
+		return nil, err
+	}
+
+	return mappers.MapConbooksToResponse(conbooks), nil
+}
+
 // VerifyConbook marks a conbook as verified (staff only)
 // After verification, users cannot edit the conbook
 func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {

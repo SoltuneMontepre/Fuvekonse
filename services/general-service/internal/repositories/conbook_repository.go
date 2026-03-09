@@ -137,6 +137,20 @@ func (r *ConbookRepository) GetUnverifiedConbooks(ctx context.Context) ([]models
 	return conbooks, nil
 }
 
+// GetVerifiedConbooks retrieves all verified conbooks
+func (r *ConbookRepository) GetVerifiedConbooks(ctx context.Context) ([]models.ConBookArt, error) {
+	var conbooks []models.ConBookArt
+	err := r.db.WithContext(ctx).
+		Where("is_verified = ? AND is_deleted = ?", true, false).
+		Preload("User").
+		Order("created_at DESC").
+		Find(&conbooks).Error
+	if err != nil {
+		return nil, err
+	}
+	return conbooks, nil
+}
+
 // VerifyConbook marks a conbook as verified (staff only)
 func (r *ConbookRepository) VerifyConbook(ctx context.Context, id uuid.UUID) error {
 	if _, err := r.GetConbookByID(ctx, id); err != nil {

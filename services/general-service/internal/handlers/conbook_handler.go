@@ -250,6 +250,29 @@ func (h *ConbookHandler) GetPendingConbooks(c *gin.Context) {
 	utils.RespondSuccess(c, &conbooks, "Successfully retrieved pending conbooks")
 }
 
+// GetVerifiedConbooks godoc
+// @Summary Get verified conbooks
+// @Description Retrieve all verified conbooks (admin/staff only)
+// @Tags admin-conbooks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved verified conbooks"
+// @Failure 401 "Unauthorized"
+// @Failure 403 "Insufficient permissions"
+// @Failure 500 "Internal server error"
+// @Router /admin/conbooks/verified [get]
+func (h *ConbookHandler) GetVerifiedConbooks(c *gin.Context) {
+	ctx := c.Request.Context()
+	conbooks, err := h.services.Conbook.GetVerifiedConbooks(ctx)
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve verified conbooks")
+		return
+	}
+
+	utils.RespondSuccess(c, &conbooks, "Successfully retrieved verified conbooks")
+}
+
 // VerifyConbook godoc
 // @Summary Verify a conbook
 // @Description Mark a conbook as verified by staff. After verification, users cannot edit the conbook.
