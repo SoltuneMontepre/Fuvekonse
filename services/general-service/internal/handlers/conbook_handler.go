@@ -303,7 +303,7 @@ func (h *ConbookHandler) VerifyConbook(c *gin.Context) {
 			utils.RespondNotFound(c, "Conbook not found")
 			return
 		}
-		if err.Error() == "conbook is already verified" {
+		if errors.Is(err, services.ErrAlreadyVerified) {
 			utils.RespondError(c, 409, "ALREADY_VERIFIED", "Conbook is already verified")
 			return
 		}
@@ -312,4 +312,45 @@ func (h *ConbookHandler) VerifyConbook(c *gin.Context) {
 	}
 
 	utils.RespondSuccess(c, conbook, "Conbook verified successfully")
+}
+
+// UnverifyConbook godoc
+// @Summary Unverify a conbook
+// @Description Mark a conbook as unverified by staff/admin.
+// @Tags admin-conbooks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Conbook ID" format(uuid)
+// @Success 200 "Conbook unverified successfully"
+// @Failure 400 "Invalid conbook ID"
+// @Failure 401 "Unauthorized"
+// @Failure 403 "Insufficient permissions"
+// @Failure 404 "Conbook not found"
+// @Failure 409 "Conbook already unverified"
+// @Failure 500 "Internal server error"
+// @Router /admin/conbooks/{id}/unverify [patch]
+func (h *ConbookHandler) UnverifyConbook(c *gin.Context) {
+	ctx := c.Request.Context()
+	conbookID := c.Param("id")
+	if conbookID == "" {
+		utils.RespondValidationError(c, "Conbook ID is required")
+		return
+	}
+
+	conbook, err := h.services.Conbook.UnverifyConbook(ctx, conbookID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrConbookNotFound) {
+			utils.RespondNotFound(c, "Conbook not found")
+			return
+		}
+		if errors.Is(err, services.ErrAlreadyUnverified) {
+			utils.RespondError(c, 409, "ALREADY_UNVERIFIED", "Conbook is already unverified")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to unverify conbook")
+		return
+	}
+
+	utils.RespondSuccess(c, conbook, "Conbook unverified successfully")
 }

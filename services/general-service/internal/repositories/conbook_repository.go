@@ -151,15 +151,28 @@ func (r *ConbookRepository) GetVerifiedConbooks(ctx context.Context) ([]models.C
 	return conbooks, nil
 }
 
-// VerifyConbook marks a conbook as verified (staff only)
-func (r *ConbookRepository) VerifyConbook(ctx context.Context, id uuid.UUID) error {
+// SetConbookVerificationStatus updates verification status (staff only)
+func (r *ConbookRepository) SetConbookVerificationStatus(ctx context.Context, id uuid.UUID, isVerified bool) error {
 	if _, err := r.GetConbookByID(ctx, id); err != nil {
 		return err
 	}
 
 	return r.db.WithContext(ctx).Model(&models.ConBookArt{}).
 		Where("id = ?", id).
-		Update("is_verified", true).Error
+		Updates(map[string]interface{}{
+			"is_verified": isVerified,
+			"modified_at": time.Now(),
+		}).Error
+}
+
+// VerifyConbook marks a conbook as verified (staff only)
+func (r *ConbookRepository) VerifyConbook(ctx context.Context, id uuid.UUID) error {
+	return r.SetConbookVerificationStatus(ctx, id, true)
+}
+
+// UnverifyConbook marks a conbook as unverified (staff only)
+func (r *ConbookRepository) UnverifyConbook(ctx context.Context, id uuid.UUID) error {
+	return r.SetConbookVerificationStatus(ctx, id, false)
 }
 
 // CanEditConbook checks if a user can edit a conbook
