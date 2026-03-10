@@ -142,7 +142,7 @@ func IsPermanentError(err error) bool {
 		errors.Is(err, repo.ErrUserBlacklisted) ||
 		errors.Is(err, repo.ErrInvalidTicketStatus) ||
 		errors.Is(err, repo.ErrCannotDowngrade) ||
-		errors.Is(err, repo.ErrTicketDenied) ||
+		errors.Is(err, repo.ErrTicketNotApproved) ||
 		errors.Is(err, ErrInvalidUUID) ||
 		errors.Is(err, ErrNoTicketFound) ||
 		errors.Is(err, ErrUnknownAction) ||
