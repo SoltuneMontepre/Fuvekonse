@@ -19,6 +19,8 @@ var (
 	ErrConbookLimit        = repositories.ErrConbookLimit
 	ErrConbookVerified     = repositories.ErrConbookVerified
 	ErrUnauthorizedConbook = repositories.ErrUnauthorizedConbook
+	ErrAlreadyVerified     = errors.New("conbook is already verified")
+	ErrAlreadyUnverified   = errors.New("conbook is already unverified")
 )
 
 type ConbookService struct {
@@ -195,9 +197,19 @@ func (s *ConbookService) GetUnverifiedConbooks(ctx context.Context) ([]responses
 	return mappers.MapConbooksToResponse(conbooks), nil
 }
 
-// VerifyConbook marks a conbook as verified (staff only)
-// After verification, users cannot edit the conbook
-func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+// GetVerifiedConbooks retrieves all verified conbooks
+func (s *ConbookService) GetVerifiedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
+	conbooks, err := s.repos.Conbook.GetVerifiedConbooks(ctx)
+	if err != nil {
+		log.Printf("Error retrieving verified conbooks: %v", err)
+		return nil, err
+	}
+
+	return mappers.MapConbooksToResponse(conbooks), nil
+}
+
+// setConbookVerificationStatus sets the verification status and returns the updated conbook
+func (s *ConbookService) setConbookVerificationStatus(ctx context.Context, conbookIDStr string, isVerified bool) (*responses.ConbookResponse, error) {
 	conbookID, err := uuid.Parse(conbookIDStr)
 	if err != nil {
 		return nil, errors.New("invalid conbook id")
@@ -209,13 +221,15 @@ func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string)
 		return nil, err
 	}
 
-	if conbook.IsVerified {
-		return nil, errors.New("conbook is already verified")
+	if conbook.IsVerified == isVerified {
+		if isVerified {
+			return nil, ErrAlreadyVerified
+		}
+		return nil, ErrAlreadyUnverified
 	}
 
-	// Verify the conbook
-	if err := s.repos.Conbook.VerifyConbook(ctx, conbookID); err != nil {
-		log.Printf("Error verifying conbook: %v", err)
+	if err := s.repos.Conbook.SetConbookVerificationStatus(ctx, conbookID, isVerified); err != nil {
+		log.Printf("Error setting conbook verification status: %v", err)
 		return nil, err
 	}
 
@@ -227,4 +241,15 @@ func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string)
 
 	response := mappers.MapConbookToResponse(updated)
 	return &response, nil
+}
+
+// VerifyConbook marks a conbook as verified (staff only)
+// After verification, users cannot edit the conbook.
+func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+	return s.setConbookVerificationStatus(ctx, conbookIDStr, true)
+}
+
+// UnverifyConbook marks a conbook as unverified (staff only)
+func (s *ConbookService) UnverifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+	return s.setConbookVerificationStatus(ctx, conbookIDStr, false)
 }
