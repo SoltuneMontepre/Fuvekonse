@@ -206,6 +206,29 @@ func (s *DealerService) VerifyDealer(ctx context.Context, boothID string, fromEm
 	return mappers.MapDealerBoothToDetailResponse(boothWithStaffs), nil
 }
 
+// DenyDealerBooth rejects a dealer registration by soft-deleting the booth and its staff records.
+// Only allowed before verification.
+func (s *DealerService) DenyDealerBooth(boothID string) (*responses.DealerBoothDetailResponse, error) {
+	booth, err := s.repos.Dealer.FindBoothByID(boothID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("dealer booth not found")
+		}
+		return nil, err
+	}
+
+	if booth.IsVerified {
+		return nil, errors.New("dealer booth is already verified")
+	}
+
+	deniedBooth, err := s.repos.Dealer.DenyBooth(boothID)
+	if err != nil {
+		return nil, errors.New("failed to deny dealer booth")
+	}
+
+	return mappers.MapDealerBoothToDetailResponse(deniedBooth), nil
+}
+
 // JoinDealerBooth allows a user to join a dealer booth using a booth code
 func (s *DealerService) JoinDealerBooth(userID string, boothCode string) (*responses.DealerBoothDetailResponse, error) {
 	// Check if user exists

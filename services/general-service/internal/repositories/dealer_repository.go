@@ -138,6 +138,53 @@ func (r *DealerRepository) VerifyBooth(id string, boothNumber string) (*models.D
 	return &booth, nil
 }
 
+// DenyBooth soft-deletes a dealer booth and all active staff records.
+// Intended for admin use to reject a dealer registration before verification.
+func (r *DealerRepository) DenyBooth(id string) (*models.DealerBooth, error) {
+	returnValue := &models.DealerBooth{}
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var booth models.DealerBooth
+		if err := tx.Where("id = ? AND is_deleted = ?", id, false).First(&booth).Error; err != nil {
+			return err
+		}
+
+		now := time.Now()
+
+		// Soft-delete booth
+		if err := tx.Model(&models.DealerBooth{}).
+			Where("id = ? AND is_deleted = ?", id, false).
+			Updates(map[string]interface{}{
+				"is_deleted": true,
+				"deleted_at": &now,
+			}).Error; err != nil {
+			return err
+		}
+
+		// Soft-delete all staff records in this booth
+		if err := tx.Model(&models.UserDealerStaff{}).
+			Where("booth_id = ? AND is_deleted = ?", booth.Id, false).
+			Updates(map[string]interface{}{
+				"is_deleted": true,
+				"deleted_at": &now,
+			}).Error; err != nil {
+			return err
+		}
+
+		// Reload booth with staffs for response
+		if err := tx.Preload("Staffs.User").Where("id = ?", booth.Id).First(returnValue).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return returnValue, nil
+}
+
 // CheckBoothNumberExists checks if a booth number already exists
 func (r *DealerRepository) CheckBoothNumberExists(boothNumber string) (bool, error) {
 	var count int64

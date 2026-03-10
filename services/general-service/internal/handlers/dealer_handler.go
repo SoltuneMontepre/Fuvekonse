@@ -227,6 +227,48 @@ func (h *DealerHandler) VerifyDealer(c *gin.Context) {
 	utils.RespondSuccess(c, booth, "Successfully verified dealer booth")
 }
 
+// DenyDealer godoc
+// @Summary Deny dealer booth (admin)
+// @Description Reject a dealer booth registration (soft-delete the booth). Only allowed before verification.
+// @Tags admin-dealers
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Dealer Booth ID" format(uuid)
+// @Success 200 "Successfully denied dealer booth"
+// @Failure 400 "Invalid dealer booth ID"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 403 "Forbidden - admin only"
+// @Failure 404 "Dealer booth not found"
+// @Failure 409 "Conflict - booth already verified"
+// @Failure 500 "Internal server error"
+// @Router /admin/dealers/{id}/deny [patch]
+func (h *DealerHandler) DenyDealer(c *gin.Context) {
+	boothID := c.Param("id")
+	if boothID == "" {
+		utils.RespondBadRequest(c, "Dealer booth ID is required")
+		return
+	}
+
+	booth, err := h.services.Dealer.DenyDealerBooth(boothID)
+	if err != nil {
+		errMsg := err.Error()
+		switch errMsg {
+		case "dealer booth not found":
+			utils.RespondNotFound(c, errMsg)
+		case "dealer booth is already verified":
+			utils.RespondError(c, 409, "CONFLICT", errMsg)
+		case "failed to deny dealer booth":
+			utils.RespondInternalServerError(c, errMsg)
+		default:
+			utils.RespondInternalServerError(c, "Failed to deny dealer booth")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, booth, "Successfully denied dealer booth")
+}
+
 // JoinDealerBooth godoc
 // @Summary Join a dealer booth
 // @Description Join a dealer booth as a staff member using a booth code
