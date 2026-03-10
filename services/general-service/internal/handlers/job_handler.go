@@ -119,8 +119,8 @@ func respondTicketJobError(c *gin.Context, err error) {
 		utils.RespondError(c, http.StatusConflict, "INVALID_STATUS", err.Error())
 	case errors.Is(err, repositories.ErrCannotDowngrade):
 		utils.RespondError(c, http.StatusConflict, "CANNOT_DOWNGRADE", err.Error())
-	case errors.Is(err, repositories.ErrTicketDenied):
-		utils.RespondError(c, http.StatusConflict, "TICKET_DENIED", err.Error())
+	case errors.Is(err, repositories.ErrTicketNotApproved):
+		utils.RespondError(c, http.StatusConflict, "TICKET_NOT_APPROVED", err.Error())
 	default:
 		log.Printf("Job processing failed (unhandled error): %v", err)
 		utils.RespondInternalServerError(c, "Job processing failed")

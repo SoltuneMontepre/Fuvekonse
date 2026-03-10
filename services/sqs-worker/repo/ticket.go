@@ -21,7 +21,7 @@ var (
 	ErrUserBlacklisted      = errors.New("user is blacklisted from purchasing tickets")
 	ErrInvalidTicketStatus  = errors.New("invalid ticket status for this operation")
 	ErrCannotDowngrade      = errors.New("cannot downgrade: new tier price must be higher than current tier price")
-	ErrTicketDenied         = errors.New("cannot upgrade a denied ticket")
+	ErrTicketNotApproved    = errors.New("only approved tickets can be upgraded")
 )
 
 type TicketRepo struct {
@@ -305,8 +305,8 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 			}
 			return err
 		}
-		if ticket.Status == models.TicketStatusDenied {
-			return ErrTicketDenied
+		if ticket.Status != models.TicketStatusApproved {
+			return ErrTicketNotApproved
 		}
 		var oldTier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", ticket.TicketId).First(&oldTier).Error; err != nil {

@@ -398,8 +398,8 @@ func (h *TicketHandler) UpgradeTicket(c *gin.Context) {
 			utils.RespondError(c, 409, "OUT_OF_STOCK", "Target tier is sold out")
 		case errors.Is(err, repositories.ErrCannotDowngrade):
 			utils.RespondError(c, 409, "CANNOT_DOWNGRADE", "Can only upgrade to a higher-priced tier")
-		case errors.Is(err, repositories.ErrTicketDenied):
-			utils.RespondError(c, 409, "TICKET_DENIED", "Cannot upgrade a denied ticket")
+		case errors.Is(err, repositories.ErrTicketNotApproved):
+			utils.RespondError(c, 409, "TICKET_NOT_APPROVED", "Only approved tickets can be upgraded")
 		default:
 			utils.RespondInternalServerError(c, "Failed to upgrade ticket")
 		}

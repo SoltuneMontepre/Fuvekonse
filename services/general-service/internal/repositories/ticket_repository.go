@@ -25,7 +25,7 @@ var (
 	ErrInvalidTicketStatus    = errors.New("invalid ticket status for this operation")
 	ErrUserNotFound           = errors.New("user not found")
 	ErrCannotDowngrade        = errors.New("cannot downgrade: new tier price must be higher than current tier price")
-	ErrTicketDenied           = errors.New("cannot upgrade a denied ticket")
+	ErrTicketNotApproved      = errors.New("only approved tickets can be upgraded")
 )
 
 type TicketRepository struct {
@@ -1247,9 +1247,9 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return err
 		}
 
-		// 2. Denied tickets cannot be upgraded
-		if ticket.Status == models.TicketStatusDenied {
-			return ErrTicketDenied
+		// 2. Only approved tickets can be upgraded
+		if ticket.Status != models.TicketStatusApproved {
+			return ErrTicketNotApproved
 		}
 
 		// 3. Lock the OLD tier row to get price and increment stock
