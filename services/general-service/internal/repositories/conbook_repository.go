@@ -13,7 +13,7 @@ import (
 var (
 	ErrConbookNotFound     = errors.New("conbook not found")
 	ErrConbookLimit        = errors.New("maximum conbook uploads (10) reached")
-	ErrConbookVerified     = errors.New("cannot edit verified conbook")
+	ErrConbookNotEditable  = errors.New("cannot edit conbook unless status is pending")
 	ErrUnauthorizedConbook = errors.New("user is not the owner of this conbook")
 )
 
@@ -77,16 +77,16 @@ func (r *ConbookRepository) GetUserConbookCount(ctx context.Context, userID uuid
 	return count, err
 }
 
-// UpdateConbook updates a conbook (only if not verified)
+// UpdateConbook updates a conbook (only if status is pending)
 func (r *ConbookRepository) UpdateConbook(ctx context.Context, id uuid.UUID, conbook *models.ConBookArt) (*models.ConBookArt, error) {
-	// Check if exists and not verified
+	// Check if exists and is still editable.
 	existing, err := r.GetConbookByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if existing.IsVerified {
-		return nil, ErrConbookVerified
+	if existing.ConBookArtStatus != models.ConbookStatusPending {
+		return nil, ErrConbookNotEditable
 	}
 
 	conbook.Id = id
@@ -103,15 +103,15 @@ func (r *ConbookRepository) UpdateConbook(ctx context.Context, id uuid.UUID, con
 	return conbook, nil
 }
 
-// DeleteConbook soft deletes a conbook (only if not verified)
+// DeleteConbook soft deletes a conbook (only if status is pending)
 func (r *ConbookRepository) DeleteConbook(ctx context.Context, id uuid.UUID) error {
 	existing, err := r.GetConbookByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if existing.IsVerified {
-		return ErrConbookVerified
+	if existing.ConBookArtStatus != models.ConbookStatusPending {
+		return ErrConbookNotEditable
 	}
 
 	now := time.Now()
@@ -123,11 +123,11 @@ func (r *ConbookRepository) DeleteConbook(ctx context.Context, id uuid.UUID) err
 		}).Error
 }
 
-// GetUnverifiedConbooks retrieves all unverified conbooks (for staff review)
-func (r *ConbookRepository) GetUnverifiedConbooks(ctx context.Context) ([]models.ConBookArt, error) {
+// GetConbooksByStatus retrieves all conbooks by status.
+func (r *ConbookRepository) GetConbooksByStatus(ctx context.Context, status models.ConbookStatus) ([]models.ConBookArt, error) {
 	var conbooks []models.ConBookArt
 	err := r.db.WithContext(ctx).
-		Where("is_verified = ? AND is_deleted = ?", false, false).
+		Where("con_book_art_status = ? AND is_deleted = ?", status, false).
 		Preload("User").
 		Order("created_at ASC").
 		Find(&conbooks).Error
@@ -137,22 +137,23 @@ func (r *ConbookRepository) GetUnverifiedConbooks(ctx context.Context) ([]models
 	return conbooks, nil
 }
 
-// GetVerifiedConbooks retrieves all verified conbooks
-func (r *ConbookRepository) GetVerifiedConbooks(ctx context.Context) ([]models.ConBookArt, error) {
-	var conbooks []models.ConBookArt
-	err := r.db.WithContext(ctx).
-		Where("is_verified = ? AND is_deleted = ?", true, false).
-		Preload("User").
-		Order("created_at DESC").
-		Find(&conbooks).Error
-	if err != nil {
-		return nil, err
-	}
-	return conbooks, nil
+// GetPendingConbooks retrieves all pending conbooks.
+func (r *ConbookRepository) GetPendingConbooks(ctx context.Context) ([]models.ConBookArt, error) {
+	return r.GetConbooksByStatus(ctx, models.ConbookStatusPending)
 }
 
-// SetConbookVerificationStatus updates verification status (staff only)
-func (r *ConbookRepository) SetConbookVerificationStatus(ctx context.Context, id uuid.UUID, isVerified bool) error {
+// GetApprovedConbooks retrieves all approved conbooks.
+func (r *ConbookRepository) GetApprovedConbooks(ctx context.Context) ([]models.ConBookArt, error) {
+	return r.GetConbooksByStatus(ctx, models.ConbookStatusApproved)
+}
+
+// GetDeniedConbooks retrieves all denied conbooks.
+func (r *ConbookRepository) GetDeniedConbooks(ctx context.Context) ([]models.ConBookArt, error) {
+	return r.GetConbooksByStatus(ctx, models.ConbookStatusDenied)
+}
+
+// SetConbookStatus updates conbook status (staff only).
+func (r *ConbookRepository) SetConbookStatus(ctx context.Context, id uuid.UUID, status models.ConbookStatus) error {
 	if _, err := r.GetConbookByID(ctx, id); err != nil {
 		return err
 	}
@@ -160,19 +161,9 @@ func (r *ConbookRepository) SetConbookVerificationStatus(ctx context.Context, id
 	return r.db.WithContext(ctx).Model(&models.ConBookArt{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"is_verified": isVerified,
-			"modified_at": time.Now(),
+			"con_book_art_status": status,
+			"modified_at":         time.Now(),
 		}).Error
-}
-
-// VerifyConbook marks a conbook as verified (staff only)
-func (r *ConbookRepository) VerifyConbook(ctx context.Context, id uuid.UUID) error {
-	return r.SetConbookVerificationStatus(ctx, id, true)
-}
-
-// UnverifyConbook marks a conbook as unverified (staff only)
-func (r *ConbookRepository) UnverifyConbook(ctx context.Context, id uuid.UUID) error {
-	return r.SetConbookVerificationStatus(ctx, id, false)
 }
 
 // CanEditConbook checks if a user can edit a conbook
@@ -182,8 +173,8 @@ func (r *ConbookRepository) CanEditConbook(ctx context.Context, userID uuid.UUID
 		return false, err
 	}
 
-	// User must be the owner and conbook must not be verified
-	if conbook.UserId != userID || conbook.IsVerified {
+	// User must be the owner and conbook must still be pending.
+	if conbook.UserId != userID || conbook.ConBookArtStatus != models.ConbookStatusPending {
 		return false, nil
 	}
 

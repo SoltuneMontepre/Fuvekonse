@@ -205,14 +205,16 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				adminDealers.PATCH("/:id/deny", h.Dealer.DenyDealer)
 			}
 
-			// Admin/Staff conbook management (pending review and verification)
+			// Admin/Staff conbook management (status review and transitions)
 			adminConbooks := admin.Group("/conbooks")
 			adminConbooks.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
 			{
 				adminConbooks.GET("/pending", h.Conbook.GetPendingConbooks)
-				adminConbooks.GET("/verified", h.Conbook.GetVerifiedConbooks)
-				adminConbooks.PATCH("/:id/verify", h.Conbook.VerifyConbook)
-				adminConbooks.PATCH("/:id/unverify", h.Conbook.UnverifyConbook)
+				adminConbooks.GET("/approved", h.Conbook.GetApprovedConbooks)
+				adminConbooks.GET("/denied", h.Conbook.GetDeniedConbooks)
+				adminConbooks.PATCH("/:id/approve", h.Conbook.ApproveConbook)
+				adminConbooks.PATCH("/:id/deny", h.Conbook.DenyConbook)
+				adminConbooks.PATCH("/:id/pending", h.Conbook.MarkConbookPending)
 			}
 		}
 	}
