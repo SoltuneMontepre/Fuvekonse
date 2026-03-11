@@ -20,6 +20,11 @@ func (r *DealerRepository) CreateBooth(booth *models.DealerBooth) error {
 	return r.db.Create(booth).Error
 }
 
+// UpdateBooth updates dealer booth data.
+func (r *DealerRepository) UpdateBooth(booth *models.DealerBooth) error {
+	return r.db.Save(booth).Error
+}
+
 // CreateStaff creates a new dealer staff
 func (r *DealerRepository) CreateStaff(staff *models.UserDealerStaff) error {
 	return r.db.Create(staff).Error

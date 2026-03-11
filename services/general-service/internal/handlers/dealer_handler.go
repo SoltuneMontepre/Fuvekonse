@@ -89,6 +89,63 @@ func (h *DealerHandler) RegisterDealer(c *gin.Context) {
 	utils.RespondCreated(c, booth, "Successfully registered as dealer")
 }
 
+// EditDealer godoc
+// @Summary Edit dealer booth information
+// @Description Update current owner's dealer booth information including booth_name, description, and price_sheets.
+// @Description Only booth owners can edit, and only before verification.
+// @Tags dealer
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body requests.DealerEditRequest true "Dealer booth edit request"
+// @Success 200 "Successfully updated dealer booth"
+// @Failure 400 "Bad request - validation error"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 403 "Forbidden - only owner can edit"
+// @Failure 409 "Conflict - booth already verified"
+// @Failure 500 "Internal server error"
+// @Router /dealer/edit [patch]
+func (h *DealerHandler) EditDealer(c *gin.Context) {
+	var req requests.DealerEditRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.RespondValidationError(c, err.Error())
+		return
+	}
+
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	booth, err := h.services.Dealer.EditDealerBooth(userID, &req)
+	if err != nil {
+		errMsg := err.Error()
+		switch errMsg {
+		case "you are not a staff member of any dealer booth", "you are not a staff member of this booth":
+			utils.RespondError(c, 403, "FORBIDDEN", errMsg)
+		case "only booth owners can edit booth information":
+			utils.RespondError(c, 403, "FORBIDDEN", errMsg)
+		case "dealer booth is already verified":
+			utils.RespondError(c, 409, "CONFLICT", errMsg)
+		case "failed to update dealer booth", "failed to retrieve updated booth information":
+			utils.RespondInternalServerError(c, errMsg)
+		default:
+			utils.RespondInternalServerError(c, "Failed to update dealer booth")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, booth, "Successfully updated dealer booth")
+}
+
 // GetDealersForAdmin godoc
 // @Summary Get all dealer booths (admin)
 // @Description Get a paginated list of all dealer booths with optional filters
