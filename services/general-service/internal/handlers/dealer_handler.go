@@ -29,7 +29,7 @@ func NewDealerHandler(services *services.Services) *DealerHandler {
 // @Description
 // @Description **Usage:**
 // @Description 1. Include JWT access token in Authorization header: Bearer YOUR_ACCESS_TOKEN
-// @Description 2. Provide booth information (booth_name, description, price_sheet)
+// @Description 2. Provide booth information (booth_name, description, price_sheets)
 // @Description 3. Receive the created dealer booth information
 // @Tags dealer
 // @Accept json

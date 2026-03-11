@@ -66,7 +66,7 @@ func (s *DealerService) RegisterDealer(userID string, req *requests.DealerRegist
 		Id:          uuid.New(),
 		BoothName:   req.BoothName,
 		Description: req.Description,
-		PriceSheet:  req.PriceSheet,
+		PriceSheets: req.PriceSheets,
 		BoothNumber: "", // Will be assigned later by admin
 		IsVerified:  false,
 		IsDeleted:   false,
