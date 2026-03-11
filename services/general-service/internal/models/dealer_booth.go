@@ -7,11 +7,10 @@ import (
 )
 
 type DealerBooth struct {
-	Id          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	BoothName   string    `gorm:"type:varchar(255)"`
-	Description string    `gorm:"type:varchar(500)"`
-	BoothNumber string    `gorm:"type:varchar(100)"`
-	// PriceSheet  string            `gorm:"type:varchar(500)"` // image url
+	Id          uuid.UUID         `gorm:"type:uuid;primaryKey"`
+	BoothName   string            `gorm:"type:varchar(255)"`
+	Description string            `gorm:"type:varchar(500)"`
+	BoothNumber string            `gorm:"type:varchar(100)"`
 	PriceSheets []string          `gorm:"serializer:json;type:text"` // image urls
 	IsVerified  bool              `gorm:"default:false"`
 	CreatedAt   time.Time         `gorm:"autoCreateTime"`
