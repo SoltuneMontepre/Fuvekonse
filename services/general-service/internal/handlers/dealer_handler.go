@@ -92,20 +92,28 @@ func (h *DealerHandler) RegisterDealer(c *gin.Context) {
 // EditDealer godoc
 // @Summary Edit dealer booth information
 // @Description Update current owner's dealer booth information including booth_name, description, and price_sheets.
-// @Description Only booth owners can edit, and only before verification.
+// @Description Only booth owners can edit.
 // @Tags dealer
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param id path string true "Booth ID"
 // @Param request body requests.DealerEditRequest true "Dealer booth edit request"
 // @Success 200 "Successfully updated dealer booth"
 // @Failure 400 "Bad request - validation error"
 // @Failure 401 "Unauthorized - missing or invalid token"
 // @Failure 403 "Forbidden - only owner can edit"
+// @Failure 404 "Not found - dealer booth not found"
 // @Failure 409 "Conflict - booth already verified"
 // @Failure 500 "Internal server error"
-// @Router /dealer/edit [patch]
+// @Router /dealer/{id} [patch]
 func (h *DealerHandler) EditDealer(c *gin.Context) {
+	boothID := c.Param("id")
+	if boothID == "" {
+		utils.RespondValidationError(c, "booth id is required")
+		return
+	}
+
 	var req requests.DealerEditRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -125,10 +133,12 @@ func (h *DealerHandler) EditDealer(c *gin.Context) {
 		return
 	}
 
-	booth, err := h.services.Dealer.EditDealerBooth(userID, &req)
+	booth, err := h.services.Dealer.EditDealerBooth(userID, boothID, &req)
 	if err != nil {
 		errMsg := err.Error()
 		switch errMsg {
+		case "dealer booth not found":
+			utils.RespondNotFound(c, errMsg)
 		case "you are not a staff member of any dealer booth", "you are not a staff member of this booth":
 			utils.RespondError(c, 403, "FORBIDDEN", errMsg)
 		case "only booth owners can edit booth information":

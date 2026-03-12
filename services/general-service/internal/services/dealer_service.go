@@ -90,16 +90,16 @@ func (s *DealerService) RegisterDealer(userID string, req *requests.DealerRegist
 
 // EditDealerBooth updates booth information for the owner.
 // Editing is only allowed before booth verification.
-func (s *DealerService) EditDealerBooth(userID string, req *requests.DealerEditRequest) (*responses.DealerBoothDetailResponse, error) {
-	booth, err := s.repos.Dealer.GetBoothByStaffUserID(userID)
+func (s *DealerService) EditDealerBooth(userID string, boothID string, req *requests.DealerEditRequest) (*responses.DealerBoothDetailResponse, error) {
+	booth, err := s.repos.Dealer.FindBoothByID(boothID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("you are not a staff member of any dealer booth")
+			return nil, errors.New("dealer booth not found")
 		}
 		return nil, err
 	}
 
-	ownerStaff, err := s.repos.Dealer.FindStaffByUserAndBoothID(userID, booth.Id.String())
+	ownerStaff, err := s.repos.Dealer.FindStaffByUserAndBoothID(userID, boothID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("you are not a staff member of this booth")
@@ -111,9 +111,9 @@ func (s *DealerService) EditDealerBooth(userID string, req *requests.DealerEditR
 		return nil, errors.New("only booth owners can edit booth information")
 	}
 
-	if booth.IsVerified {
-		return nil, errors.New("dealer booth is already verified")
-	}
+	// if booth.IsVerified {
+	// 	return nil, errors.New("dealer booth is already verified")
+	// }
 
 	if req.BoothName != nil {
 		booth.BoothName = *req.BoothName
