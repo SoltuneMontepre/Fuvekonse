@@ -111,10 +111,6 @@ func (s *DealerService) EditDealerBooth(userID string, boothID string, req *requ
 		return nil, errors.New("only booth owners can edit booth information")
 	}
 
-	// if booth.IsVerified {
-	// 	return nil, errors.New("dealer booth is already verified")
-	// }
-
 	if req.BoothName != nil {
 		booth.BoothName = *req.BoothName
 	}
