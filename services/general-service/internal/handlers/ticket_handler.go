@@ -1076,7 +1076,7 @@ func (h *TicketHandler) GetBlacklistedUsers(c *gin.Context) {
 // @Param request body requests.BlacklistUserRequest true "Blacklist reason"
 // @Success 200 "User blacklisted successfully"
 // @Success 202 "Request queued for processing"
-// @Failure 400 "Invalid user ID or missing reason"
+// @Failure 400 "Invalid user ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
 // @Failure 500 "Internal server error"
