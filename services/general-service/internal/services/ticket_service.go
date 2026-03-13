@@ -659,7 +659,8 @@ func isValidTicketStatus(status models.TicketStatus) bool {
 	case models.TicketStatusPending,
 		models.TicketStatusSelfConfirmed,
 		models.TicketStatusApproved,
-		models.TicketStatusDenied:
+		models.TicketStatusDenied,
+		models.TicketStatusAdminGranted:
 		return true
 	default:
 		return false

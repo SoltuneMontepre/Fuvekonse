@@ -14,6 +14,7 @@ const (
 	TicketStatusSelfConfirmed TicketStatus = "self_confirmed"
 	TicketStatusApproved      TicketStatus = "approved"
 	TicketStatusDenied        TicketStatus = "denied"
+	TicketStatusAdminGranted  TicketStatus = "admin_granted" // Ticket created directly by admin, bypasses payment flow
 )
 
 type UserTicket struct {
@@ -22,7 +23,7 @@ type UserTicket struct {
 	TicketId       uuid.UUID    `gorm:"type:uuid;index" json:"ticket_id"`
 	TicketNumber   int          `gorm:"type:int" json:"ticket_number"`                                  // Per-tier sequential number
 	ReferenceCode  string       `gorm:"type:varchar(50);uniqueIndex" json:"reference_code"`             // e.g., "T1-0042"
-	Status         TicketStatus `gorm:"type:varchar(20);default:'pending';index" json:"status"`         // pending, self_confirmed, approved, denied
+	Status         TicketStatus `gorm:"type:varchar(20);default:'pending';index" json:"status"`         // pending, self_confirmed, approved, denied, admin_granted
 	ConBadgeName   string       `gorm:"type:varchar(255)" json:"con_badge_name"`                        // Filled after approval
 	BadgeImage     string       `gorm:"type:varchar(500)" json:"badge_image"`                           // Filled after approval
 	IsFursuiter    bool         `gorm:"default:false" json:"is_fursuiter"`                              // Filled after approval
