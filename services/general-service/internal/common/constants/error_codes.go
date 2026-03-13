@@ -8,6 +8,7 @@ var (
 	ErrAccountLocked            = errors.New("account temporarily locked due to too many failed login attempts")
 	ErrInvalidCredentials       = errors.New("invalid email or password")
 	ErrUserNotVerified          = errors.New("user is not verified")
+	ErrAccountBanned             = errors.New("account is banned")
 	ErrUserNotFound             = errors.New("user not found")
 	ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
 	ErrPasswordMismatch         = errors.New("new password and confirm password do not match")
