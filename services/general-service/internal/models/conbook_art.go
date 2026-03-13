@@ -15,13 +15,12 @@ const (
 )
 
 type ConBookArt struct {
-	Id          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserId      uuid.UUID `gorm:"type:uuid;index"`
-	Title       string    `gorm:"type:varchar(255)"`
-	Description string    `gorm:"type:varchar(500)"`
-	Handle      string    `gorm:"type:varchar(255)"`
-	ImageUrl    string    `gorm:"type:varchar(500)"`
-	// IsVerified        bool          `gorm:"default:false"`
+	Id               uuid.UUID     `gorm:"type:uuid;primaryKey"`
+	UserId           uuid.UUID     `gorm:"type:uuid;index"`
+	Title            string        `gorm:"type:varchar(255)"`
+	Description      string        `gorm:"type:varchar(500)"`
+	Handle           string        `gorm:"type:varchar(255)"`
+	ImageUrl         string        `gorm:"type:varchar(500)"`
 	ConBookArtStatus ConbookStatus `gorm:"type:varchar(20);default:'pending';index"`
 	CreatedAt        time.Time     `gorm:"autoCreateTime"`
 	ModifiedAt       time.Time     `gorm:"autoUpdateTime"`
