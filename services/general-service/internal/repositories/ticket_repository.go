@@ -417,7 +417,7 @@ func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tie
 			return err
 		}
 
-		// 4. Create ticket as approved
+		// 4. Create ticket as admin_granted (bypasses payment flow, no stock decrement)
 		now := time.Now()
 		referenceCode := fmt.Sprintf("%s-%04d", tier.TierCode, ticketNumber)
 		ticket = &models.UserTicket{
@@ -426,7 +426,7 @@ func (r *TicketRepository) CreateTicketForAdmin(ctx context.Context, userID, tie
 			TicketId:      tierID,
 			TicketNumber:  ticketNumber,
 			ReferenceCode: referenceCode,
-			Status:        models.TicketStatusApproved,
+			Status:        models.TicketStatusAdminGranted,
 			ApprovedAt:    &now,
 			ApprovedBy:    &staffID,
 		}
@@ -713,7 +713,10 @@ func splitReferenceCode(refCode string) int {
 	return 0
 }
 
-// CancelTicket cancels a pending ticket and re-increments stock
+// CancelTicket cancels a ticket.
+// - If the ticket is an in-progress upgrade (upgraded_from_tier_id set), it rolls back to the
+//   previous tier instead of deleting — the user keeps their original approved ticket.
+// - Otherwise, the ticket is permanently deleted and stock is re-incremented (skipped for admin_granted).
 func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uuid.UUID) error {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Find and lock the ticket
@@ -727,20 +730,31 @@ func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uu
 			return err
 		}
 
-		// Can only cancel pending or self_confirmed tickets
-		if ticket.Status != models.TicketStatusPending && ticket.Status != models.TicketStatusSelfConfirmed {
+		// Can only cancel pending, self_confirmed, or admin_granted tickets
+		cancellable := ticket.Status == models.TicketStatusPending ||
+			ticket.Status == models.TicketStatusSelfConfirmed ||
+			ticket.Status == models.TicketStatusAdminGranted
+		if !cancellable {
 			return ErrInvalidTicketStatus
 		}
 
-		// Lock and update the tier (re-increment stock)
-		var tier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ?", ticket.TicketId).
-			First(&tier).Error; err != nil {
-			return err
+		// If this is an in-progress upgrade, roll back to the previous tier instead of deleting.
+		if ticket.UpgradedFromTierID != nil {
+			return r.rollbackUpgrade(tx, &ticket, uuid.Nil, "Cancelled by user")
 		}
-		if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
-			return err
+
+		// Re-increment stock only for tickets that went through the normal purchase flow.
+		// admin_granted tickets never decremented stock, so skip the re-increment.
+		if ticket.Status != models.TicketStatusAdminGranted {
+			var tier models.TicketTier
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("id = ?", ticket.TicketId).
+				First(&tier).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
+				return err
+			}
 		}
 
 		// Permanently delete the user ticket
@@ -1185,7 +1199,8 @@ func (r *TicketRepository) DeleteTicketForAdmin(ctx context.Context, ticketID uu
 			return err
 		}
 
-		// 2. Re-increment stock if ticket was in a stock-consuming state
+		// 2. Re-increment stock if ticket was in a stock-consuming state.
+		// admin_granted tickets never decremented stock, so exclude them.
 		if ticket.Status == models.TicketStatusPending ||
 			ticket.Status == models.TicketStatusSelfConfirmed ||
 			ticket.Status == models.TicketStatusApproved {
@@ -1229,17 +1244,18 @@ type UpgradeResult struct {
 }
 
 // UpgradeTicketTier atomically upgrades a user's ticket to a higher-priced tier.
-// Validates: ticket exists and is non-denied, new tier is active with stock, price > current.
+// Validates: ticket must be approved or admin_granted, new tier is active with stock, price > current.
 // Stock: increments old tier, decrements new tier.
 // Ticket: updates tier, generates new ticket_number + reference_code, resets to pending.
 func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID) (*UpgradeResult, error) {
 	var result *UpgradeResult
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1. Find and lock the user's current non-deleted ticket
+		// 1. Find and lock the user's current active (non-deleted, non-denied) ticket.
+		// Explicitly exclude denied tickets: a denied ticket is not deleted but is no longer active.
 		var ticket models.UserTicket
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("user_id = ? AND is_deleted = ?", userID, false).
+			Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).
 			First(&ticket).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketNotFound
@@ -1247,8 +1263,8 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return err
 		}
 
-		// 2. Only approved tickets can be upgraded
-		if ticket.Status != models.TicketStatusApproved {
+		// 2. Only approved or admin_granted tickets can be upgraded
+		if ticket.Status != models.TicketStatusApproved && ticket.Status != models.TicketStatusAdminGranted {
 			return ErrTicketNotApproved
 		}
 
