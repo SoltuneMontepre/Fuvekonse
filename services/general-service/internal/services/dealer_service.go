@@ -66,7 +66,7 @@ func (s *DealerService) RegisterDealer(userID string, req *requests.DealerRegist
 		Id:          uuid.New(),
 		BoothName:   req.BoothName,
 		Description: req.Description,
-		PriceSheet:  req.PriceSheet,
+		PriceSheets: req.PriceSheets,
 		BoothNumber: "", // Will be assigned later by admin
 		IsVerified:  false,
 		IsDeleted:   false,
@@ -86,6 +86,51 @@ func (s *DealerService) RegisterDealer(userID string, req *requests.DealerRegist
 	}
 
 	return mappers.MapDealerBoothToResponse(booth), nil
+}
+
+// EditDealerBooth updates booth information for the owner.
+// Editing is only allowed before booth verification.
+func (s *DealerService) EditDealerBooth(userID string, boothID string, req *requests.DealerEditRequest) (*responses.DealerBoothDetailResponse, error) {
+	booth, err := s.repos.Dealer.FindBoothByID(boothID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("dealer booth not found")
+		}
+		return nil, err
+	}
+
+	ownerStaff, err := s.repos.Dealer.FindStaffByUserAndBoothID(userID, boothID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("you are not a staff member of this booth")
+		}
+		return nil, err
+	}
+
+	if !ownerStaff.IsOwner {
+		return nil, errors.New("only booth owners can edit booth information")
+	}
+
+	if req.BoothName != nil {
+		booth.BoothName = *req.BoothName
+	}
+	if req.Description != nil {
+		booth.Description = *req.Description
+	}
+	if req.PriceSheets != nil {
+		booth.PriceSheets = *req.PriceSheets
+	}
+
+	if err := s.repos.Dealer.UpdateBooth(booth); err != nil {
+		return nil, errors.New("failed to update dealer booth")
+	}
+
+	updatedBooth, err := s.repos.Dealer.FindBoothByIDWithStaffs(booth.Id.String())
+	if err != nil {
+		return nil, errors.New("failed to retrieve updated booth information")
+	}
+
+	return mappers.MapDealerBoothToDetailResponse(updatedBooth), nil
 }
 
 // GetAllDealersForAdmin retrieves all dealer booths with pagination and filters (admin only)

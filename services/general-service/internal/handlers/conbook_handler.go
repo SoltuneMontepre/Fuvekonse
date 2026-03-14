@@ -122,7 +122,7 @@ func (h *ConbookHandler) GetConbookByID(c *gin.Context) {
 
 // EditConbook godoc
 // @Summary Update a conbook
-// @Description Update conbook details. Can only be edited before staff verification. User can only edit their own conbooks.
+// @Description Update conbook details. Can only be edited while status is pending. User can only edit their own conbooks.
 // @Tags conbooks
 // @Accept json
 // @Produce json
@@ -132,7 +132,7 @@ func (h *ConbookHandler) GetConbookByID(c *gin.Context) {
 // @Success 200 "Conbook updated successfully"
 // @Failure 400 "Invalid request or conbook ID"
 // @Failure 401 "Unauthorized"
-// @Failure 403 "Cannot edit verified conbook or not owner"
+// @Failure 403 "Cannot edit non-pending conbook or not owner"
 // @Failure 404 "Conbook not found"
 // @Failure 500 "Internal server error"
 // @Router /conbooks/{id} [put]
@@ -159,15 +159,15 @@ func (h *ConbookHandler) EditConbook(c *gin.Context) {
 	conbook, err := h.services.Conbook.EditConbook(ctx, userID.(string), conbookID, &req)
 	if err != nil {
 		if errors.Is(err, services.ErrUnauthorizedConbook) {
-			utils.RespondForbidden(c, "Cannot edit verified conbook or you are not the owner")
+			utils.RespondForbidden(c, "Cannot edit non-pending conbook or you are not the owner")
 			return
 		}
 		if errors.Is(err, repositories.ErrConbookNotFound) {
 			utils.RespondNotFound(c, "Conbook not found")
 			return
 		}
-		if errors.Is(err, services.ErrConbookVerified) {
-			utils.RespondForbidden(c, "Cannot edit verified conbook")
+		if errors.Is(err, services.ErrConbookNotEditable) {
+			utils.RespondForbidden(c, "Cannot edit non-pending conbook")
 			return
 		}
 		utils.RespondInternalServerError(c, "Failed to update conbook")
@@ -179,7 +179,7 @@ func (h *ConbookHandler) EditConbook(c *gin.Context) {
 
 // DeleteConbook godoc
 // @Summary Delete a conbook
-// @Description Delete a conbook. Can only be deleted before staff verification. User can only delete their own conbooks.
+// @Description Delete a conbook. Can only be deleted while status is pending. User can only delete their own conbooks.
 // @Tags conbooks
 // @Accept json
 // @Produce json
@@ -188,7 +188,7 @@ func (h *ConbookHandler) EditConbook(c *gin.Context) {
 // @Success 204 "Conbook deleted successfully"
 // @Failure 400 "Invalid conbook ID"
 // @Failure 401 "Unauthorized"
-// @Failure 403 "Cannot delete verified conbook or not owner"
+// @Failure 403 "Cannot delete non-pending conbook or not owner"
 // @Failure 404 "Conbook not found"
 // @Failure 500 "Internal server error"
 // @Router /conbooks/{id} [delete]
@@ -209,15 +209,15 @@ func (h *ConbookHandler) DeleteConbook(c *gin.Context) {
 	err := h.services.Conbook.DeleteConbook(ctx, userID.(string), conbookID)
 	if err != nil {
 		if errors.Is(err, services.ErrUnauthorizedConbook) {
-			utils.RespondForbidden(c, "Cannot delete verified conbook or you are not the owner")
+			utils.RespondForbidden(c, "Cannot delete non-pending conbook or you are not the owner")
 			return
 		}
 		if errors.Is(err, repositories.ErrConbookNotFound) {
 			utils.RespondNotFound(c, "Conbook not found")
 			return
 		}
-		if errors.Is(err, services.ErrConbookVerified) {
-			utils.RespondForbidden(c, "Cannot delete verified conbook")
+		if errors.Is(err, services.ErrConbookNotEditable) {
+			utils.RespondForbidden(c, "Cannot delete non-pending conbook")
 			return
 		}
 		utils.RespondInternalServerError(c, "Failed to delete conbook")
@@ -229,7 +229,7 @@ func (h *ConbookHandler) DeleteConbook(c *gin.Context) {
 
 // GetPendingConbooks godoc
 // @Summary Get pending conbooks for review
-// @Description Retrieve all unverified conbooks for staff review (staff only)
+// @Description Retrieve all pending conbooks for staff review (staff only)
 // @Tags admin-conbooks
 // @Accept json
 // @Produce json
@@ -241,7 +241,7 @@ func (h *ConbookHandler) DeleteConbook(c *gin.Context) {
 // @Router /admin/conbooks/pending [get]
 func (h *ConbookHandler) GetPendingConbooks(c *gin.Context) {
 	ctx := c.Request.Context()
-	conbooks, err := h.services.Conbook.GetUnverifiedConbooks(ctx)
+	conbooks, err := h.services.Conbook.GetPendingConbooks(ctx)
 	if err != nil {
 		utils.RespondInternalServerError(c, "Failed to retrieve pending conbooks")
 		return
@@ -250,46 +250,69 @@ func (h *ConbookHandler) GetPendingConbooks(c *gin.Context) {
 	utils.RespondSuccess(c, &conbooks, "Successfully retrieved pending conbooks")
 }
 
-// GetVerifiedConbooks godoc
-// @Summary Get verified conbooks
-// @Description Retrieve all verified conbooks (admin/staff only)
+// GetApprovedConbooks godoc
+// @Summary Get approved conbooks
+// @Description Retrieve all approved conbooks (admin/staff only)
 // @Tags admin-conbooks
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 "Successfully retrieved verified conbooks"
+// @Success 200 "Successfully retrieved approved conbooks"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Insufficient permissions"
 // @Failure 500 "Internal server error"
-// @Router /admin/conbooks/verified [get]
-func (h *ConbookHandler) GetVerifiedConbooks(c *gin.Context) {
+// @Router /admin/conbooks/approved [get]
+func (h *ConbookHandler) GetApprovedConbooks(c *gin.Context) {
 	ctx := c.Request.Context()
-	conbooks, err := h.services.Conbook.GetVerifiedConbooks(ctx)
+	conbooks, err := h.services.Conbook.GetApprovedConbooks(ctx)
 	if err != nil {
-		utils.RespondInternalServerError(c, "Failed to retrieve verified conbooks")
+		utils.RespondInternalServerError(c, "Failed to retrieve approved conbooks")
 		return
 	}
 
-	utils.RespondSuccess(c, &conbooks, "Successfully retrieved verified conbooks")
+	utils.RespondSuccess(c, &conbooks, "Successfully retrieved approved conbooks")
 }
 
-// VerifyConbook godoc
-// @Summary Verify a conbook
-// @Description Mark a conbook as verified by staff. After verification, users cannot edit the conbook.
+// GetDeniedConbooks godoc
+// @Summary Get denied conbooks
+// @Description Retrieve all denied conbooks (admin/staff only)
+// @Tags admin-conbooks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved denied conbooks"
+// @Failure 401 "Unauthorized"
+// @Failure 403 "Insufficient permissions"
+// @Failure 500 "Internal server error"
+// @Router /admin/conbooks/denied [get]
+func (h *ConbookHandler) GetDeniedConbooks(c *gin.Context) {
+	ctx := c.Request.Context()
+	conbooks, err := h.services.Conbook.GetDeniedConbooks(ctx)
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve denied conbooks")
+		return
+	}
+
+	utils.RespondSuccess(c, &conbooks, "Successfully retrieved denied conbooks")
+}
+
+// ApproveConbook godoc
+// @Summary Approve a conbook
+// @Description Mark a conbook as approved by staff.
 // @Tags admin-conbooks
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Conbook ID" format(uuid)
-// @Success 200 "Conbook verified successfully"
+// @Success 200 "Conbook approved successfully"
 // @Failure 400 "Invalid conbook ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Insufficient permissions"
 // @Failure 404 "Conbook not found"
-// @Failure 409 "Conbook already verified"
+// @Failure 409 "Conbook already has approved status"
 // @Failure 500 "Internal server error"
-// @Router /admin/conbooks/{id}/verify [patch]
-func (h *ConbookHandler) VerifyConbook(c *gin.Context) {
+// @Router /admin/conbooks/{id}/approve [patch]
+func (h *ConbookHandler) ApproveConbook(c *gin.Context) {
 	ctx := c.Request.Context()
 	conbookID := c.Param("id")
 	if conbookID == "" {
@@ -297,40 +320,40 @@ func (h *ConbookHandler) VerifyConbook(c *gin.Context) {
 		return
 	}
 
-	conbook, err := h.services.Conbook.VerifyConbook(ctx, conbookID)
+	conbook, err := h.services.Conbook.ApproveConbook(ctx, conbookID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrConbookNotFound) {
 			utils.RespondNotFound(c, "Conbook not found")
 			return
 		}
-		if errors.Is(err, services.ErrAlreadyVerified) {
-			utils.RespondError(c, 409, "ALREADY_VERIFIED", "Conbook is already verified")
+		if errors.Is(err, services.ErrStatusUnchanged) {
+			utils.RespondError(c, 409, "STATUS_UNCHANGED", "Conbook already has approved status")
 			return
 		}
-		utils.RespondInternalServerError(c, "Failed to verify conbook")
+		utils.RespondInternalServerError(c, "Failed to approve conbook")
 		return
 	}
 
-	utils.RespondSuccess(c, conbook, "Conbook verified successfully")
+	utils.RespondSuccess(c, conbook, "Conbook approved successfully")
 }
 
-// UnverifyConbook godoc
-// @Summary Unverify a conbook
-// @Description Mark a conbook as unverified by staff/admin.
+// DenyConbook godoc
+// @Summary Deny a conbook
+// @Description Mark a conbook as denied by staff/admin.
 // @Tags admin-conbooks
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Conbook ID" format(uuid)
-// @Success 200 "Conbook unverified successfully"
+// @Success 200 "Conbook denied successfully"
 // @Failure 400 "Invalid conbook ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Insufficient permissions"
 // @Failure 404 "Conbook not found"
-// @Failure 409 "Conbook already unverified"
+// @Failure 409 "Conbook already has denied status"
 // @Failure 500 "Internal server error"
-// @Router /admin/conbooks/{id}/unverify [patch]
-func (h *ConbookHandler) UnverifyConbook(c *gin.Context) {
+// @Router /admin/conbooks/{id}/deny [patch]
+func (h *ConbookHandler) DenyConbook(c *gin.Context) {
 	ctx := c.Request.Context()
 	conbookID := c.Param("id")
 	if conbookID == "" {
@@ -338,19 +361,60 @@ func (h *ConbookHandler) UnverifyConbook(c *gin.Context) {
 		return
 	}
 
-	conbook, err := h.services.Conbook.UnverifyConbook(ctx, conbookID)
+	conbook, err := h.services.Conbook.DenyConbook(ctx, conbookID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrConbookNotFound) {
 			utils.RespondNotFound(c, "Conbook not found")
 			return
 		}
-		if errors.Is(err, services.ErrAlreadyUnverified) {
-			utils.RespondError(c, 409, "ALREADY_UNVERIFIED", "Conbook is already unverified")
+		if errors.Is(err, services.ErrStatusUnchanged) {
+			utils.RespondError(c, 409, "STATUS_UNCHANGED", "Conbook already has denied status")
 			return
 		}
-		utils.RespondInternalServerError(c, "Failed to unverify conbook")
+		utils.RespondInternalServerError(c, "Failed to deny conbook")
 		return
 	}
 
-	utils.RespondSuccess(c, conbook, "Conbook unverified successfully")
+	utils.RespondSuccess(c, conbook, "Conbook denied successfully")
+}
+
+// MarkConbookPending godoc
+// @Summary Mark conbook as pending
+// @Description Move a conbook back to pending status by staff/admin.
+// @Tags admin-conbooks
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Conbook ID" format(uuid)
+// @Success 200 "Conbook status set to pending successfully"
+// @Failure 400 "Invalid conbook ID"
+// @Failure 401 "Unauthorized"
+// @Failure 403 "Insufficient permissions"
+// @Failure 404 "Conbook not found"
+// @Failure 409 "Conbook already has pending status"
+// @Failure 500 "Internal server error"
+// @Router /admin/conbooks/{id}/pending [patch]
+func (h *ConbookHandler) MarkConbookPending(c *gin.Context) {
+	ctx := c.Request.Context()
+	conbookID := c.Param("id")
+	if conbookID == "" {
+		utils.RespondValidationError(c, "Conbook ID is required")
+		return
+	}
+
+	conbook, err := h.services.Conbook.MarkConbookPending(ctx, conbookID)
+	if err != nil {
+		if errors.Is(err, repositories.ErrConbookNotFound) {
+			utils.RespondNotFound(c, "Conbook not found")
+			return
+		}
+		if errors.Is(err, services.ErrStatusUnchanged) {
+			utils.RespondError(c, 409, "STATUS_UNCHANGED", "Conbook already has pending status")
+			return
+		}
+		utils.RespondInternalServerError(c, "Failed to set conbook status to pending")
+		return
+	}
+
+	utils.RespondSuccess(c, conbook, "Conbook status set to pending successfully")
 }

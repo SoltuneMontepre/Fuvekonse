@@ -14,7 +14,7 @@ func MapConbookToResponse(conbook *models.ConBookArt) responses.ConbookResponse 
 		Description: conbook.Description,
 		Handle:      conbook.Handle,
 		ImageUrl:    conbook.ImageUrl,
-		IsVerified:  conbook.IsVerified,
+		Status:      conbook.ConBookArtStatus,
 		CreatedAt:   conbook.CreatedAt,
 		ModifiedAt:  conbook.ModifiedAt,
 	}

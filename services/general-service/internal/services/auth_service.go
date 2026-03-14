@@ -265,6 +265,11 @@ func (s *AuthService) GoogleLoginOrRegister(ctx context.Context, req *requests.G
 		user = newUser
 	}
 
+	// Banned users cannot log in
+	if user.IsBlacklisted {
+		return nil, constants.ErrAccountBanned
+	}
+
 	accessToken, err := utils.CreateAccessToken(user.Id, user.Email, user.FursonaName, user.Role.String())
 	if err != nil {
 		return nil, err
@@ -331,6 +336,11 @@ func (s *AuthService) Login(ctx context.Context, req *requests.LoginRequest) (re
 			return nil, constants.ErrInternalServer
 		}
 		return nil, constants.ErrInvalidCredentials
+	}
+
+	// Banned users cannot log in
+	if user.IsBlacklisted {
+		return nil, constants.ErrAccountBanned
 	}
 
 	// Reset failed login attempts on successful login

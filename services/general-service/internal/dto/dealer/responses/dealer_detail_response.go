@@ -21,7 +21,7 @@ type DealerBoothDetailResponse struct {
 	BoothName   string                 `json:"booth_name"`
 	Description string                 `json:"description"`
 	BoothNumber string                 `json:"booth_number"`
-	PriceSheet  string                 `json:"price_sheet"`
+	PriceSheets []string               `json:"price_sheets"`
 	IsVerified  bool                   `json:"is_verified"`
 	CreatedAt   time.Time              `json:"created_at"`
 	ModifiedAt  time.Time              `json:"modified_at"`
