@@ -187,7 +187,7 @@ func (h *UserHandler) UpdateAvatar(c *gin.Context) {
 
 // GetAllUsers godoc
 // @Summary Get all users (admin only)
-// @Description Get a paginated list of all users. Only accessible by admins.
+// @Description Get a paginated list of all users. Only accessible by admins. Each user includes is_banned (and is_blacklisted) so the FE can show ban status.
 // @Tags admin
 // @Accept json
 // @Produce json

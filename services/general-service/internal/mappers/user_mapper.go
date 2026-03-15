@@ -37,20 +37,27 @@ func MapUserToDetailedResponse(user *models.User) *responses.UserDetailedRespons
 // MapUserToDetailedResponseWithDealer maps a User model to a detailed UserDetailedResponse DTO with dealer and ticket status
 func MapUserToDetailedResponseWithDealer(user *models.User, isDealer bool, isHasTicket bool) *responses.UserDetailedResponse {
 	return &responses.UserDetailedResponse{
-		Id:          user.Id,
-		FursonaName: user.FursonaName,
-		LastName:    user.LastName,
-		FirstName:   user.FirstName,
-		Country:     user.Country,
-		Email:       user.Email,
-		Avatar:      user.Avatar,
-		Role:        user.Role,
-		IdCard:      user.IdCard,
-		DateOfBirth: formatDateOfBirth(user.DateOfBirth), // "2006-01-02" or ""
-		IsVerified:  user.IsVerified,
-		IsDealer:    isDealer,
-		IsHasTicket: isHasTicket,
-		CreatedAt:   user.CreatedAt,
-		ModifiedAt:  user.ModifiedAt,
+		Id:              user.Id,
+		FursonaName:     user.FursonaName,
+		LastName:        user.LastName,
+		FirstName:       user.FirstName,
+		Country:         user.Country,
+		Email:           user.Email,
+		Avatar:          user.Avatar,
+		Role:            user.Role,
+		IdCard:          user.IdCard,
+		DateOfBirth:     formatDateOfBirth(user.DateOfBirth), // "2006-01-02" or ""
+		IsVerified:      user.IsVerified,
+		IsDealer:        isDealer,
+		IsHasTicket:     isHasTicket,
+		IsBlacklisted:   user.IsBlacklisted,
+		IsBanned:        user.IsBlacklisted,
+		DenialCount:     user.DenialCount,
+		BlacklistedAt:   user.BlacklistedAt,
+		BlacklistReason: user.BlacklistReason,
+		IsDeleted:       user.IsDeleted,
+		DeletedAt:       user.DeletedAt,
+		CreatedAt:       user.CreatedAt,
+		ModifiedAt:      user.ModifiedAt,
 	}
 }
