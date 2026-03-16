@@ -50,3 +50,14 @@ type UserDetailedResponse struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	ModifiedAt      time.Time  `json:"modified_at"`
 }
+
+// CountByCountryItem is one entry in the accounts-by-country stats
+type CountByCountryItem struct {
+	Country string `json:"country"` // Country code (or empty for unknown)
+	Count   int    `json:"count"`
+}
+
+// CountByCountryResponse is the response for GET /admin/users/statistics/count-by-country
+type CountByCountryResponse struct {
+	ByCountry []CountByCountryItem `json:"by_country"`
+}

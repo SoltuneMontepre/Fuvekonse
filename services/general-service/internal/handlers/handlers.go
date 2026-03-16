@@ -6,19 +6,21 @@ import (
 )
 
 type Handlers struct {
-	Auth    *AuthHandler
-	User    *UserHandler
-	Ticket  *TicketHandler
-	Dealer  *DealerHandler
-	Conbook *ConbookHandler
+	Auth      *AuthHandler
+	User      *UserHandler
+	Ticket    *TicketHandler
+	Dealer    *DealerHandler
+	Conbook   *ConbookHandler
+	Analytics *AnalyticsHandler
 }
 
 func NewHandlers(services *services.Services, queuePublisher queue.Publisher) *Handlers {
 	return &Handlers{
-		Auth:    NewAuthHandler(services),
-		User:    NewUserHandler(services),
-		Ticket:  NewTicketHandler(services, queuePublisher),
-		Dealer:  NewDealerHandler(services),
-		Conbook: NewConbookHandler(services),
+		Auth:      NewAuthHandler(services),
+		User:      NewUserHandler(services),
+		Ticket:    NewTicketHandler(services, queuePublisher),
+		Dealer:    NewDealerHandler(services),
+		Conbook:   NewConbookHandler(services),
+		Analytics: NewAnalyticsHandler(services),
 	}
 }

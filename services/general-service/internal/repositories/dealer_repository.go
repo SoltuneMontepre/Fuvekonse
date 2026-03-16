@@ -70,6 +70,13 @@ func (r *DealerRepository) FindStaffByUserID(userID string) (*models.UserDealerS
 	return &staff, nil
 }
 
+// CountBooths returns the total number of non-deleted dealer booths (for analytics).
+func (r *DealerRepository) CountBooths() (int64, error) {
+	var total int64
+	err := r.db.Model(&models.DealerBooth{}).Where("is_deleted = ?", false).Count(&total).Error
+	return total, err
+}
+
 // FindAllBooths finds all dealer booths with pagination
 func (r *DealerRepository) FindAllBooths(page, pageSize int, isVerified *bool) ([]*models.DealerBooth, int64, error) {
 	var booths []*models.DealerBooth

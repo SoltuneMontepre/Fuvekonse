@@ -64,6 +64,13 @@ func (r *UserRepository) SetVerified(userID string, verified bool) error {
 		Update("is_verified", verified).Error
 }
 
+// Count returns the total number of non-deleted users (for analytics).
+func (r *UserRepository) Count() (int64, error) {
+	var total int64
+	err := r.db.Model(&models.User{}).Where("is_deleted = ?", false).Count(&total).Error
+	return total, err
+}
+
 // FindAll finds all users with pagination and optional search (email, first_name, last_name, fursona_name)
 func (r *UserRepository) FindAll(page, pageSize int, search string) ([]*models.User, int64, error) {
 	// Validate pagination parameters
@@ -130,4 +137,26 @@ func (r *UserRepository) DeleteUser(user *models.User) error {
 // UpdateUser updates user information (admin use)
 func (r *UserRepository) UpdateUser(user *models.User) error {
 	return r.db.Save(user).Error
+}
+
+// CountByCountryResult holds country code and count for aggregation
+type CountByCountryResult struct {
+	Country string `gorm:"column:country"`
+	Count   int64  `gorm:"column:count"`
+}
+
+// CountByCountry returns counts of non-deleted users grouped by country.
+// Empty or NULL country is returned as empty string.
+func (r *UserRepository) CountByCountry() ([]CountByCountryResult, error) {
+	var results []CountByCountryResult
+	err := r.db.Model(&models.User{}).
+		Select("COALESCE(country, '') AS country, COUNT(*) AS count").
+		Where("is_deleted = ?", false).
+		Group("COALESCE(country, '')").
+		Order("count DESC").
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
