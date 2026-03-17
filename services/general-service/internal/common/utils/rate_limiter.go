@@ -10,8 +10,11 @@ import (
 )
 
 const (
-	loginFailedKeyPrefix = "login:failed:%s"
-	otpKeyPrefix         = "otp:%s"
+	loginFailedKeyPrefix       = "login:failed:%s"
+	otpKeyPrefix               = "otp:%s"
+	otpAttemptKeyPrefix        = "otp:attempts:%s"
+	passwordResetJTIKeyPrefix  = "pwd_reset_jti:%s"
+	otpMaxAttempts             = 5
 )
 
 // GetLoginFailedAttempts returns the number of failed login attempts for a given email
@@ -163,7 +166,81 @@ func DeleteOTP(ctx context.Context, redisClient *redis.Client, email string) err
 		// Redis not available, skip deletion
 		return nil
 	}
-	
+
 	key := fmt.Sprintf(otpKeyPrefix, email)
 	return redisClient.Del(ctx, key).Err()
+}
+
+// IncrementOTPAttempts increments the OTP verification attempt counter for an email.
+// Returns the new attempt count. The counter TTL matches the OTP TTL so it auto-cleans.
+func IncrementOTPAttempts(ctx context.Context, redisClient *redis.Client, email string, otpTTL time.Duration) (int, error) {
+	if redisClient == nil {
+		return 0, nil
+	}
+	key := fmt.Sprintf(otpAttemptKeyPrefix, email)
+	set, err := redisClient.SetNX(ctx, key, 1, otpTTL).Result()
+	if err != nil {
+		return 0, err
+	}
+	if set {
+		return 1, nil
+	}
+	count, err := redisClient.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+// IsOTPBlocked returns true if the email has exhausted OTP verification attempts.
+func IsOTPBlocked(ctx context.Context, redisClient *redis.Client, email string) (bool, error) {
+	if redisClient == nil {
+		return false, nil
+	}
+	key := fmt.Sprintf(otpAttemptKeyPrefix, email)
+	val, err := redisClient.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return false, nil
+		}
+		return false, err
+	}
+	attempts, err := strconv.Atoi(val)
+	if err != nil {
+		return false, err
+	}
+	return attempts >= otpMaxAttempts, nil
+}
+
+// ResetOTPAttempts removes the OTP attempt counter (called on successful verification or new OTP).
+func ResetOTPAttempts(ctx context.Context, redisClient *redis.Client, email string) error {
+	if redisClient == nil {
+		return nil
+	}
+	key := fmt.Sprintf(otpAttemptKeyPrefix, email)
+	return redisClient.Del(ctx, key).Err()
+}
+
+// StorePasswordResetJTI marks a password-reset token's JTI as valid in Redis.
+// The TTL should match the JWT expiry so the key auto-cleans after the token expires.
+func StorePasswordResetJTI(ctx context.Context, redisClient *redis.Client, jti string, expiration time.Duration) error {
+	if redisClient == nil {
+		return fmt.Errorf("redis client not available: cannot store password reset JTI")
+	}
+	key := fmt.Sprintf(passwordResetJTIKeyPrefix, jti)
+	return redisClient.Set(ctx, key, "1", expiration).Err()
+}
+
+// ConsumePasswordResetJTI atomically checks and deletes a password-reset JTI.
+// Returns true if the JTI existed (token is valid for single use), false otherwise.
+func ConsumePasswordResetJTI(ctx context.Context, redisClient *redis.Client, jti string) (bool, error) {
+	if redisClient == nil {
+		return false, fmt.Errorf("redis client not available: cannot consume password reset JTI")
+	}
+	key := fmt.Sprintf(passwordResetJTIKeyPrefix, jti)
+	deleted, err := redisClient.Del(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return deleted > 0, nil
 }

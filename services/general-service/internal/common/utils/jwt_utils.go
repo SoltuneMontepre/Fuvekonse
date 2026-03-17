@@ -302,8 +302,10 @@ func GetForgotPasswordTokenExpiry() time.Duration {
 	return time.Duration(minutes) * time.Minute
 }
 
-// CreateForgotPasswordToken creates a signed JWT used for password reset
-func CreateForgotPasswordToken(userID uuid.UUID, email, fursonaName, role string) (string, error) {
+// CreateForgotPasswordToken creates a signed JWT used for password reset.
+// Returns the signed token string and the JTI (unique token ID) for single-use tracking.
+func CreateForgotPasswordToken(userID uuid.UUID, email, fursonaName, role string) (token string, jti string, err error) {
+	jti = uuid.New().String()
 	claims := JWTClaims{
 		UserID:      userID.String(),
 		Email:       email,
@@ -316,15 +318,15 @@ func CreateForgotPasswordToken(userID uuid.UUID, email, fursonaName, role string
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "general-service",
 			Subject:   userID.String(),
-			ID:        uuid.New().String(),
+			ID:        jti,
 		},
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := t.SignedString([]byte(GetJWTSecret()))
-	if err != nil {
-		return "", fmt.Errorf("failed to sign password token: %w", err)
+	signed, signErr := t.SignedString([]byte(GetJWTSecret()))
+	if signErr != nil {
+		return "", "", fmt.Errorf("failed to sign password token: %w", signErr)
 	}
-	return signed, nil
+	return signed, jti, nil
 }
 
 // ValidateForgotPasswordToken validates a JWT

@@ -375,6 +375,10 @@ func (h *AuthHandler) VerifyOtp(c *gin.Context) {
 			utils.RespondErrorWithErrorMessage(c, 404, constants.ErrCodeNotFound, errMsg, "userNotFound")
 			return
 		}
+		if strings.Contains(errMsg, "too many failed attempts") {
+			utils.RespondErrorWithErrorMessage(c, 429, constants.ErrCodeBadRequest, errMsg, "otpTooManyAttempts")
+			return
+		}
 		utils.RespondErrorWithErrorMessage(c, 500, constants.ErrCodeInternalServerError, errMsg, "verifyOtpFailed")
 		return
 	}
@@ -472,7 +476,7 @@ func (h *AuthHandler) ResetPasswordConfirm(c *gin.Context) {
 		return
 	}
 
-	if err := h.services.Auth.ResetPasswordWithToken(req.Token, &req); err != nil {
+	if err := h.services.Auth.ResetPasswordWithToken(c.Request.Context(), req.Token, &req); err != nil {
 		if errors.Is(err, constants.ErrPasswordMismatch) {
 			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, err.Error(), "passwordsDoNotMatch")
 			return

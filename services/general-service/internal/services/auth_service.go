@@ -393,8 +393,18 @@ func (s *AuthService) ResetPassword(userID string, req *requests.ResetPasswordRe
 	return nil
 }
 
-// VerifyOtpAsync verifies OTP and updates user status to Active (IsVerified = true)
+// VerifyOtp verifies OTP and updates user status to Active (IsVerified = true).
+// Rate-limited: after 5 wrong attempts the OTP is invalidated and user must request a new one.
 func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (bool, error) {
+	// Check if OTP verification is blocked due to too many failed attempts
+	blocked, err := utils.IsOTPBlocked(ctx, s.redisClient, email)
+	if err != nil {
+		return false, fmt.Errorf("an error occurred while verifying the OTP: %w", err)
+	}
+	if blocked {
+		return false, fmt.Errorf("too many failed attempts, please request a new verification code")
+	}
+
 	// Find user by email
 	user, err := s.repos.User.FindByEmail(email)
 	if err != nil {
@@ -411,8 +421,18 @@ func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (
 	}
 
 	if !valid {
+		// Increment failed attempt counter; invalidate OTP if limit reached
+		otpTTL := timeConstants.GetOTPExpiryDuration()
+		attempts, _ := utils.IncrementOTPAttempts(ctx, s.redisClient, email, otpTTL)
+		if attempts >= 5 {
+			// Burn the OTP so brute-force window is closed
+			_ = utils.DeleteOTP(ctx, s.redisClient, email)
+		}
 		return false, nil
 	}
+
+	// Success — reset attempt counter
+	_ = utils.ResetOTPAttempts(ctx, s.redisClient, email)
 
 	// Update user verification status in database (explicit update so is_verified is persisted)
 	if err := s.repos.User.SetVerified(user.Id.String(), true); err != nil {
@@ -422,9 +442,18 @@ func (s *AuthService) VerifyOtp(ctx context.Context, email string, otp string) (
 	return true, nil
 }
 
-// I write this out if you need to do the regiter func later 🥀
-// VerifyOtpAndCompleteRegistrationAsync verifies OTP and completes registration
+// VerifyOtpAndCompleteRegistration verifies OTP and completes registration.
+// Rate-limited: after 5 wrong attempts the OTP is invalidated and user must request a new one.
 func (s *AuthService) VerifyOtpAndCompleteRegistration(ctx context.Context, email string, otp string) (bool, error) {
+	// Check if OTP verification is blocked due to too many failed attempts
+	blocked, err := utils.IsOTPBlocked(ctx, s.redisClient, email)
+	if err != nil {
+		return false, err
+	}
+	if blocked {
+		return false, fmt.Errorf("too many failed attempts, please request a new verification code")
+	}
+
 	// Find user by email
 	user, err := s.repos.User.FindByEmail(email)
 	if err != nil {
@@ -438,8 +467,16 @@ func (s *AuthService) VerifyOtpAndCompleteRegistration(ctx context.Context, emai
 	}
 
 	if !valid {
+		otpTTL := timeConstants.GetOTPExpiryDuration()
+		attempts, _ := utils.IncrementOTPAttempts(ctx, s.redisClient, email, otpTTL)
+		if attempts >= 5 {
+			_ = utils.DeleteOTP(ctx, s.redisClient, email)
+		}
 		return false, nil
 	}
+
+	// Success — reset attempt counter
+	_ = utils.ResetOTPAttempts(ctx, s.redisClient, email)
 
 	// Update user verification status
 	user.IsVerified = true
@@ -479,6 +516,9 @@ func (s *AuthService) ResendOtp(ctx context.Context, email string, mailService *
 		return false, fmt.Errorf("failed to store OTP: %w", err)
 	}
 
+	// Reset attempt counter so user gets fresh attempts with the new OTP
+	_ = utils.ResetOTPAttempts(ctx, s.redisClient, email)
+
 	// Send OTP email
 	if mailService == nil {
 		return false, fmt.Errorf("mail service not available")
@@ -503,9 +543,14 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 	}
 
 	// create signed reset token
-	token, err := utils.CreateForgotPasswordToken(user.Id, user.Email, user.FursonaName, user.Role.String())
+	token, jti, err := utils.CreateForgotPasswordToken(user.Id, user.Email, user.FursonaName, user.Role.String())
 	if err != nil {
 		return fmt.Errorf("failed to create reset token: %w", err)
+	}
+
+	// Store JTI in Redis so the token can only be used once
+	if err := utils.StorePasswordResetJTI(ctx, s.redisClient, jti, utils.GetForgotPasswordTokenExpiry()); err != nil {
+		return fmt.Errorf("failed to store reset token JTI: %w", err)
 	}
 
 	lang := LangFromCountry(user.Country)
@@ -560,8 +605,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string, mailServ
 	return nil
 }
 
-// ResetPasswordWithToken validates reset token and updates the user's password
-func (s *AuthService) ResetPasswordWithToken(token string, req *requests.ResetPasswordTokenRequest) error {
+// ResetPasswordWithToken validates reset token (single-use) and updates the user's password
+func (s *AuthService) ResetPasswordWithToken(ctx context.Context, token string, req *requests.ResetPasswordTokenRequest) error {
 	if req.NewPassword != req.ConfirmedPassword {
 		return constants.ErrPasswordMismatch
 	}
@@ -569,6 +614,15 @@ func (s *AuthService) ResetPasswordWithToken(token string, req *requests.ResetPa
 	claims, err := utils.ValidateForgotPasswordToken(token)
 	if err != nil {
 		return err
+	}
+
+	// Enforce single-use: consume the JTI from Redis (atomic check-and-delete)
+	valid, err := utils.ConsumePasswordResetJTI(ctx, s.redisClient, claims.ID)
+	if err != nil {
+		return constants.ErrInternalServer
+	}
+	if !valid {
+		return fmt.Errorf("reset token has already been used")
 	}
 
 	userID := claims.UserID
