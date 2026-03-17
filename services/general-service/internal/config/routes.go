@@ -158,6 +158,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 			{
 				adminUsers.GET("", h.User.GetAllUsers)
 				adminUsers.GET("/statistics/count-by-country", h.User.GetUserCountByCountry)
+				adminUsers.GET("/statistics/count-by-age-range", h.User.GetUserCountByAgeRange)
 				adminUsers.GET("/:id", h.User.GetUserByIDForAdmin)
 				adminUsers.PUT("/:id", h.User.UpdateUserByAdmin)
 				adminUsers.DELETE("/:id", h.User.DeleteUser)

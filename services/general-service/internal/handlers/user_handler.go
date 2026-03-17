@@ -206,6 +206,28 @@ func (h *UserHandler) GetUserCountByCountry(c *gin.Context) {
 	utils.RespondSuccess(c, data, "Successfully retrieved user count by country")
 }
 
+// GetUserCountByAgeRange godoc
+// @Summary Get user count grouped by age ranges (admin only)
+// @Description Returns the number of accounts per requested age range, based on date_of_birth. Only non-deleted users are counted; users with NULL date_of_birth are excluded.
+// @Description Range semantics: min is inclusive, max is exclusive. Example: 16-20 counts ages 16,17,18,19 (so 20-25 does not double-count age 20).
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved user count by age range"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 403 "Forbidden - insufficient permissions"
+// @Failure 500 "Internal server error"
+// @Router /admin/users/statistics/count-by-age-range [get]
+func (h *UserHandler) GetUserCountByAgeRange(c *gin.Context) {
+	data, err := h.services.User.GetUserCountByAgeRange()
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve user count by age range")
+		return
+	}
+	utils.RespondSuccess(c, data, "Successfully retrieved user count by age range")
+}
+
 // GetAllUsers godoc
 // @Summary Get all users (admin only)
 // @Description Get a paginated list of all users. Only accessible by admins. Each user includes is_banned (and is_blacklisted) so the FE can show ban status.

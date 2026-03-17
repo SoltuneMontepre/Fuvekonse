@@ -61,3 +61,17 @@ type CountByCountryItem struct {
 type CountByCountryResponse struct {
 	ByCountry []CountByCountryItem `json:"by_country"`
 }
+
+// CountByAgeRangeItem is one entry in the accounts-by-age-range stats.
+// Range semantics: min is inclusive, max is exclusive. Example: 16-20 counts ages 16,17,18,19.
+type CountByAgeRangeItem struct {
+	Range string `json:"range"` // e.g. "16-20"
+	Min   int    `json:"min"`
+	Max   int    `json:"max"`
+	Count int    `json:"count"`
+}
+
+// CountByAgeRangeResponse is the response for GET /admin/users/statistics/count-by-age-range
+type CountByAgeRangeResponse struct {
+	ByAgeRange []CountByAgeRangeItem `json:"by_age_range"`
+}

@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"errors"
+	"fmt"
 	"general-service/internal/models"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -153,6 +155,53 @@ func (r *UserRepository) CountByCountry() ([]CountByCountryResult, error) {
 		Select("COALESCE(country, '') AS country, COUNT(*) AS count").
 		Where("is_deleted = ?", false).
 		Group("COALESCE(country, '')").
+		Order("count DESC").
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+// AgeRangeCountResult is one aggregated bucket result.
+type AgeRangeCountResult struct {
+	Range string `gorm:"column:range"`
+	Count int64  `gorm:"column:count"`
+}
+
+// CountByAgeRanges returns bucket counts for predefined ranges in a single grouped query.
+// Bucket semantics: min inclusive, max exclusive.
+//
+// Includes:
+// - "unknown" for NULL date_of_birth
+// - "other" for ages not falling into provided ranges
+//
+// Note: Uses PostgreSQL AGE() + DATE_PART(). The codebase already relies on ILIKE, so Postgres is assumed.
+func (r *UserRepository) CountByAgeRanges(ranges [][2]int) ([]AgeRangeCountResult, error) {
+	ageExpr := "DATE_PART('year', AGE(CURRENT_DATE, date_of_birth))"
+
+	caseParts := make([]string, 0, len(ranges)+2)
+	args := make([]any, 0, len(ranges)*3)
+
+	// NULL DOB bucket
+	caseParts = append(caseParts, "WHEN date_of_birth IS NULL THEN 'unknown'")
+
+	// Range buckets
+	for _, rg := range ranges {
+		minAge := rg[0]
+		maxAge := rg[1]
+		label := fmt.Sprintf("%d-%d", minAge, maxAge)
+		caseParts = append(caseParts, "WHEN "+ageExpr+" >= ? AND "+ageExpr+" < ? THEN ?")
+		args = append(args, minAge, maxAge, label)
+	}
+
+	caseSQL := "CASE " + strings.Join(caseParts, " ") + " ELSE 'other' END"
+
+	var results []AgeRangeCountResult
+	err := r.db.Model(&models.User{}).
+		Select(caseSQL+" AS range, COUNT(*) AS count", args...).
+		Where("is_deleted = ?", false).
+		Group("range").
 		Order("count DESC").
 		Find(&results).Error
 	if err != nil {

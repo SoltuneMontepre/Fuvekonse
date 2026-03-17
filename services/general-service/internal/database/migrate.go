@@ -165,6 +165,10 @@ func MigrateAndSeed(db *gorm.DB) error {
 		return fmt.Errorf("failed to migrate ticket tier codes: %w", err)
 	}
 
+	if err := migrateCleanupExampleDotComUsersAndCountry(db); err != nil {
+		return fmt.Errorf("failed to cleanup example.com users/country: %w", err)
+	}
+
 	if err := seedInitialData(); err != nil {
 		return fmt.Errorf("failed to seed data: %w", err)
 	}

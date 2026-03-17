@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/common"
@@ -268,6 +269,62 @@ func (s *UserService) GetUserCountByCountry() (*responses.CountByCountryResponse
 		}
 	}
 	return &responses.CountByCountryResponse{ByCountry: byCountry}, nil
+}
+
+// GetUserCountByAgeRange returns counts of non-deleted users grouped into predefined age buckets (admin only).
+// Bucket semantics: min is inclusive, max is exclusive.
+func (s *UserService) GetUserCountByAgeRange() (*responses.CountByAgeRangeResponse, error) {
+	// Fixed buckets (requested pattern: 16-20, 20-25, ...).
+	// Keep the final bucket wide so we always "return everything".
+	ranges := [][2]int{
+		{16, 20},
+		{20, 25},
+		{25, 30},
+		{30, 35},
+		{35, 40},
+		{40, 45},
+		{45, 50},
+		{50, 60},
+		{60, 100},
+		{100, 200},
+	}
+
+	results, err := s.repos.User.CountByAgeRanges(ranges)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build lookup map from query results.
+	countByLabel := make(map[string]int, len(results))
+	for _, r := range results {
+		countByLabel[r.Range] = int(r.Count)
+	}
+
+	// Always return all predefined buckets (even if count is 0).
+	out := make([]responses.CountByAgeRangeItem, 0, len(ranges)+2)
+	for _, rg := range ranges {
+		minAge := rg[0]
+		maxAge := rg[1]
+		lookupLabel := fmt.Sprintf("%d-%d", minAge, maxAge)
+		label := lookupLabel
+		if minAge == 100 {
+			label = "100+"
+		}
+		out = append(out, responses.CountByAgeRangeItem{
+			Range: label,
+			Min:   minAge,
+			Max:   maxAge,
+			Count: countByLabel[lookupLabel],
+		})
+	}
+
+	// Include unknown DOB and other out-of-range buckets too (still "return everything").
+	out = append(out,
+		responses.CountByAgeRangeItem{Range: "unknown", Min: 0, Max: 0, Count: countByLabel["unknown"]},
+		responses.CountByAgeRangeItem{Range: "other", Min: 0, Max: 0, Count: countByLabel["other"]},
+	)
+
+	return &responses.CountByAgeRangeResponse{ByAgeRange: out}, nil
 }
 
 // DeleteUser soft deletes a user (admin only)

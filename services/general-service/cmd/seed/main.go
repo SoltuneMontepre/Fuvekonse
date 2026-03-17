@@ -106,10 +106,10 @@ func main() {
 		log.Printf("📊 Total users in database: %d", count)
 	}
 
-	log.Println("\n========================")
+	log.Println("========================")
 	log.Printf("🎉 Seeding completed! %d/%d users processed", successCount, len(seedUsers))
-	log.Println("\n=== Seeded Accounts ===")
-	log.Println(`
+	log.Println("=== Seeded Accounts ===")
+	log.Print(`
 ADMIN:    admin@fuve.com
 USER:     user@fuve.com
 DEALER:   dealer@fuve.com
