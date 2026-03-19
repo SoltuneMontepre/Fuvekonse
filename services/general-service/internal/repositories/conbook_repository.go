@@ -103,14 +103,15 @@ func (r *ConbookRepository) UpdateConbook(ctx context.Context, id uuid.UUID, con
 	return conbook, nil
 }
 
-// DeleteConbook soft deletes a conbook (only if status is pending)
+// DeleteConbook soft deletes a conbook (only if status is pending or denied)
 func (r *ConbookRepository) DeleteConbook(ctx context.Context, id uuid.UUID) error {
 	existing, err := r.GetConbookByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if existing.ConBookArtStatus != models.ConbookStatusPending {
+	// Allow deletion only if status is pending or denied, but not approved
+	if existing.ConBookArtStatus == models.ConbookStatusApproved {
 		return ErrConbookNotEditable
 	}
 
@@ -175,6 +176,21 @@ func (r *ConbookRepository) CanEditConbook(ctx context.Context, userID uuid.UUID
 
 	// User must be the owner and conbook must still be pending.
 	if conbook.UserId != userID || conbook.ConBookArtStatus != models.ConbookStatusPending {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// CanDeleteConbook checks if a user can delete a conbook
+func (r *ConbookRepository) CanDeleteConbook(ctx context.Context, userID uuid.UUID, conbookID uuid.UUID) (bool, error) {
+	conbook, err := r.GetConbookByID(ctx, conbookID)
+	if err != nil {
+		return false, err
+	}
+
+	// User must be the owner and status must be pending or denied (not approved)
+	if conbook.UserId != userID || conbook.ConBookArtStatus == models.ConbookStatusApproved {
 		return false, nil
 	}
 

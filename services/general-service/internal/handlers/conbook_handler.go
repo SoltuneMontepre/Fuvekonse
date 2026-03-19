@@ -179,7 +179,7 @@ func (h *ConbookHandler) EditConbook(c *gin.Context) {
 
 // DeleteConbook godoc
 // @Summary Delete a conbook
-// @Description Delete a conbook. Can only be deleted while status is pending. User can only delete their own conbooks.
+// @Description Delete a conbook. Can be deleted when status is pending or denied, but not when approved. User can only delete their own conbooks.
 // @Tags conbooks
 // @Accept json
 // @Produce json
@@ -188,7 +188,7 @@ func (h *ConbookHandler) EditConbook(c *gin.Context) {
 // @Success 204 "Conbook deleted successfully"
 // @Failure 400 "Invalid conbook ID"
 // @Failure 401 "Unauthorized"
-// @Failure 403 "Cannot delete non-pending conbook or not owner"
+// @Failure 403 "Cannot delete approved conbook or not owner"
 // @Failure 404 "Conbook not found"
 // @Failure 500 "Internal server error"
 // @Router /conbooks/{id} [delete]
@@ -209,7 +209,7 @@ func (h *ConbookHandler) DeleteConbook(c *gin.Context) {
 	err := h.services.Conbook.DeleteConbook(ctx, userID.(string), conbookID)
 	if err != nil {
 		if errors.Is(err, services.ErrUnauthorizedConbook) {
-			utils.RespondForbidden(c, "Cannot delete non-pending conbook or you are not the owner")
+			utils.RespondForbidden(c, "Cannot delete approved conbook or you are not the owner")
 			return
 		}
 		if errors.Is(err, repositories.ErrConbookNotFound) {
@@ -217,7 +217,7 @@ func (h *ConbookHandler) DeleteConbook(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, services.ErrConbookNotEditable) {
-			utils.RespondForbidden(c, "Cannot delete non-pending conbook")
+			utils.RespondForbidden(c, "Cannot delete approved conbook")
 			return
 		}
 		utils.RespondInternalServerError(c, "Failed to delete conbook")
