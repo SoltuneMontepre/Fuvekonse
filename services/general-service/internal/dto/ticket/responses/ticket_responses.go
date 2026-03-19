@@ -56,12 +56,24 @@ type UpgradeTicketResponse struct {
 
 // TicketUserResponse represents user info in ticket context (minimal PII for admin)
 type TicketUserResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	FirstName   string    `json:"first_name"`
-	LastName    string    `json:"last_name"`
-	FursonaName string    `json:"fursona_name"`
-	DenialCount int       `json:"denial_count"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	FirstName   string     `json:"first_name"`
+	LastName    string     `json:"last_name"`
+	FursonaName string     `json:"fursona_name"`
+	Country     string     `json:"country"`
+	Avatar      string     `json:"avatar"`
+	IDCard      string     `json:"id_card"`
+	DateOfBirth *time.Time `json:"date_of_birth,omitempty"`
+	IsVerified  bool       `json:"is_verified"`
+
+	DenialCount     int        `json:"denial_count"`
+	IsBlacklisted   bool       `json:"is_blacklisted"`
+	BlacklistedAt   *time.Time `json:"blacklisted_at,omitempty"`
+	BlacklistReason string     `json:"blacklist_reason,omitempty"`
+
+	CreatedAt  time.Time `json:"created_at"`
+	ModifiedAt time.Time `json:"modified_at"`
 }
 
 // TicketStatisticsResponse represents ticket statistics for admin dashboard

@@ -71,7 +71,19 @@ func MapUserTicketToResponse(ticket *models.UserTicket, includeUser bool) *respo
 			FirstName:   ticket.User.FirstName,
 			LastName:    ticket.User.LastName,
 			FursonaName: ticket.User.FursonaName,
-			DenialCount: ticket.User.DenialCount,
+			Country:     ticket.User.Country,
+			Avatar:      ticket.User.Avatar,
+			IDCard:      ticket.User.IdCard,
+			DateOfBirth: ticket.User.DateOfBirth,
+			IsVerified:  ticket.User.IsVerified,
+
+			DenialCount:     ticket.User.DenialCount,
+			IsBlacklisted:   ticket.User.IsBlacklisted,
+			BlacklistedAt:   ticket.User.BlacklistedAt,
+			BlacklistReason: ticket.User.BlacklistReason,
+
+			CreatedAt:  ticket.User.CreatedAt,
+			ModifiedAt: ticket.User.ModifiedAt,
 		}
 	}
 
