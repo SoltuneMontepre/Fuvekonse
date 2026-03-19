@@ -154,8 +154,8 @@ func (s *ConbookService) EditConbook(ctx context.Context, userIDStr string, conb
 	return &response, nil
 }
 
-// DeleteConbook deletes a conbook (only if status is pending).
-// User can only delete their own pending conbooks.
+// DeleteConbook deletes a conbook (if status is pending or denied, but not approved).
+// User can only delete their own conbooks unless they are approved.
 func (s *ConbookService) DeleteConbook(ctx context.Context, userIDStr string, conbookIDStr string) error {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -168,12 +168,12 @@ func (s *ConbookService) DeleteConbook(ctx context.Context, userIDStr string, co
 	}
 
 	// Check authorization
-	canEdit, err := s.repos.Conbook.CanEditConbook(ctx, userID, conbookID)
+	canDelete, err := s.repos.Conbook.CanDeleteConbook(ctx, userID, conbookID)
 	if err != nil {
 		return err
 	}
 
-	if !canEdit {
+	if !canDelete {
 		return ErrUnauthorizedConbook
 	}
 
