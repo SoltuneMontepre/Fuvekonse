@@ -123,6 +123,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				dealer.POST("/register", h.Dealer.RegisterDealer)
 				dealer.PATCH("/:id", h.Dealer.EditDealer)
 				dealer.POST("/join", h.Dealer.JoinDealerBooth)
+				dealer.DELETE("/leave", h.Dealer.LeaveDealerBooth)
 				dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)
 			}
 

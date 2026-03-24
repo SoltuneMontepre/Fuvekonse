@@ -491,6 +491,66 @@ func (h *DealerHandler) RemoveStaffFromBooth(c *gin.Context) {
 	utils.RespondSuccess(c, booth, "Successfully removed staff member")
 }
 
+// LeaveDealerBooth godoc
+// @Summary Leave dealer booth (staff only)
+// @Description Leave the current dealer booth as a non-owner staff member.
+// @Description Booth owners cannot leave using this endpoint.
+// @Description
+// @Description **Requirements:**
+// @Description - User must be a staff member of a dealer booth
+// @Description - User must not be the booth owner
+// @Description
+// @Description **Usage:**
+// @Description 1. Include JWT access token in Authorization header: Bearer YOUR_ACCESS_TOKEN
+// @Description 2. Call endpoint without request body
+// @Description 3. Membership is removed from the booth
+// @Tags dealer
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully left dealer booth"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 403 "Forbidden - owner cannot leave via this endpoint"
+// @Failure 404 "User not found or not in any booth"
+// @Failure 500 "Internal server error"
+// @Router /dealer/leave [delete]
+func (h *DealerHandler) LeaveDealerBooth(c *gin.Context) {
+	// Get user ID from JWT context
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		utils.RespondUnauthorized(c, "User ID not found in token")
+		return
+	}
+
+	userID, ok := userIDRaw.(string)
+	if !ok {
+		utils.RespondUnauthorized(c, "Invalid user ID in token")
+		return
+	}
+
+	err := h.services.Dealer.LeaveDealerBooth(userID)
+	if err != nil {
+		errMsg := err.Error()
+		switch errMsg {
+		case "user not found":
+			utils.RespondNotFound(c, errMsg)
+		case "you are not a staff member of any dealer booth":
+			utils.RespondNotFound(c, errMsg)
+		case "you are not a staff member of this booth":
+			utils.RespondError(c, 403, "FORBIDDEN", errMsg)
+		case "booth owner cannot leave booth":
+			utils.RespondError(c, 403, "FORBIDDEN", errMsg)
+		case "failed to leave dealer booth":
+			utils.RespondInternalServerError(c, errMsg)
+		default:
+			utils.RespondInternalServerError(c, "Failed to leave dealer booth")
+		}
+		return
+	}
+
+	utils.RespondSuccess(c, nil, "Successfully left dealer booth")
+}
+
 // GetMyDealer godoc
 // @Summary Get current user's dealer booth
 // @Description Get the dealer booth information for the currently authenticated user

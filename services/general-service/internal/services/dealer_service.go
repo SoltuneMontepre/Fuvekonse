@@ -414,6 +414,48 @@ func (s *DealerService) RemoveStaffFromBooth(ownerUserID string, staffUserID str
 	return mappers.MapDealerBoothToDetailResponse(boothWithStaffs), nil
 }
 
+// LeaveDealerBooth allows a non-owner staff member to leave their booth
+func (s *DealerService) LeaveDealerBooth(userID string) error {
+	// Check if user exists
+	_, err := s.repos.User.FindByID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return err
+	}
+
+	// Get booth by staff user id
+	booth, err := s.repos.Dealer.GetBoothByStaffUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("you are not a staff member of any dealer booth")
+		}
+		return err
+	}
+
+	// Find current user's staff record in this booth
+	staff, err := s.repos.Dealer.FindStaffByUserAndBoothID(userID, booth.Id.String())
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("you are not a staff member of this booth")
+		}
+		return err
+	}
+
+	// Owner cannot leave via this endpoint
+	if staff.IsOwner {
+		return errors.New("booth owner cannot leave booth")
+	}
+
+	// Remove own staff membership
+	if err := s.repos.Dealer.RemoveStaff(staff.Id.String()); err != nil {
+		return errors.New("failed to leave dealer booth")
+	}
+
+	return nil
+}
+
 // GetMyDealer retrieves the dealer booth for the current user
 func (s *DealerService) GetMyDealer(userID string) (*responses.DealerBoothDetailResponse, error) {
 	// Get the booth that the user is a staff member of
