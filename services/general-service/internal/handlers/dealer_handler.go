@@ -548,7 +548,7 @@ func (h *DealerHandler) LeaveDealerBooth(c *gin.Context) {
 		return
 	}
 
-	utils.RespondSuccess(c, nil, "Successfully left dealer booth")
+	utils.RespondSuccess[any](c, nil, "Successfully left dealer booth")
 }
 
 // GetMyDealer godoc
