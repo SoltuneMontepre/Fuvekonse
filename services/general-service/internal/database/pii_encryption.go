@@ -59,7 +59,8 @@ func encryptUserPII(c *security.AESCipher, u *models.User) error {
 	if u == nil {
 		return nil
 	}
-	// Keep Email plaintext (uniqueness + lookup) and DateOfBirth plaintext (analytics queries).
+	// Keep Email plaintext (uniqueness + lookup), Country plaintext (analytics/grouping),
+	// and DateOfBirth plaintext (analytics queries).
 	if u.FirstName, err = c.EncryptString(u.FirstName); err != nil {
 		return err
 	}
@@ -67,9 +68,6 @@ func encryptUserPII(c *security.AESCipher, u *models.User) error {
 		return err
 	}
 	if u.FursonaName, err = c.EncryptString(u.FursonaName); err != nil {
-		return err
-	}
-	if u.Country, err = c.EncryptString(u.Country); err != nil {
 		return err
 	}
 	if u.IdCard, err = c.EncryptString(u.IdCard); err != nil {
@@ -90,9 +88,6 @@ func decryptUserPII(c *security.AESCipher, u *models.User) error {
 		return err
 	}
 	if u.FursonaName, err = c.DecryptString(u.FursonaName); err != nil {
-		return err
-	}
-	if u.Country, err = c.DecryptString(u.Country); err != nil {
 		return err
 	}
 	if u.IdCard, err = c.DecryptString(u.IdCard); err != nil {

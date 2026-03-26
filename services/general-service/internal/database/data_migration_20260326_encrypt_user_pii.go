@@ -18,7 +18,6 @@ type userPIIRow struct {
 	FirstName   string `gorm:"column:first_name"`
 	LastName    string `gorm:"column:last_name"`
 	FursonaName string `gorm:"column:fursona_name"`
-	Country     string `gorm:"column:country"`
 	IdCard      string `gorm:"column:id_card"`
 }
 
@@ -68,12 +67,6 @@ func migrateEncryptExistingUserPII(db *gorm.DB) error {
 				return err
 			} else if changed {
 				updates["fursona_name"] = value
-			}
-
-			if value, changed, err := encryptIfPlain(c, row.Country); err != nil {
-				return err
-			} else if changed {
-				updates["country"] = value
 			}
 
 			if value, changed, err := encryptIfPlain(c, row.IdCard); err != nil {
