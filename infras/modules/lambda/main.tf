@@ -21,6 +21,7 @@ resource "aws_lambda_function" "general_service" {
       REDIS_URL                       = var.redis_url
       REDIS_TLS                       = "true"
       JWT_SECRET                      = var.jwt_secret
+      USER_PII_AES_KEY                = var.user_pii_aes_key
       JWT_ACCESS_TOKEN_EXPIRY_MINUTES = var.jwt_access_token_expiry_minutes
       JWT_REFRESH_TOKEN_EXPIRY_DAYS   = var.jwt_refresh_token_expiry_days
       LOGIN_MAX_FAIL                  = var.login_max_fail

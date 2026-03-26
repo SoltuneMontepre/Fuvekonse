@@ -16,6 +16,7 @@ locals {
   redis_url = local.secrets.REDIS_URL
 
   jwt_secret                      = local.secrets.JWT_SECRET
+  user_pii_aes_key                = local.secrets.USER_PII_AES_KEY
   jwt_access_token_expiry_minutes = local.secrets.JWT_ACCESS_TOKEN_EXPIRY_MINUTES
   jwt_refresh_token_expiry_days   = local.secrets.JWT_REFRESH_TOKEN_EXPIRY_DAYS
   login_max_fail                  = local.secrets.LOGIN_MAX_FAIL

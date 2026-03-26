@@ -33,6 +33,9 @@ func Connect(connectionString string) (*gorm.DB, error) {
 	}
 
 	AutoGenerateUUID(db)
+	if err := RegisterUserPIIEncryption(db); err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }

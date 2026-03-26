@@ -67,6 +67,12 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "user_pii_aes_key" {
+  description = "Base64-encoded AES key for encrypting user PII (general-service)"
+  type        = string
+  sensitive   = true
+}
+
 variable "jwt_access_token_expiry_minutes" {
   description = "JWT access token expiry in minutes"
   type        = string

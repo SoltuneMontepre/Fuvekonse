@@ -63,6 +63,7 @@ func validateRequiredEnvVars() error {
 		"DB_PASSWORD",
 		"DB_NAME",
 		"JWT_SECRET",
+		"USER_PII_AES_KEY",
 		// Redis is optional - only warn if missing
 	}
 

@@ -52,6 +52,7 @@ module "lambda" {
   redis_url                       = local.redis_url
   aws_region                      = var.aws_region
   jwt_secret                      = local.jwt_secret
+  user_pii_aes_key                = local.user_pii_aes_key
   jwt_access_token_expiry_minutes = local.jwt_access_token_expiry_minutes
   jwt_refresh_token_expiry_days   = local.jwt_refresh_token_expiry_days
   login_max_fail                  = local.login_max_fail
