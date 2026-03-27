@@ -169,8 +169,12 @@ func MigrateAndSeed(db *gorm.DB) error {
 		return fmt.Errorf("failed to cleanup example.com users/country: %w", err)
 	}
 
-	if err := migrateRestoreCountryPlaintext(db); err != nil {
-		return fmt.Errorf("failed to restore country plaintext: %w", err)
+	// if err := migrateRestoreCountryPlaintext(db); err != nil {
+	// 	return fmt.Errorf("failed to restore country plaintext: %w", err)
+	// }
+
+	if err := migrateRestoreFursonaNamePlaintext(db); err != nil {
+		return fmt.Errorf("failed to restore fursona_name plaintext: %w", err)
 	}
 
 	// if err := migrateEncryptExistingUserPII(db); err != nil {

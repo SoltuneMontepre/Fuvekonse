@@ -14,11 +14,10 @@ import (
 const encryptedValuePrefix = "v1:"
 
 type userPIIRow struct {
-	Id          string `gorm:"column:id"`
-	FirstName   string `gorm:"column:first_name"`
-	LastName    string `gorm:"column:last_name"`
-	FursonaName string `gorm:"column:fursona_name"`
-	IdCard      string `gorm:"column:id_card"`
+	Id        string `gorm:"column:id"`
+	FirstName string `gorm:"column:first_name"`
+	LastName  string `gorm:"column:last_name"`
+	IdCard    string `gorm:"column:id_card"`
 }
 
 // migrateEncryptExistingUserPII encrypts legacy plaintext PII values already stored in users.
@@ -61,12 +60,6 @@ func migrateEncryptExistingUserPII(db *gorm.DB) error {
 				return err
 			} else if changed {
 				updates["last_name"] = value
-			}
-
-			if value, changed, err := encryptIfPlain(c, row.FursonaName); err != nil {
-				return err
-			} else if changed {
-				updates["fursona_name"] = value
 			}
 
 			if value, changed, err := encryptIfPlain(c, row.IdCard); err != nil {
