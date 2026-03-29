@@ -228,5 +228,13 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				adminAnalytics.GET("/dashboard", h.Analytics.GetDashboard)
 			}
 		}
+
+		// Dev-only: send a test email (OTP / dealer approved / ticket+QR) without going through auth flows
+		if GetEnvOr("ENV", "development") != "production" {
+			dev := v1.Group("/dev")
+			{
+				dev.POST("/mail/send", h.DevMail.SendTestMail)
+			}
+		}
 	}
 }

@@ -12,6 +12,7 @@ type Handlers struct {
 	Dealer    *DealerHandler
 	Conbook   *ConbookHandler
 	Analytics *AnalyticsHandler
+	DevMail   *DevMailHandler
 }
 
 func NewHandlers(services *services.Services, queuePublisher queue.Publisher) *Handlers {
@@ -22,5 +23,6 @@ func NewHandlers(services *services.Services, queuePublisher queue.Publisher) *H
 		Dealer:    NewDealerHandler(services),
 		Conbook:   NewConbookHandler(services),
 		Analytics: NewAnalyticsHandler(services),
+		DevMail:   NewDevMailHandler(services),
 	}
 }
