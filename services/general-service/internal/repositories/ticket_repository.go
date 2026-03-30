@@ -304,8 +304,10 @@ func (r *TicketRepository) GetNextTicketNumber(ctx context.Context, tx *gorm.DB,
 }
 
 // PurchaseTicket creates a new ticket with stock decrement (atomic operation)
-// This uses row-level locking to prevent race conditions
-func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uuid.UUID) (*models.UserTicket, error) {
+// This uses row-level locking to prevent race conditions.
+// When adminBypass is true, skips blacklist, one-ticket-per-user, and tier active/visible checks;
+// out-of-stock is allowed (no stock decrement when stock is 0; otherwise decrements as usual).
+func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uuid.UUID, adminBypass bool) (*models.UserTicket, error) {
 	var ticket *models.UserTicket
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -314,34 +316,44 @@ func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uu
 		if err := tx.Where("id = ? AND is_deleted = ?", userID, false).First(&user).Error; err != nil {
 			return err
 		}
-		if user.IsBlacklisted {
+		if !adminBypass && user.IsBlacklisted {
 			return ErrUserBlacklisted
 		}
 
 		// 2. Check if user already has a non-denied ticket
-		var existingTicket models.UserTicket
-		err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).
-			First(&existingTicket).Error
-		if err == nil {
-			return ErrUserAlreadyHasTicket
-		}
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+		if !adminBypass {
+			var existingTicket models.UserTicket
+			err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).
+				First(&existingTicket).Error
+			if err == nil {
+				return ErrUserAlreadyHasTicket
+			}
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
 
-		// 3. Lock the tier row for update and check stock (must be active and visible to purchase)
+		// 3. Lock the tier row for update (active/visible required unless admin bypass)
 		var tier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", tierID, false, true, true).
-			First(&tier).Error; err != nil {
+		q := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND is_deleted = ?", tierID, false)
+		if !adminBypass {
+			q = q.Where("is_active = ? AND is_visible = ?", true, true)
+		}
+		if err := q.First(&tier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
 			}
 			return err
 		}
 
-		if tier.Stock <= 0 {
-			return ErrOutOfStock
+		var decrementStock bool
+		if adminBypass {
+			decrementStock = tier.Stock > 0
+		} else {
+			if tier.Stock <= 0 {
+				return ErrOutOfStock
+			}
+			decrementStock = true
 		}
 
 		// 4. Get next ticket number for this tier
@@ -350,9 +362,11 @@ func (r *TicketRepository) PurchaseTicket(ctx context.Context, userID, tierID uu
 			return err
 		}
 
-		// 5. Decrement stock
-		if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
-			return err
+		// 5. Decrement stock when available
+		if decrementStock {
+			if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
+				return err
+			}
 		}
 
 		// 6. Create the ticket
@@ -1237,10 +1251,13 @@ func (r *TicketRepository) DeleteTicketForAdmin(ctx context.Context, ticketID uu
 
 // UpgradeResult contains the upgraded ticket and pricing info for the API response.
 type UpgradeResult struct {
-	Ticket          *models.UserTicket
-	OldTierPrice    decimal.Decimal
-	NewTierPrice    decimal.Decimal
-	PriceDifference decimal.Decimal
+	Ticket               *models.UserTicket
+	OldTierPrice         decimal.Decimal
+	NewTierPrice         decimal.Decimal
+	PriceDifference      decimal.Decimal
+	OldTierPriceUsd      decimal.Decimal
+	NewTierPriceUsd      decimal.Decimal
+	PriceDifferenceUsd   decimal.Decimal
 }
 
 // UpgradeTicketTier atomically upgrades a user's ticket to a higher-priced tier.
@@ -1346,10 +1363,13 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 		}
 
 		result = &UpgradeResult{
-			Ticket:          &ticket,
-			OldTierPrice:    oldTier.Price,
-			NewTierPrice:    newTier.Price,
-			PriceDifference: newTier.Price.Sub(oldTier.Price),
+			Ticket:             &ticket,
+			OldTierPrice:       oldTier.Price,
+			NewTierPrice:       newTier.Price,
+			PriceDifference:    newTier.Price.Sub(oldTier.Price),
+			OldTierPriceUsd:    oldTier.PriceUsd,
+			NewTierPriceUsd:    newTier.PriceUsd,
+			PriceDifferenceUsd: newTier.PriceUsd.Sub(oldTier.PriceUsd),
 		}
 
 		return nil

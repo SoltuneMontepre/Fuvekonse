@@ -44,6 +44,7 @@ type CreateTicketTierRequest struct {
 	Description string   `json:"description" binding:"max=500"`
 	Benefits    []string `json:"benefits"`
 	Price       *float64 `json:"price" binding:"required,gte=0"`
+	PriceUsd    *float64 `json:"price_usd" binding:"omitempty,gte=0"`
 	Stock       *int     `json:"stock" binding:"required,gte=0"`
 	IsActive    bool     `json:"is_active"`
 }
@@ -54,6 +55,7 @@ type UpdateTicketTierRequest struct {
 	Description *string   `json:"description" binding:"omitempty,max=500"`
 	Benefits    []string  `json:"benefits"`
 	Price       *float64  `json:"price" binding:"omitempty,gte=0"`
+	PriceUsd    *float64  `json:"price_usd" binding:"omitempty,gte=0"`
 	Stock       *int      `json:"stock" binding:"omitempty,gte=0"`
 	IsActive    *bool     `json:"is_active"`
 }

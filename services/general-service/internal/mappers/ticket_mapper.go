@@ -22,6 +22,7 @@ func MapTicketTierToResponse(tier *models.TicketTier) *responses.TicketTierRespo
 		Description: tier.Description,
 		Benefits:    benefits,
 		Price:       tier.Price,
+		PriceUsd:    tier.PriceUsd,
 		Stock:       tier.Stock,
 		IsActive:    tier.IsActive,
 		IsVisible:   tier.IsVisible,
@@ -150,9 +151,12 @@ func MapUsersToBlacklistedResponse(users []models.User) []responses.BlacklistedU
 // MapUpgradeResultToResponse maps a repository UpgradeResult to an UpgradeTicketResponse DTO
 func MapUpgradeResultToResponse(result *repositories.UpgradeResult) *responses.UpgradeTicketResponse {
 	return &responses.UpgradeTicketResponse{
-		Ticket:          MapUserTicketToResponse(result.Ticket, false),
-		OldTierPrice:    result.OldTierPrice,
-		NewTierPrice:    result.NewTierPrice,
-		PriceDifference: result.PriceDifference,
+		Ticket:             MapUserTicketToResponse(result.Ticket, false),
+		OldTierPrice:       result.OldTierPrice,
+		NewTierPrice:       result.NewTierPrice,
+		PriceDifference:    result.PriceDifference,
+		OldTierPriceUsd:    result.OldTierPriceUsd,
+		NewTierPriceUsd:    result.NewTierPriceUsd,
+		PriceDifferenceUsd: result.PriceDifferenceUsd,
 	}
 }

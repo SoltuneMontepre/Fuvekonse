@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	role "general-service/internal/common/constants"
 	"general-service/internal/common/utils"
 	"general-service/internal/dto/ticket/requests"
 	"general-service/internal/queue"
@@ -22,6 +23,15 @@ func NewTicketHandler(services *services.Services, queuePublisher queue.Publishe
 	return &TicketHandler{services: services, queue: queuePublisher}
 }
 
+func isRequesterAdmin(c *gin.Context) bool {
+	userRoleVal, hasRole := c.Get("role")
+	if !hasRole {
+		return false
+	}
+	r, ok := userRoleVal.(role.UserRole)
+	return ok && r == role.RoleAdmin
+}
+
 // ========== Public User Endpoints ==========
 
 // GetTiers godoc
@@ -35,7 +45,7 @@ func NewTicketHandler(services *services.Services, queuePublisher queue.Publishe
 // @Router /tickets/tiers [get]
 func (h *TicketHandler) GetTiers(c *gin.Context) {
 	ctx := c.Request.Context()
-	tiers, err := h.services.Ticket.GetAllTiers(ctx)
+	tiers, err := h.services.Ticket.GetAllTiers(ctx, isRequesterAdmin(c))
 	if err != nil {
 		utils.RespondInternalServerError(c, "Failed to retrieve ticket tiers")
 		return
@@ -64,7 +74,7 @@ func (h *TicketHandler) GetTierByID(c *gin.Context) {
 		return
 	}
 
-	tier, err := h.services.Ticket.GetTierByID(ctx, tierID)
+	tier, err := h.services.Ticket.GetTierByID(ctx, tierID, isRequesterAdmin(c))
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidTierID) {
 			utils.RespondBadRequest(c, "Invalid tier ID format")
@@ -140,11 +150,14 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 		return
 	}
 
+	isAdmin := isRequesterAdmin(c)
+
 	if h.queue != nil {
 		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action: queue.ActionPurchaseTicket,
-			UserID: userID.(string),
-			TierID: req.TierID,
+			Action:       queue.ActionPurchaseTicket,
+			UserID:       userID.(string),
+			TierID:       req.TierID,
+			AdminBypass:  isAdmin,
 		}); err != nil {
 			log.Printf("SQS PublishTicketJob failed: %v", err)
 			utils.RespondInternalServerError(c, "Failed to queue ticket purchase")
@@ -154,7 +167,7 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 		return
 	}
 
-	ticket, err := h.services.Ticket.PurchaseTicket(ctx, userID.(string), &req)
+	ticket, err := h.services.Ticket.PurchaseTicket(ctx, userID.(string), &req, isAdmin)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidTierID):

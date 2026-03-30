@@ -24,6 +24,8 @@ type TicketJobMessage struct {
 	TargetUserID string     `json:"target_user_id,omitempty"` // For blacklist/unblacklist
 	// Request body payloads (JSON-marshalled)
 	TierID     string `json:"tier_id,omitempty"`     // For purchase, upgrade_ticket
+	// AdminBypass: when true, purchase skips blacklist, one-ticket-per-user, tier active/visible, and out-of-stock (stock decremented only if > 0).
+	AdminBypass bool `json:"admin_bypass,omitempty"`
 	Reason     string `json:"reason,omitempty"`      // For deny, blacklist
 	ConBadgeName   string `json:"con_badge_name,omitempty"`
 	BadgeImage     string `json:"badge_image,omitempty"`

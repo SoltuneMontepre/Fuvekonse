@@ -96,8 +96,9 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 		v1.GET("/ping", CheckHealth)
 		SetupAuthRoutes(v1, h)
 
-		// Public ticket routes (no auth required for viewing tiers)
+		// Public ticket routes (optional JWT so admins can get normalized tier payloads, e.g. is_active)
 		tickets := v1.Group("/tickets")
+		tickets.Use(middlewares.OptionalJWTAuthMiddleware())
 		{
 			tickets.GET("/tiers", h.Ticket.GetTiers)
 			tickets.GET("/tiers/:id", h.Ticket.GetTierByID)

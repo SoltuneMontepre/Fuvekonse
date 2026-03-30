@@ -39,12 +39,19 @@ func NewTicketService(repos *repositories.Repositories, mail *MailService) *Tick
 // ========== Public User Endpoints ==========
 
 // GetAllTiers returns all visible ticket tiers for public listing (excludes deleted and hidden).
-func (s *TicketService) GetAllTiers(ctx context.Context) ([]responses.TicketTierResponse, error) {
+// When showActiveForAdmin is true, all returned tiers have IsActive set to true in the response (admin UI / purchase testing).
+func (s *TicketService) GetAllTiers(ctx context.Context, showActiveForAdmin bool) ([]responses.TicketTierResponse, error) {
 	tiers, err := s.repos.Ticket.GetVisibleTiers(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return mappers.MapTicketTiersToResponse(tiers), nil
+	out := mappers.MapTicketTiersToResponse(tiers)
+	if showActiveForAdmin {
+		for i := range out {
+			out[i].IsActive = true
+		}
+	}
+	return out, nil
 }
 
 // GetAllTiersForAdmin returns all non-deleted tiers (active and inactive) for admin.
@@ -56,8 +63,9 @@ func (s *TicketService) GetAllTiersForAdmin(ctx context.Context) ([]responses.Ti
 	return mappers.MapTicketTiersToResponse(tiers), nil
 }
 
-// GetTierByID returns a specific ticket tier
-func (s *TicketService) GetTierByID(ctx context.Context, tierID string) (*responses.TicketTierResponse, error) {
+// GetTierByID returns a specific ticket tier.
+// When showActiveForAdmin is true, the response has IsActive set to true (admin UI / purchase testing).
+func (s *TicketService) GetTierByID(ctx context.Context, tierID string, showActiveForAdmin bool) (*responses.TicketTierResponse, error) {
 	id, err := uuid.Parse(tierID)
 	if err != nil {
 		return nil, ErrInvalidTierID
@@ -67,7 +75,11 @@ func (s *TicketService) GetTierByID(ctx context.Context, tierID string) (*respon
 	if err != nil {
 		return nil, err
 	}
-	return mappers.MapTicketTierToResponse(tier), nil
+	resp := mappers.MapTicketTierToResponse(tier)
+	if showActiveForAdmin {
+		resp.IsActive = true
+	}
+	return resp, nil
 }
 
 // CreateTierForAdmin creates a new ticket tier (admin only)
@@ -85,6 +97,10 @@ func (s *TicketService) CreateTierForAdmin(ctx context.Context, req *requests.Cr
 	if req.Price != nil {
 		price = *req.Price
 	}
+	priceUsd := 0.0
+	if req.PriceUsd != nil {
+		priceUsd = *req.PriceUsd
+	}
 	stock := 0
 	if req.Stock != nil {
 		stock = *req.Stock
@@ -95,6 +111,7 @@ func (s *TicketService) CreateTierForAdmin(ctx context.Context, req *requests.Cr
 		Description: req.Description,
 		Benefits:    benefitsJSON,
 		Price:       decimal.NewFromFloat(price),
+		PriceUsd:    decimal.NewFromFloat(priceUsd),
 		Stock:       stock,
 		IsActive:    req.IsActive,
 		IsVisible:   true,
@@ -133,6 +150,9 @@ func (s *TicketService) UpdateTierForAdmin(ctx context.Context, tierID string, r
 	}
 	if req.Price != nil {
 		updates["price"] = decimal.NewFromFloat(*req.Price)
+	}
+	if req.PriceUsd != nil {
+		updates["price_usd"] = decimal.NewFromFloat(*req.PriceUsd)
 	}
 	if req.Stock != nil {
 		updates["stock"] = *req.Stock
@@ -207,8 +227,9 @@ func (s *TicketService) GetMyTicket(ctx context.Context, userID string) (*respon
 	return mappers.MapUserTicketToResponse(ticket, false), nil
 }
 
-// PurchaseTicket creates a new pending ticket for the user
-func (s *TicketService) PurchaseTicket(ctx context.Context, userID string, req *requests.PurchaseTicketRequest) (*responses.UserTicketResponse, error) {
+// PurchaseTicket creates a new pending ticket for the user.
+// When adminBypass is true (admin role), repository skips normal purchase validations.
+func (s *TicketService) PurchaseTicket(ctx context.Context, userID string, req *requests.PurchaseTicketRequest, adminBypass bool) (*responses.UserTicketResponse, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, ErrInvalidUserID
@@ -219,7 +240,7 @@ func (s *TicketService) PurchaseTicket(ctx context.Context, userID string, req *
 		return nil, ErrInvalidTierID
 	}
 
-	ticket, err := s.repos.Ticket.PurchaseTicket(ctx, uid, tierID)
+	ticket, err := s.repos.Ticket.PurchaseTicket(ctx, uid, tierID, adminBypass)
 	if err != nil {
 		return nil, err
 	}

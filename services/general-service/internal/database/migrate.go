@@ -31,6 +31,11 @@ func AutoMigrate(db *gorm.DB) error {
 		return fmt.Errorf("failed to ensure users.google_id column: %w", err)
 	}
 
+	// Ensure price_usd exists on ticket_tiers (handles DBs created before PriceUsd was added)
+	if err := ensureTicketTiersPriceUsdColumn(db); err != nil {
+		return fmt.Errorf("failed to ensure ticket_tiers.price_usd column: %w", err)
+	}
+
 	// Drop columns that are no longer in the model
 	// WARNING: This will permanently DELETE DATA!
 	if err := dropUnusedColumns(db, allModels); err != nil {
@@ -55,6 +60,19 @@ func ensureUsersGoogleIdColumn(db *gorm.DB) error {
 			return err
 		}
 		log.Println("Added users.google_id column (migration)")
+	}
+	return nil
+}
+
+// ensureTicketTiersPriceUsdColumn adds the price_usd column to ticket_tiers if it does not exist.
+// This covers databases created before PriceUsd was added to the TicketTier model.
+func ensureTicketTiersPriceUsdColumn(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if migrator.HasTable("ticket_tiers") && !migrator.HasColumn("ticket_tiers", "price_usd") {
+		if err := migrator.AddColumn(&models.TicketTier{}, "PriceUsd"); err != nil {
+			return err
+		}
+		log.Println("Added ticket_tiers.price_usd column (migration)")
 	}
 	return nil
 }

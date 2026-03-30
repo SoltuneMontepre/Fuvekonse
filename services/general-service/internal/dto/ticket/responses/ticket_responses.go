@@ -15,6 +15,7 @@ type TicketTierResponse struct {
 	Description string          `json:"description"`
 	Benefits    []string        `json:"benefits"` // Parsed from JSON
 	Price       decimal.Decimal `json:"price"`
+	PriceUsd    decimal.Decimal `json:"price_usd"`
 	Stock       int             `json:"stock"`
 	IsActive    bool            `json:"is_active"`
 	IsVisible   bool            `json:"is_visible"`
@@ -48,10 +49,13 @@ type UserTicketResponse struct {
 
 // UpgradeTicketResponse contains the upgraded ticket plus pricing info for the frontend.
 type UpgradeTicketResponse struct {
-	Ticket          *UserTicketResponse `json:"ticket"`
-	OldTierPrice    decimal.Decimal     `json:"old_tier_price"`
-	NewTierPrice    decimal.Decimal     `json:"new_tier_price"`
-	PriceDifference decimal.Decimal     `json:"price_difference"`
+	Ticket               *UserTicketResponse `json:"ticket"`
+	OldTierPrice         decimal.Decimal     `json:"old_tier_price"`
+	NewTierPrice         decimal.Decimal     `json:"new_tier_price"`
+	PriceDifference      decimal.Decimal     `json:"price_difference"`
+	OldTierPriceUsd      decimal.Decimal     `json:"old_tier_price_usd"`
+	NewTierPriceUsd      decimal.Decimal     `json:"new_tier_price_usd"`
+	PriceDifferenceUsd   decimal.Decimal     `json:"price_difference_usd"`
 }
 
 // TicketUserResponse represents user info in ticket context (minimal PII for admin)

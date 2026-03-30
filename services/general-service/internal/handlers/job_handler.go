@@ -26,7 +26,7 @@ func (h *TicketHandler) ProcessTicketJob(c *gin.Context) {
 
 	switch msg.Action {
 	case queue.ActionPurchaseTicket:
-		_, err := h.services.Ticket.PurchaseTicket(ctx, msg.UserID, &requests.PurchaseTicketRequest{TierID: msg.TierID})
+		_, err := h.services.Ticket.PurchaseTicket(ctx, msg.UserID, &requests.PurchaseTicketRequest{TierID: msg.TierID}, msg.AdminBypass)
 		if err != nil {
 			respondTicketJobError(c, err)
 			return

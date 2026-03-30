@@ -33,6 +33,7 @@ type TicketTier struct {
 	TierCode  string          `gorm:"type:varchar(10);uniqueIndex"`
 	Stock     int             `gorm:"type:int"`
 	Price     decimal.Decimal `gorm:"type:decimal(10,2)"`
+	PriceUsd  decimal.Decimal `gorm:"type:decimal(10,2);default:0"`
 	IsActive  bool            `gorm:"default:true"`
 	IsVisible bool            `gorm:"default:true"`
 	IsDeleted bool            `gorm:"default:false"`

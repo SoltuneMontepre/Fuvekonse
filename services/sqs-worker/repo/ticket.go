@@ -73,45 +73,57 @@ func getNextTicketNumber(ctx context.Context, tx *gorm.DB, tierID uuid.UUID) (in
 	return maxNumber + 1, nil
 }
 
-func (r *TicketRepo) PurchaseTicket(ctx context.Context, userID, tierID uuid.UUID) (*models.UserTicket, error) {
+func (r *TicketRepo) PurchaseTicket(ctx context.Context, userID, tierID uuid.UUID, adminBypass bool) (*models.UserTicket, error) {
 	var ticket *models.UserTicket
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user models.User
 		if err := tx.Where("id = ? AND is_deleted = ?", userID, false).First(&user).Error; err != nil {
 			return err
 		}
-		if user.IsBlacklisted {
+		if !adminBypass && user.IsBlacklisted {
 			return ErrUserBlacklisted
 		}
-		var existing models.UserTicket
-		if err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).First(&existing).Error; err == nil {
-			// Idempotent: already have a ticket for this tier -> success
-			if existing.TicketId == tierID {
-				ticket = &existing
-				return nil
+		if !adminBypass {
+			var existing models.UserTicket
+			if err := tx.Where("user_id = ? AND is_deleted = ? AND status != ?", userID, false, models.TicketStatusDenied).First(&existing).Error; err == nil {
+				// Idempotent: already have a ticket for this tier -> success
+				if existing.TicketId == tierID {
+					ticket = &existing
+					return nil
+				}
+				return ErrUserAlreadyHasTicket
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
 			}
-			return ErrUserAlreadyHasTicket
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
 		}
 		var tier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", tierID, false, true, true).
-			First(&tier).Error; err != nil {
+		q := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND is_deleted = ?", tierID, false)
+		if !adminBypass {
+			q = q.Where("is_active = ? AND is_visible = ?", true, true)
+		}
+		if err := q.First(&tier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
 			}
 			return err
 		}
-		if tier.Stock <= 0 {
-			return ErrOutOfStock
+		var decrementStock bool
+		if adminBypass {
+			decrementStock = tier.Stock > 0
+		} else {
+			if tier.Stock <= 0 {
+				return ErrOutOfStock
+			}
+			decrementStock = true
 		}
 		num, err := getNextTicketNumber(ctx, tx, tierID)
 		if err != nil {
 			return err
 		}
-		if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
-			return err
+		if decrementStock {
+			if err := tx.Model(&tier).Update("stock", tier.Stock-1).Error; err != nil {
+				return err
+			}
 		}
 		ref := fmt.Sprintf("%s-%04d", tier.TierCode, num)
 		ticket = &models.UserTicket{

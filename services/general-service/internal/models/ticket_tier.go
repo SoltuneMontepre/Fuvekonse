@@ -10,7 +10,8 @@ import (
 type TicketTier struct {
 	Id          uuid.UUID       `gorm:"type:uuid;primaryKey" json:"id"`
 	TierCode    string          `gorm:"type:varchar(10);uniqueIndex" json:"tier_code"` // e.g., "T1", "T2", "T3"
-	Price       decimal.Decimal `gorm:"type:decimal(10,2)" json:"price"`
+	Price       decimal.Decimal `gorm:"type:decimal(10,2)" json:"price"`               // Primary (e.g. local) currency
+	PriceUsd    decimal.Decimal `gorm:"type:decimal(10,2);default:0" json:"price_usd"`
 	Description string          `gorm:"type:varchar(500)" json:"description"`
 	TicketName  string          `gorm:"type:varchar(255)" json:"ticket_name"`
 	Benefits    string          `gorm:"type:text" json:"benefits"` // JSON array of benefit strings
