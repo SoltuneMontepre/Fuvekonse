@@ -783,7 +783,7 @@ func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uu
 }
 
 // UpdateBadgeDetails updates badge details after approval
-func (r *TicketRepository) UpdateBadgeDetails(ctx context.Context, ticketID, userID uuid.UUID, badgeName, badgeImage string, isFursuiter, isFursuitStaff bool) (*models.UserTicket, error) {
+func (r *TicketRepository) UpdateBadgeDetails(ctx context.Context, ticketID, userID uuid.UUID, badgeName, badgeImage, namecardUrl string, isFursuiter, isFursuitStaff bool) (*models.UserTicket, error) {
 	var ticket models.UserTicket
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -804,6 +804,7 @@ func (r *TicketRepository) UpdateBadgeDetails(ctx context.Context, ticketID, use
 		// Update badge details
 		ticket.ConBadgeName = badgeName
 		ticket.BadgeImage = badgeImage
+		ticket.NamecardUrl = namecardUrl
 		ticket.IsFursuiter = isFursuiter
 		ticket.IsFursuitStaff = isFursuitStaff
 

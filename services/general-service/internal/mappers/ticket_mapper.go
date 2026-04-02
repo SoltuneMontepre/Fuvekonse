@@ -47,6 +47,7 @@ func MapUserTicketToResponse(ticket *models.UserTicket, includeUser bool) *respo
 		TicketNumber:          ticket.TicketNumber,
 		ConBadgeName:          ticket.ConBadgeName,
 		BadgeImage:            ticket.BadgeImage,
+		NamecardUrl:           ticket.NamecardUrl,
 		IsFursuiter:           ticket.IsFursuiter,
 		IsFursuitStaff:        ticket.IsFursuitStaff,
 		IsCheckedIn:           ticket.IsCheckedIn,

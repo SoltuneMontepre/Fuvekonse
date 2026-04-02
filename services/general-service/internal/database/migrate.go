@@ -36,6 +36,11 @@ func AutoMigrate(db *gorm.DB) error {
 		return fmt.Errorf("failed to ensure ticket_tiers.price_usd column: %w", err)
 	}
 
+	// Ensure namecard_url exists on user_tickets (handles DBs created before NamecardUrl was added)
+	if err := ensureUserTicketsNamecardUrlColumn(db); err != nil {
+		return fmt.Errorf("failed to ensure user_tickets.namecard_url column: %w", err)
+	}
+
 	// Drop columns that are no longer in the model
 	// WARNING: This will permanently DELETE DATA!
 	if err := dropUnusedColumns(db, allModels); err != nil {
@@ -73,6 +78,19 @@ func ensureTicketTiersPriceUsdColumn(db *gorm.DB) error {
 			return err
 		}
 		log.Println("Added ticket_tiers.price_usd column (migration)")
+	}
+	return nil
+}
+
+// ensureUserTicketsNamecardUrlColumn adds the namecard_url column to user_tickets if it does not exist.
+// This covers databases created before NamecardUrl was added to the UserTicket model.
+func ensureUserTicketsNamecardUrlColumn(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if migrator.HasTable("user_tickets") && !migrator.HasColumn("user_tickets", "namecard_url") {
+		if err := migrator.AddColumn(&models.UserTicket{}, "NamecardUrl"); err != nil {
+			return err
+		}
+		log.Println("Added user_tickets.namecard_url column (migration)")
 	}
 	return nil
 }
@@ -199,9 +217,9 @@ func MigrateAndSeed(db *gorm.DB) error {
 	// 	return fmt.Errorf("failed to encrypt existing user PII: %w", err)
 	// }
 
-	if err := seedInitialData(); err != nil {
-		return fmt.Errorf("failed to seed data: %w", err)
-	}
+	// if err := seedInitialData(); err != nil {
+	// 	return fmt.Errorf("failed to seed data: %w", err)
+	// }
 
 	return nil
 }

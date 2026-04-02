@@ -72,7 +72,7 @@ func ProcessTicketJob(ctx context.Context, db *gorm.DB, body []byte) error {
 		if existing == nil {
 			return ErrNoTicketFound
 		}
-		_, err = tr.UpdateBadgeDetails(ctx, existing.Id, uid, msg.ConBadgeName, msg.BadgeImage, msg.IsFursuiter, msg.IsFursuitStaff)
+		_, err = tr.UpdateBadgeDetails(ctx, existing.Id, uid, msg.ConBadgeName, msg.BadgeImage, msg.NamecardUrl, msg.IsFursuiter, msg.IsFursuitStaff)
 		return err
 	case jobmsg.ActionApproveTicket:
 		tid, err := uuid.Parse(msg.TicketID)

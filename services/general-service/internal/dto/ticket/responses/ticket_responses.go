@@ -29,6 +29,7 @@ type UserTicketResponse struct {
 	TicketNumber   int        `json:"ticket_number"`
 	ConBadgeName   string     `json:"con_badge_name,omitempty"`
 	BadgeImage     string     `json:"badge_image,omitempty"`
+	NamecardUrl    string     `json:"namecard_url,omitempty"`
 	IsFursuiter    bool       `json:"is_fursuiter"`
 	IsFursuitStaff bool       `json:"is_fursuit_staff"`
 	IsCheckedIn    bool       `json:"is_checked_in"`

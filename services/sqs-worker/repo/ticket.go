@@ -196,7 +196,7 @@ func (r *TicketRepo) CancelTicket(ctx context.Context, ticketID, userID uuid.UUI
 	return err
 }
 
-func (r *TicketRepo) UpdateBadgeDetails(ctx context.Context, ticketID, userID uuid.UUID, badgeName, badgeImage string, isFursuiter, isFursuitStaff bool) (*models.UserTicket, error) {
+func (r *TicketRepo) UpdateBadgeDetails(ctx context.Context, ticketID, userID uuid.UUID, badgeName, badgeImage, namecardUrl string, isFursuiter, isFursuitStaff bool) (*models.UserTicket, error) {
 	var t models.UserTicket
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("id = ? AND user_id = ? AND is_deleted = ?", ticketID, userID, false).First(&t).Error; err != nil {
@@ -210,6 +210,7 @@ func (r *TicketRepo) UpdateBadgeDetails(ctx context.Context, ticketID, userID uu
 		}
 		t.ConBadgeName = badgeName
 		t.BadgeImage = badgeImage
+		t.NamecardUrl = namecardUrl
 		t.IsFursuiter = isFursuiter
 		t.IsFursuitStaff = isFursuitStaff
 		return tx.Save(&t).Error

@@ -17,6 +17,7 @@ type DenyTicketRequest struct {
 type UpdateBadgeDetailsRequest struct {
 	ConBadgeName   string `json:"con_badge_name" binding:"required,min=1,max=255"`
 	BadgeImage     string `json:"badge_image" binding:"omitempty,url,max=500"`
+	NamecardUrl    string `json:"namecard_url" binding:"omitempty,url,max=500"`
 	IsFursuiter    bool   `json:"is_fursuiter"`
 	IsFursuitStaff bool   `json:"is_fursuit_staff"`
 }
@@ -66,6 +67,7 @@ type UpdateTicketForAdminRequest struct {
 	TierID         *string `json:"tier_id" binding:"omitempty,uuid"`
 	ConBadgeName   *string `json:"con_badge_name" binding:"omitempty,max=255"`
 	BadgeImage     *string `json:"badge_image" binding:"omitempty,max=500"`
+	NamecardUrl    *string `json:"namecard_url" binding:"omitempty,max=500"`
 	IsFursuiter    *bool   `json:"is_fursuiter"`
 	IsFursuitStaff *bool   `json:"is_fursuit_staff"`
 	IsCheckedIn    *bool   `json:"is_checked_in"`

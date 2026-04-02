@@ -26,6 +26,7 @@ type UserTicket struct {
 	Status         TicketStatus `gorm:"type:varchar(20);default:'pending';index" json:"status"`         // pending, self_confirmed, approved, denied, admin_granted
 	ConBadgeName   string       `gorm:"type:varchar(255)" json:"con_badge_name"`                        // Filled after approval
 	BadgeImage     string       `gorm:"type:varchar(500)" json:"badge_image"`                           // Filled after approval
+	NamecardUrl    string       `gorm:"type:varchar(500)" json:"namecard_url"`                          // Filled after approval (link to generated namecard)
 	IsFursuiter    bool         `gorm:"default:false" json:"is_fursuiter"`                              // Filled after approval
 	IsFursuitStaff bool         `gorm:"default:false" json:"is_fursuit_staff"`                          // Filled after approval
 	IsCheckedIn    bool         `gorm:"default:false" json:"is_checked_in"`

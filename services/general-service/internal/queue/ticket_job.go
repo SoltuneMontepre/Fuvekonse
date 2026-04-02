@@ -29,6 +29,7 @@ type TicketJobMessage struct {
 	Reason     string `json:"reason,omitempty"`      // For deny, blacklist
 	ConBadgeName   string `json:"con_badge_name,omitempty"`
 	BadgeImage     string `json:"badge_image,omitempty"`
+	NamecardUrl    string `json:"namecard_url,omitempty"`
 	IsFursuiter    bool   `json:"is_fursuiter"`
 	IsFursuitStaff bool   `json:"is_fursuit_staff"`
 }

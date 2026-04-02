@@ -307,7 +307,16 @@ func (s *TicketService) UpdateBadgeDetails(ctx context.Context, userID string, r
 		return nil, ErrNoTicketFound
 	}
 
-	ticket, err := s.repos.Ticket.UpdateBadgeDetails(ctx, existingTicket.Id, uid, req.ConBadgeName, req.BadgeImage, req.IsFursuiter, req.IsFursuitStaff)
+	ticket, err := s.repos.Ticket.UpdateBadgeDetails(
+		ctx,
+		existingTicket.Id,
+		uid,
+		req.ConBadgeName,
+		req.BadgeImage,
+		req.NamecardUrl,
+		req.IsFursuiter,
+		req.IsFursuitStaff,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -585,6 +594,9 @@ func (s *TicketService) UpdateTicketForAdmin(ctx context.Context, ticketID, staf
 	}
 	if req.BadgeImage != nil {
 		updates["badge_image"] = *req.BadgeImage
+	}
+	if req.NamecardUrl != nil {
+		updates["namecard_url"] = *req.NamecardUrl
 	}
 	if req.IsFursuiter != nil {
 		updates["is_fursuiter"] = *req.IsFursuiter

@@ -49,6 +49,7 @@ type UserTicket struct {
 	Status         TicketStatus `gorm:"type:varchar(20);default:'pending';index"`
 	ConBadgeName   string       `gorm:"type:varchar(255)"`
 	BadgeImage     string       `gorm:"type:varchar(500)"`
+	NamecardUrl    string       `gorm:"type:varchar(500)"`
 	IsFursuiter    bool         `gorm:"default:false"`
 	IsFursuitStaff bool         `gorm:"default:false"`
 	DenialReason   string       `gorm:"type:varchar(500)"`

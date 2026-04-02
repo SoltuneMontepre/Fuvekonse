@@ -292,7 +292,7 @@ func (h *TicketHandler) CancelTicket(c *gin.Context) {
 
 // UpdateBadgeDetails godoc
 // @Summary Update badge details
-// @Description Update badge details for an approved ticket (con badge name, image, fursuiter status). When queue is enabled, request is queued (202).
+// @Description Update badge details for an approved ticket (con badge name, image, namecard URL, fursuiter status). When queue is enabled, request is queued (202).
 // @Tags tickets
 // @Accept json
 // @Produce json
@@ -322,12 +322,13 @@ func (h *TicketHandler) UpdateBadgeDetails(c *gin.Context) {
 
 	if h.queue != nil {
 		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action:          queue.ActionUpdateBadge,
-			UserID:          userID.(string),
-			ConBadgeName:    req.ConBadgeName,
-			BadgeImage:      req.BadgeImage,
-			IsFursuiter:     req.IsFursuiter,
-			IsFursuitStaff:  req.IsFursuitStaff,
+			Action:         queue.ActionUpdateBadge,
+			UserID:         userID.(string),
+			ConBadgeName:   req.ConBadgeName,
+			BadgeImage:     req.BadgeImage,
+			NamecardUrl:    req.NamecardUrl,
+			IsFursuiter:    req.IsFursuiter,
+			IsFursuitStaff: req.IsFursuitStaff,
 		}); err != nil {
 			utils.RespondInternalServerError(c, "Failed to queue badge update")
 			return
