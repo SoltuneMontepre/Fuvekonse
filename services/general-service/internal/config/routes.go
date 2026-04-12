@@ -148,6 +148,15 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				protectedConbooks.PUT("/:id", h.Conbook.EditConbook)
 				protectedConbooks.DELETE("/:id", h.Conbook.DeleteConbook)
 			}
+
+			protectedPanels := protected.Group("/panels")
+			{
+				protectedPanels.POST("", h.Panel.CreatePanel)
+				protectedPanels.GET("", h.Panel.GetMyPanels)
+				protectedPanels.GET("/:id", h.Panel.GetPanelByID)
+				protectedPanels.PUT("/:id", h.Panel.EditPanel)
+				protectedPanels.DELETE("/:id", h.Panel.DeletePanel)
+			}
 		}
 
 		// Admin routes - require JWT; role enforced per subgroup (admin, or admin+staff for ticket get/approve)
@@ -220,6 +229,18 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				adminConbooks.PATCH("/:id/approve", h.Conbook.ApproveConbook)
 				adminConbooks.PATCH("/:id/deny", h.Conbook.DenyConbook)
 				adminConbooks.PATCH("/:id/pending", h.Conbook.MarkConbookPending)
+			}
+
+			adminPanels := admin.Group("/panels")
+			adminPanels.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
+			{
+				adminPanels.GET("/pending", h.Panel.GetPendingPanels)
+				adminPanels.GET("/approved", h.Panel.GetApprovedPanels)
+				adminPanels.GET("/denied", h.Panel.GetDeniedPanels)
+				adminPanels.PATCH("/:id/schedule", h.Panel.AssignPanelSchedule)
+				adminPanels.PATCH("/:id/approve", h.Panel.ApprovePanel)
+				adminPanels.PATCH("/:id/deny", h.Panel.DenyPanel)
+				adminPanels.PATCH("/:id/pending", h.Panel.MarkPanelPending)
 			}
 
 			// Admin-only dashboard analytics (single consolidated query)

@@ -17,6 +17,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.TicketTier{},
 		&models.UserTicket{},
 		&models.ConBookArt{},
+		&models.PerformancePanel{},
 		&models.Payment{},
 	}
 
@@ -39,6 +40,11 @@ func AutoMigrate(db *gorm.DB) error {
 	// Ensure namecard_url exists on user_tickets (handles DBs created before NamecardUrl was added)
 	if err := ensureUserTicketsNamecardUrlColumn(db); err != nil {
 		return fmt.Errorf("failed to ensure user_tickets.namecard_url column: %w", err)
+	}
+
+	// Ensure nickname exists on performance_panels (handles DBs created before Nickname was added)
+	if err := ensurePerformancePanelsNicknameColumn(db); err != nil {
+		return fmt.Errorf("failed to ensure performance_panels.nickname column: %w", err)
 	}
 
 	// Drop columns that are no longer in the model
@@ -91,6 +97,18 @@ func ensureUserTicketsNamecardUrlColumn(db *gorm.DB) error {
 			return err
 		}
 		log.Println("Added user_tickets.namecard_url column (migration)")
+	}
+	return nil
+}
+
+// ensurePerformancePanelsNicknameColumn adds nickname to performance_panels if missing.
+func ensurePerformancePanelsNicknameColumn(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if migrator.HasTable("performance_panels") && !migrator.HasColumn("performance_panels", "nickname") {
+		if err := migrator.AddColumn(&models.PerformancePanel{}, "Nickname"); err != nil {
+			return err
+		}
+		log.Println("Added performance_panels.nickname column (migration)")
 	}
 	return nil
 }

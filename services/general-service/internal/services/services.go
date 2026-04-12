@@ -13,6 +13,7 @@ type Services struct {
 	Ticket    *TicketService
 	Dealer    *DealerService
 	Conbook   *ConbookService
+	Panel     *PanelService
 	Analytics *AnalyticsService
 }
 
@@ -26,6 +27,7 @@ func NewServices(repos *repositories.Repositories, redisClient *redis.Client, lo
 		Ticket:    ticket,
 		Dealer:    NewDealerService(repos, mail),
 		Conbook:   NewConbookService(repos),
+		Panel:     NewPanelService(repos),
 		Analytics: NewAnalyticsService(repos, ticket),
 	}
 }

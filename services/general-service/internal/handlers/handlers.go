@@ -11,6 +11,7 @@ type Handlers struct {
 	Ticket    *TicketHandler
 	Dealer    *DealerHandler
 	Conbook   *ConbookHandler
+	Panel     *PanelHandler
 	Analytics *AnalyticsHandler
 	DevMail   *DevMailHandler
 }
@@ -22,6 +23,7 @@ func NewHandlers(services *services.Services, queuePublisher queue.Publisher) *H
 		Ticket:    NewTicketHandler(services, queuePublisher),
 		Dealer:    NewDealerHandler(services),
 		Conbook:   NewConbookHandler(services),
+		Panel:     NewPanelHandler(services),
 		Analytics: NewAnalyticsHandler(services),
 		DevMail:   NewDevMailHandler(services),
 	}
