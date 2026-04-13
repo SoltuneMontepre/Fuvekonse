@@ -157,6 +157,15 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				protectedPanels.PUT("/:id", h.Panel.EditPanel)
 				protectedPanels.DELETE("/:id", h.Panel.DeletePanel)
 			}
+
+			protectedTalents := protected.Group("/talents")
+			{
+				protectedTalents.POST("", h.Talent.CreateTalent)
+				protectedTalents.GET("", h.Talent.GetMyTalents)
+				protectedTalents.GET("/:id", h.Talent.GetTalentByID)
+				protectedTalents.PUT("/:id", h.Talent.EditTalent)
+				protectedTalents.DELETE("/:id", h.Talent.DeleteTalent)
+			}
 		}
 
 		// Admin routes - require JWT; role enforced per subgroup (admin, or admin+staff for ticket get/approve)
@@ -241,6 +250,18 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				adminPanels.PATCH("/:id/approve", h.Panel.ApprovePanel)
 				adminPanels.PATCH("/:id/deny", h.Panel.DenyPanel)
 				adminPanels.PATCH("/:id/pending", h.Panel.MarkPanelPending)
+			}
+
+			adminTalents := admin.Group("/talents")
+			adminTalents.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
+			{
+				adminTalents.GET("/pending", h.Talent.GetPendingTalents)
+				adminTalents.GET("/approved", h.Talent.GetApprovedTalents)
+				adminTalents.GET("/denied", h.Talent.GetDeniedTalents)
+				adminTalents.PATCH("/:id/schedule", h.Talent.AssignTalentSchedule)
+				adminTalents.PATCH("/:id/approve", h.Talent.ApproveTalent)
+				adminTalents.PATCH("/:id/deny", h.Talent.DenyTalent)
+				adminTalents.PATCH("/:id/pending", h.Talent.MarkTalentPending)
 			}
 
 			// Admin-only dashboard analytics (single consolidated query)

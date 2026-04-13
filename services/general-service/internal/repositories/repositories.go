@@ -8,6 +8,7 @@ type Repositories struct {
 	Dealer  *DealerRepository
 	Conbook *ConbookRepository
 	Panel   *PanelRepository
+	Talent  *TalentRepository
 }
 
 func NewRepositories(db *gorm.DB) *Repositories {
@@ -17,5 +18,6 @@ func NewRepositories(db *gorm.DB) *Repositories {
 		Dealer:  NewDealerRepository(db),
 		Conbook: NewConbookRepository(db),
 		Panel:   NewPanelRepository(db),
+		Talent:  NewTalentRepository(db),
 	}
 }
