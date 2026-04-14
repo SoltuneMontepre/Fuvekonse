@@ -216,21 +216,21 @@ func MigrateAndSeed(db *gorm.DB) error {
 		return err
 	}
 
-	if err := migrateTicketTierCodes(db); err != nil {
-		return fmt.Errorf("failed to migrate ticket tier codes: %w", err)
-	}
+	// if err := migrateTicketTierCodes(db); err != nil {
+	// 	return fmt.Errorf("failed to migrate ticket tier codes: %w", err)
+	// }
 
-	if err := migrateCleanupExampleDotComUsersAndCountry(db); err != nil {
-		return fmt.Errorf("failed to cleanup example.com users/country: %w", err)
-	}
+	// if err := migrateCleanupExampleDotComUsersAndCountry(db); err != nil {
+	// 	return fmt.Errorf("failed to cleanup example.com users/country: %w", err)
+	// }
 
 	// if err := migrateRestoreCountryPlaintext(db); err != nil {
 	// 	return fmt.Errorf("failed to restore country plaintext: %w", err)
 	// }
 
-	if err := migrateRestoreFursonaNamePlaintext(db); err != nil {
-		return fmt.Errorf("failed to restore fursona_name plaintext: %w", err)
-	}
+	// if err := migrateRestoreFursonaNamePlaintext(db); err != nil {
+	// 	return fmt.Errorf("failed to restore fursona_name plaintext: %w", err)
+	// }
 
 	// if err := migrateEncryptExistingUserPII(db); err != nil {
 	// 	return fmt.Errorf("failed to encrypt existing user PII: %w", err)
