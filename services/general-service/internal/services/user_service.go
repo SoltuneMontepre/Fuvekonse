@@ -254,6 +254,22 @@ func (s *UserService) UpdateUserByAdmin(userID string, req *requests.AdminUpdate
 	return mappers.MapUserToDetailedResponse(user), nil
 }
 
+// GetUserCountByCountry returns counts of non-deleted users grouped by country (admin only)
+func (s *UserService) GetUserCountByCountry() (*responses.CountByCountryResponse, error) {
+	results, err := s.repos.User.CountByCountry()
+	if err != nil {
+		return nil, err
+	}
+	byCountry := make([]responses.CountByCountryItem, len(results))
+	for i, r := range results {
+		byCountry[i] = responses.CountByCountryItem{
+			Country: r.Country,
+			Count:   int(r.Count),
+		}
+	}
+	return &responses.CountByCountryResponse{ByCountry: byCountry}, nil
+}
+
 // DeleteUser soft deletes a user (admin only)
 func (s *UserService) DeleteUser(userID string) error {
 	// Fetch user (admin can see deleted users)

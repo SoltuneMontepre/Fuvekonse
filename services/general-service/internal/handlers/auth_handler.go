@@ -108,6 +108,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Success 200 "Successfully logged in"
 // @Failure 400 "Bad request - validation error"
 // @Failure 401 "Unauthorized - invalid credentials"
+// @Failure 403 "Forbidden - account banned"
 // @Failure 429 "Too many failed login attempts - account temporarily locked"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -144,6 +145,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		// Check for unverified user
 		if errors.Is(err, constants.ErrUserNotVerified) {
 			utils.RespondErrorWithErrorMessage(c, 403, constants.ErrCodeForbidden, "User not verified", "userNotVerified")
+			return
+		}
+
+		// Check for banned account
+		if errors.Is(err, constants.ErrAccountBanned) {
+			utils.RespondErrorWithErrorMessage(c, 403, constants.ErrCodeForbidden, "Account is banned", "accountBanned")
 			return
 		}
 
@@ -284,6 +291,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 // @Success 200 "Logged in or registered successfully"
 // @Failure 400 "Bad request - missing or invalid credential"
 // @Failure 401 "Invalid Google token"
+// @Failure 403 "Forbidden - account banned"
 // @Failure 500 "Internal server error"
 // @Router /auth/google [post]
 func (h *AuthHandler) GoogleLogin(c *gin.Context) {
@@ -313,6 +321,10 @@ func (h *AuthHandler) GoogleLogin(c *gin.Context) {
 		}
 		if errors.Is(err, constants.ErrPasswordMismatch) {
 			utils.RespondErrorWithErrorMessage(c, 400, constants.ErrCodeBadRequest, "Passwords do not match", "passwordsDoNotMatch")
+			return
+		}
+		if errors.Is(err, constants.ErrAccountBanned) {
+			utils.RespondErrorWithErrorMessage(c, 403, constants.ErrCodeForbidden, "Account is banned", "accountBanned")
 			return
 		}
 		if strings.Contains(err.Error(), "invalid google token") {

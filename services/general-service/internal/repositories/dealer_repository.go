@@ -20,6 +20,11 @@ func (r *DealerRepository) CreateBooth(booth *models.DealerBooth) error {
 	return r.db.Create(booth).Error
 }
 
+// UpdateBooth updates dealer booth data.
+func (r *DealerRepository) UpdateBooth(booth *models.DealerBooth) error {
+	return r.db.Save(booth).Error
+}
+
 // CreateStaff creates a new dealer staff
 func (r *DealerRepository) CreateStaff(staff *models.UserDealerStaff) error {
 	return r.db.Create(staff).Error
@@ -63,6 +68,13 @@ func (r *DealerRepository) FindStaffByUserID(userID string) (*models.UserDealerS
 		return nil, err
 	}
 	return &staff, nil
+}
+
+// CountBooths returns the total number of non-deleted dealer booths (for analytics).
+func (r *DealerRepository) CountBooths() (int64, error) {
+	var total int64
+	err := r.db.Model(&models.DealerBooth{}).Where("is_deleted = ?", false).Count(&total).Error
+	return total, err
 }
 
 // FindAllBooths finds all dealer booths with pagination

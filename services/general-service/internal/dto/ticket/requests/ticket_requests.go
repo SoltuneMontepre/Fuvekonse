@@ -77,5 +77,5 @@ type UpgradeTicketRequest struct {
 
 // BlacklistUserRequest is the request body for blacklisting a user
 type BlacklistUserRequest struct {
-	Reason string `json:"reason" binding:"required,min=1,max=500"`
+	Reason string `json:"reason" binding:"omitempty,max=500"`
 }

@@ -11,7 +11,7 @@ type DealerBooth struct {
 	BoothName   string            `gorm:"type:varchar(255)"`
 	Description string            `gorm:"type:varchar(500)"`
 	BoothNumber string            `gorm:"type:varchar(100)"`
-	PriceSheet  string            `gorm:"type:varchar(500)"` // image url
+	PriceSheets []string          `gorm:"serializer:json;type:text"` // image urls
 	IsVerified  bool              `gorm:"default:false"`
 	CreatedAt   time.Time         `gorm:"autoCreateTime"`
 	ModifiedAt  time.Time         `gorm:"autoUpdateTime"`

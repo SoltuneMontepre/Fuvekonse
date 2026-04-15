@@ -185,9 +185,30 @@ func (h *UserHandler) UpdateAvatar(c *gin.Context) {
 	utils.RespondSuccess(c, user, "Avatar updated successfully")
 }
 
+// GetUserCountByCountry godoc
+// @Summary Get user count grouped by country (admin only)
+// @Description Returns the number of accounts per country. Only non-deleted users are counted.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 "Successfully retrieved user count by country"
+// @Failure 401 "Unauthorized - missing or invalid token"
+// @Failure 403 "Forbidden - insufficient permissions"
+// @Failure 500 "Internal server error"
+// @Router /admin/users/statistics/count-by-country [get]
+func (h *UserHandler) GetUserCountByCountry(c *gin.Context) {
+	data, err := h.services.User.GetUserCountByCountry()
+	if err != nil {
+		utils.RespondInternalServerError(c, "Failed to retrieve user count by country")
+		return
+	}
+	utils.RespondSuccess(c, data, "Successfully retrieved user count by country")
+}
+
 // GetAllUsers godoc
 // @Summary Get all users (admin only)
-// @Description Get a paginated list of all users. Only accessible by admins.
+// @Description Get a paginated list of all users. Only accessible by admins. Each user includes is_banned (and is_blacklisted) so the FE can show ban status.
 // @Tags admin
 // @Accept json
 // @Produce json

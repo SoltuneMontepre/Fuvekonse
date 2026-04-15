@@ -121,6 +121,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 			{
 				dealer.GET("/me", h.Dealer.GetMyDealer)
 				dealer.POST("/register", h.Dealer.RegisterDealer)
+				dealer.PATCH("/:id", h.Dealer.EditDealer)
 				dealer.POST("/join", h.Dealer.JoinDealerBooth)
 				dealer.DELETE("/staff/remove", h.Dealer.RemoveStaffFromBooth)
 			}
@@ -156,6 +157,7 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 			adminUsers.Use(middlewares.RequireRole(role.RoleAdmin))
 			{
 				adminUsers.GET("", h.User.GetAllUsers)
+				adminUsers.GET("/statistics/count-by-country", h.User.GetUserCountByCountry)
 				adminUsers.GET("/:id", h.User.GetUserByIDForAdmin)
 				adminUsers.PUT("/:id", h.User.UpdateUserByAdmin)
 				adminUsers.DELETE("/:id", h.User.DeleteUser)
@@ -205,14 +207,23 @@ func SetupAPIRoutes(router gin.IRouter, h *handlers.Handlers, db *gorm.DB, repos
 				adminDealers.PATCH("/:id/deny", h.Dealer.DenyDealer)
 			}
 
-			// Admin/Staff conbook management (pending review and verification)
+			// Admin/Staff conbook management (status review and transitions)
 			adminConbooks := admin.Group("/conbooks")
 			adminConbooks.Use(middlewares.RequireRole(role.RoleAdmin, role.RoleStaff))
 			{
 				adminConbooks.GET("/pending", h.Conbook.GetPendingConbooks)
-				adminConbooks.GET("/verified", h.Conbook.GetVerifiedConbooks)
-				adminConbooks.PATCH("/:id/verify", h.Conbook.VerifyConbook)
-				adminConbooks.PATCH("/:id/unverify", h.Conbook.UnverifyConbook)
+				adminConbooks.GET("/approved", h.Conbook.GetApprovedConbooks)
+				adminConbooks.GET("/denied", h.Conbook.GetDeniedConbooks)
+				adminConbooks.PATCH("/:id/approve", h.Conbook.ApproveConbook)
+				adminConbooks.PATCH("/:id/deny", h.Conbook.DenyConbook)
+				adminConbooks.PATCH("/:id/pending", h.Conbook.MarkConbookPending)
+			}
+
+			// Admin-only dashboard analytics (single consolidated query)
+			adminAnalytics := admin.Group("/analytics")
+			adminAnalytics.Use(middlewares.RequireRole(role.RoleAdmin))
+			{
+				adminAnalytics.GET("/dashboard", h.Analytics.GetDashboard)
 			}
 		}
 	}

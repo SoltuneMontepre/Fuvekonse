@@ -17,10 +17,9 @@ import (
 var (
 	ErrConbookNotFound     = repositories.ErrConbookNotFound
 	ErrConbookLimit        = repositories.ErrConbookLimit
-	ErrConbookVerified     = repositories.ErrConbookVerified
+	ErrConbookNotEditable  = repositories.ErrConbookNotEditable
 	ErrUnauthorizedConbook = repositories.ErrUnauthorizedConbook
-	ErrAlreadyVerified     = errors.New("conbook is already verified")
-	ErrAlreadyUnverified   = errors.New("conbook is already unverified")
+	ErrStatusUnchanged     = errors.New("conbook already has the requested status")
 )
 
 type ConbookService struct {
@@ -51,13 +50,13 @@ func (s *ConbookService) UploadConbook(ctx context.Context, userIDStr string, re
 	}
 
 	conbook := &models.ConBookArt{
-		Id:          uuid.New(),
-		UserId:      userID,
-		Title:       req.Title,
-		Description: req.Description,
-		Handle:      req.Handle,
-		ImageUrl:    req.ImageUrl,
-		IsVerified:  false,
+		Id:               uuid.New(),
+		UserId:           userID,
+		Title:            req.Title,
+		Description:      req.Description,
+		Handle:           req.Handle,
+		ImageUrl:         req.ImageUrl,
+		ConBookArtStatus: models.ConbookStatusPending,
 	}
 
 	created, err := s.repos.Conbook.CreateConbook(ctx, conbook)
@@ -102,8 +101,8 @@ func (s *ConbookService) GetConbookByID(ctx context.Context, conbookIDStr string
 	return &response, nil
 }
 
-// EditConbook updates a conbook (only if not verified)
-// User can only edit their own conbooks, and only before verification
+// EditConbook updates a conbook (only if status is pending).
+// User can only edit their own pending conbooks.
 func (s *ConbookService) EditConbook(ctx context.Context, userIDStr string, conbookIDStr string, req *requests.UpdateConbookRequest) (*responses.ConbookResponse, error) {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -155,8 +154,8 @@ func (s *ConbookService) EditConbook(ctx context.Context, userIDStr string, conb
 	return &response, nil
 }
 
-// DeleteConbook deletes a conbook (only if not verified)
-// User can only delete their own conbooks, and only before verification
+// DeleteConbook deletes a conbook (only if status is pending).
+// User can only delete their own pending conbooks.
 func (s *ConbookService) DeleteConbook(ctx context.Context, userIDStr string, conbookIDStr string) error {
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -186,50 +185,58 @@ func (s *ConbookService) DeleteConbook(ctx context.Context, userIDStr string, co
 	return nil
 }
 
-// GetUnverifiedConbooks retrieves all conbooks pending verification (staff only)
-func (s *ConbookService) GetUnverifiedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
-	conbooks, err := s.repos.Conbook.GetUnverifiedConbooks(ctx)
+// GetPendingConbooks retrieves all pending conbooks (staff only).
+func (s *ConbookService) GetPendingConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
+	conbooks, err := s.repos.Conbook.GetPendingConbooks(ctx)
 	if err != nil {
-		log.Printf("Error retrieving unverified conbooks: %v", err)
+		log.Printf("Error retrieving pending conbooks: %v", err)
 		return nil, err
 	}
 
 	return mappers.MapConbooksToResponse(conbooks), nil
 }
 
-// GetVerifiedConbooks retrieves all verified conbooks
-func (s *ConbookService) GetVerifiedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
-	conbooks, err := s.repos.Conbook.GetVerifiedConbooks(ctx)
+// GetApprovedConbooks retrieves all approved conbooks (staff only).
+func (s *ConbookService) GetApprovedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
+	conbooks, err := s.repos.Conbook.GetApprovedConbooks(ctx)
 	if err != nil {
-		log.Printf("Error retrieving verified conbooks: %v", err)
+		log.Printf("Error retrieving approved conbooks: %v", err)
 		return nil, err
 	}
 
 	return mappers.MapConbooksToResponse(conbooks), nil
 }
 
-// setConbookVerificationStatus sets the verification status and returns the updated conbook
-func (s *ConbookService) setConbookVerificationStatus(ctx context.Context, conbookIDStr string, isVerified bool) (*responses.ConbookResponse, error) {
+// GetDeniedConbooks retrieves all denied conbooks (staff only).
+func (s *ConbookService) GetDeniedConbooks(ctx context.Context) ([]responses.ConbookResponse, error) {
+	conbooks, err := s.repos.Conbook.GetDeniedConbooks(ctx)
+	if err != nil {
+		log.Printf("Error retrieving denied conbooks: %v", err)
+		return nil, err
+	}
+
+	return mappers.MapConbooksToResponse(conbooks), nil
+}
+
+// setConbookStatus sets the status and returns the updated conbook.
+func (s *ConbookService) setConbookStatus(ctx context.Context, conbookIDStr string, status models.ConbookStatus) (*responses.ConbookResponse, error) {
 	conbookID, err := uuid.Parse(conbookIDStr)
 	if err != nil {
 		return nil, errors.New("invalid conbook id")
 	}
 
-	// Get the conbook before verification
+	// Get current conbook for state transition validation.
 	conbook, err := s.repos.Conbook.GetConbookByID(ctx, conbookID)
 	if err != nil {
 		return nil, err
 	}
 
-	if conbook.IsVerified == isVerified {
-		if isVerified {
-			return nil, ErrAlreadyVerified
-		}
-		return nil, ErrAlreadyUnverified
+	if conbook.ConBookArtStatus == status {
+		return nil, ErrStatusUnchanged
 	}
 
-	if err := s.repos.Conbook.SetConbookVerificationStatus(ctx, conbookID, isVerified); err != nil {
-		log.Printf("Error setting conbook verification status: %v", err)
+	if err := s.repos.Conbook.SetConbookStatus(ctx, conbookID, status); err != nil {
+		log.Printf("Error setting conbook status: %v", err)
 		return nil, err
 	}
 
@@ -243,13 +250,17 @@ func (s *ConbookService) setConbookVerificationStatus(ctx context.Context, conbo
 	return &response, nil
 }
 
-// VerifyConbook marks a conbook as verified (staff only)
-// After verification, users cannot edit the conbook.
-func (s *ConbookService) VerifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
-	return s.setConbookVerificationStatus(ctx, conbookIDStr, true)
+// ApproveConbook marks a conbook as approved (staff only).
+func (s *ConbookService) ApproveConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+	return s.setConbookStatus(ctx, conbookIDStr, models.ConbookStatusApproved)
 }
 
-// UnverifyConbook marks a conbook as unverified (staff only)
-func (s *ConbookService) UnverifyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
-	return s.setConbookVerificationStatus(ctx, conbookIDStr, false)
+// DenyConbook marks a conbook as denied (staff only).
+func (s *ConbookService) DenyConbook(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+	return s.setConbookStatus(ctx, conbookIDStr, models.ConbookStatusDenied)
+}
+
+// MarkConbookPending moves a conbook back to pending (staff only).
+func (s *ConbookService) MarkConbookPending(ctx context.Context, conbookIDStr string) (*responses.ConbookResponse, error) {
+	return s.setConbookStatus(ctx, conbookIDStr, models.ConbookStatusPending)
 }
