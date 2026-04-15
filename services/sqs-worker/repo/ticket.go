@@ -307,7 +307,7 @@ func (r *TicketRepo) DenyTicket(ctx context.Context, ticketID, staffID uuid.UUID
 	return &t, nil
 }
 
-func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID) (*models.UserTicket, error) {
+func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID, adminBypass bool) (*models.UserTicket, error) {
 	var ticket models.UserTicket
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -318,7 +318,7 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 			}
 			return err
 		}
-		if ticket.Status != models.TicketStatusApproved {
+		if !adminBypass && ticket.Status != models.TicketStatusApproved {
 			return ErrTicketNotApproved
 		}
 		var oldTier models.TicketTier
@@ -330,25 +330,35 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 			return nil
 		}
 		var newTier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", newTierID, false, true, true).
-			First(&newTier).Error; err != nil {
+		q := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND is_deleted = ?", newTierID, false)
+		if !adminBypass {
+			q = q.Where("is_active = ? AND is_visible = ?", true, true)
+		}
+		if err := q.First(&newTier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
 			}
 			return err
 		}
-		if newTier.Stock <= 0 {
+		if !adminBypass && newTier.Stock <= 0 {
 			return ErrOutOfStock
 		}
-		if newTier.Price.LessThanOrEqual(oldTier.Price) {
+		if !adminBypass && newTier.Price.LessThanOrEqual(oldTier.Price) {
 			return ErrCannotDowngrade
 		}
 		if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
-			return err
+		if adminBypass {
+			if newTier.Stock > 0 {
+				if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
+					return err
+				}
+			}
+		} else {
+			if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
+				return err
+			}
 		}
 		num, err := getNextTicketNumber(ctx, tx, newTierID)
 		if err != nil {

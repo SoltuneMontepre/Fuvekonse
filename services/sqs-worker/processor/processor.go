@@ -105,7 +105,7 @@ func ProcessTicketJob(ctx context.Context, db *gorm.DB, body []byte) error {
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrInvalidUUID, err)
 		}
-		_, err = tr.UpgradeTicketTier(ctx, uid, tid)
+		_, err = tr.UpgradeTicketTier(ctx, uid, tid, msg.AdminBypass)
 		return err
 	case jobmsg.ActionBlacklistUser:
 		uid, err := uuid.Parse(msg.TargetUserID)
