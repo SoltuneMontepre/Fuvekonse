@@ -57,7 +57,10 @@ type UserTicket struct {
 	DeniedAt       *time.Time   `gorm:"index"`
 	ApprovedBy     *uuid.UUID   `gorm:"type:uuid"`
 	DeniedBy       *uuid.UUID   `gorm:"type:uuid"`
-	IsDeleted      bool         `gorm:"default:false"`
-	CreatedAt      time.Time    `gorm:"autoCreateTime"`
-	ModifiedAt     time.Time    `gorm:"autoUpdateTime"`
+	UpgradedFromTierID    *uuid.UUID   `gorm:"type:uuid"`
+	PreviousReferenceCode string       `gorm:"type:varchar(50)"`
+	UpgradeDenialReason   string       `gorm:"type:varchar(500)"`
+	IsDeleted             bool         `gorm:"default:false"`
+	CreatedAt             time.Time    `gorm:"autoCreateTime"`
+	ModifiedAt            time.Time    `gorm:"autoUpdateTime"`
 }

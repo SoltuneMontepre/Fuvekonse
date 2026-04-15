@@ -771,8 +771,8 @@ func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uu
 			}
 		}
 
-		// Permanently delete the user ticket
-		if err := tx.Unscoped().Delete(&ticket).Error; err != nil {
+		// Soft-delete the user ticket
+		if err := tx.Model(&ticket).Update("is_deleted", true).Error; err != nil {
 			return err
 		}
 

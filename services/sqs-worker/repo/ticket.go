@@ -184,6 +184,11 @@ func (r *TicketRepo) CancelTicket(ctx context.Context, ticketID, userID uuid.UUI
 		if t.Status != models.TicketStatusPending && t.Status != models.TicketStatusSelfConfirmed {
 			return ErrInvalidTicketStatus
 		}
+
+		if t.UpgradedFromTierID != nil {
+			return rollbackUpgrade(tx, &t, uuid.Nil, "Cancelled by user")
+		}
+
 		var tier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", t.TicketId).First(&tier).Error; err != nil {
 			return err
@@ -191,7 +196,7 @@ func (r *TicketRepo) CancelTicket(ctx context.Context, ticketID, userID uuid.UUI
 		if err := tx.Model(&tier).Update("stock", tier.Stock+1).Error; err != nil {
 			return err
 		}
-		return tx.Unscoped().Delete(&t).Error
+		return tx.Model(&t).Update("is_deleted", true).Error
 	})
 	return err
 }
@@ -269,6 +274,11 @@ func (r *TicketRepo) DenyTicket(ctx context.Context, ticketID, staffID uuid.UUID
 		if t.Status != models.TicketStatusPending && t.Status != models.TicketStatusSelfConfirmed {
 			return ErrInvalidTicketStatus
 		}
+
+		if t.UpgradedFromTierID != nil {
+			return rollbackUpgrade(tx, &t, staffID, reason)
+		}
+
 		var tier models.TicketTier
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", t.TicketId).First(&tier).Error; err != nil {
 			return err
@@ -385,6 +395,69 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 		return nil, err
 	}
 	return &ticket, nil
+}
+
+// rollbackUpgrade reverts an upgraded ticket to its previous tier instead of
+// deleting/denying it. The user keeps their original ticket with approved status.
+func rollbackUpgrade(tx *gorm.DB, ticket *models.UserTicket, staffID uuid.UUID, reason string) error {
+	oldTierID := *ticket.UpgradedFromTierID
+	previousRefCode := ticket.PreviousReferenceCode
+
+	var newTier models.TicketTier
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", ticket.TicketId).
+		First(&newTier).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&newTier).Update("stock", newTier.Stock+1).Error; err != nil {
+		return err
+	}
+
+	var oldTier models.TicketTier
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", oldTierID).
+		First(&oldTier).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&oldTier).Update("stock", oldTier.Stock-1).Error; err != nil {
+		return err
+	}
+
+	oldTicketNumber := 0
+	if previousRefCode != "" {
+		oldTicketNumber = splitReferenceCode(previousRefCode)
+	}
+
+	now := time.Now()
+	return tx.Model(ticket).Updates(map[string]interface{}{
+		"ticket_id":               oldTierID,
+		"ticket_number":           oldTicketNumber,
+		"reference_code":          previousRefCode,
+		"status":                  models.TicketStatusApproved,
+		"upgraded_from_tier_id":   nil,
+		"previous_reference_code": "",
+		"upgrade_denial_reason":   reason,
+		"approved_at":             &now,
+		"denied_at":               nil,
+		"denied_by":               nil,
+		"denial_reason":           "",
+	}).Error
+}
+
+// splitReferenceCode extracts the ticket number from a reference code (e.g. "T1-0042" -> 42).
+func splitReferenceCode(refCode string) int {
+	for i := len(refCode) - 1; i >= 0; i-- {
+		if refCode[i] == '-' {
+			num := 0
+			for _, c := range refCode[i+1:] {
+				if c >= '0' && c <= '9' {
+					num = num*10 + int(c-'0')
+				}
+			}
+			return num
+		}
+	}
+	return 0
 }
 
 func (r *TicketRepo) BlacklistUser(ctx context.Context, userID uuid.UUID, reason string) error {
