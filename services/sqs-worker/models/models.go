@@ -15,6 +15,7 @@ const (
 	TicketStatusSelfConfirmed TicketStatus = "self_confirmed"
 	TicketStatusApproved      TicketStatus = "approved"
 	TicketStatusDenied        TicketStatus = "denied"
+	TicketStatusAdminGranted  TicketStatus = "admin_granted"
 )
 
 // User minimal for blacklist and purchase checks (table: users).
@@ -50,8 +51,11 @@ type UserTicket struct {
 	BadgeImage     string       `gorm:"type:varchar(500)"`
 	IsFursuiter    bool         `gorm:"default:false"`
 	IsFursuitStaff bool         `gorm:"default:false"`
-	DenialReason   string       `gorm:"type:varchar(500)"`
-	ApprovedAt     *time.Time   `gorm:"index"`
+	DenialReason          string       `gorm:"type:varchar(500)"`
+	UpgradedFromTierID    *uuid.UUID   `gorm:"type:uuid"`
+	PreviousReferenceCode string       `gorm:"type:varchar(50)"`
+	UpgradeDenialReason   string       `gorm:"type:varchar(500)"`
+	ApprovedAt            *time.Time   `gorm:"index"`
 	DeniedAt       *time.Time   `gorm:"index"`
 	ApprovedBy     *uuid.UUID   `gorm:"type:uuid"`
 	DeniedBy       *uuid.UUID   `gorm:"type:uuid"`
