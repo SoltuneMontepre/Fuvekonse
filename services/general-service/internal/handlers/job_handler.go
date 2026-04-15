@@ -75,7 +75,7 @@ func (h *TicketHandler) ProcessTicketJob(c *gin.Context) {
 		}
 		utils.RespondSuccess(c, ticket, "Deny processed")
 	case queue.ActionUpgradeTicket:
-		result, err := h.services.Ticket.UpgradeTicket(ctx, msg.UserID, &requests.UpgradeTicketRequest{NewTierID: msg.TierID})
+		result, err := h.services.Ticket.UpgradeTicket(ctx, msg.UserID, &requests.UpgradeTicketRequest{NewTierID: msg.TierID}, msg.AdminBypass)
 		if err != nil {
 			respondTicketJobError(c, err)
 			return

@@ -1265,7 +1265,7 @@ type UpgradeResult struct {
 // Validates: ticket must be approved or admin_granted, new tier is active with stock, price > current.
 // Stock: increments old tier, decrements new tier.
 // Ticket: updates tier, generates new ticket_number + reference_code, resets to pending.
-func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID) (*UpgradeResult, error) {
+func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTierID uuid.UUID, adminBypass bool) (*UpgradeResult, error) {
 	var result *UpgradeResult
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -1281,8 +1281,8 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return err
 		}
 
-		// 2. Only approved or admin_granted tickets can be upgraded
-		if ticket.Status != models.TicketStatusApproved && ticket.Status != models.TicketStatusAdminGranted {
+		// 2. Only approved or admin_granted tickets can be upgraded (unless admin bypass)
+		if !adminBypass && ticket.Status != models.TicketStatusApproved && ticket.Status != models.TicketStatusAdminGranted {
 			return ErrTicketNotApproved
 		}
 
@@ -1299,23 +1299,25 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return ErrCannotDowngrade
 		}
 
-		// 5. Lock the NEW tier row, validate active + visible + stock
+		// 5. Lock the NEW tier row, validate active + visible + stock (unless admin bypass)
 		var newTier models.TicketTier
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND is_deleted = ? AND is_active = ? AND is_visible = ?", newTierID, false, true, true).
-			First(&newTier).Error; err != nil {
+		q := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ? AND is_deleted = ?", newTierID, false)
+		if !adminBypass {
+			q = q.Where("is_active = ? AND is_visible = ?", true, true)
+		}
+		if err := q.First(&newTier).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrTicketTierNotFound
 			}
 			return err
 		}
 
-		if newTier.Stock <= 0 {
+		if !adminBypass && newTier.Stock <= 0 {
 			return ErrOutOfStock
 		}
 
-		// 6. Validate: new tier price must be strictly higher (upgrade only)
-		if newTier.Price.LessThanOrEqual(oldTier.Price) {
+		// 6. Validate: new tier price must be strictly higher (upgrade only, unless admin bypass)
+		if !adminBypass && newTier.Price.LessThanOrEqual(oldTier.Price) {
 			return ErrCannotDowngrade
 		}
 
@@ -1324,9 +1326,18 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return err
 		}
 
-		// 8. Decrement new tier stock (-1 consumed)
-		if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
-			return err
+		// 8. Decrement new tier stock (-1 consumed).
+		// For admin bypass, allow upgrades even when stock is 0 (only decrement if > 0).
+		if adminBypass {
+			if newTier.Stock > 0 {
+				if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
+					return err
+				}
+			}
+		} else {
+			if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
+				return err
+			}
 		}
 
 		// 9. Generate new ticket number + reference code for the new tier

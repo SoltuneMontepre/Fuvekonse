@@ -384,10 +384,12 @@ func (h *TicketHandler) UpgradeTicket(c *gin.Context) {
 	}
 
 	if h.queue != nil {
+		isAdmin := isRequesterAdmin(c)
 		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action: queue.ActionUpgradeTicket,
-			UserID: userID.(string),
-			TierID: req.NewTierID,
+			Action:      queue.ActionUpgradeTicket,
+			UserID:      userID.(string),
+			TierID:      req.NewTierID,
+			AdminBypass: isAdmin,
 		}); err != nil {
 			log.Printf("SQS PublishTicketJob (upgrade) failed: %v", err)
 			utils.RespondInternalServerError(c, "Failed to queue ticket upgrade")
@@ -397,7 +399,7 @@ func (h *TicketHandler) UpgradeTicket(c *gin.Context) {
 		return
 	}
 
-	result, err := h.services.Ticket.UpgradeTicket(ctx, userID.(string), &req)
+	result, err := h.services.Ticket.UpgradeTicket(ctx, userID.(string), &req, isRequesterAdmin(c))
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidTierID):

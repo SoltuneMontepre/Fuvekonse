@@ -326,7 +326,7 @@ func (s *TicketService) UpdateBadgeDetails(ctx context.Context, userID string, r
 
 // UpgradeTicket upgrades the user's ticket to a higher-priced tier.
 // Returns the upgraded ticket with price difference information.
-func (s *TicketService) UpgradeTicket(ctx context.Context, userID string, req *requests.UpgradeTicketRequest) (*responses.UpgradeTicketResponse, error) {
+func (s *TicketService) UpgradeTicket(ctx context.Context, userID string, req *requests.UpgradeTicketRequest, adminBypass bool) (*responses.UpgradeTicketResponse, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, ErrInvalidUserID
@@ -337,7 +337,7 @@ func (s *TicketService) UpgradeTicket(ctx context.Context, userID string, req *r
 		return nil, ErrInvalidTierID
 	}
 
-	result, err := s.repos.Ticket.UpgradeTicketTier(ctx, uid, newTierID)
+	result, err := s.repos.Ticket.UpgradeTicketTier(ctx, uid, newTierID, adminBypass)
 	if err != nil {
 		return nil, err
 	}
