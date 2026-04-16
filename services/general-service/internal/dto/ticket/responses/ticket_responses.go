@@ -23,16 +23,16 @@ type TicketTierResponse struct {
 
 // UserTicketResponse represents a user's ticket
 type UserTicketResponse struct {
-	ID             uuid.UUID  `json:"id"`
-	ReferenceCode  string     `json:"reference_code"`
-	Status         string     `json:"status"`
-	TicketNumber   int        `json:"ticket_number"`
-	ConBadgeName   string     `json:"con_badge_name,omitempty"`
-	BadgeImage     string     `json:"badge_image,omitempty"`
-	NamecardUrl    string     `json:"namecard_url,omitempty"`
-	IsFursuiter    bool       `json:"is_fursuiter"`
-	IsFursuitStaff bool       `json:"is_fursuit_staff"`
-	IsCheckedIn    bool       `json:"is_checked_in"`
+	ID                    uuid.UUID  `json:"id"`
+	ReferenceCode         string     `json:"reference_code"`
+	Status                string     `json:"status"`
+	TicketNumber          int        `json:"ticket_number"`
+	ConBadgeName          string     `json:"con_badge_name,omitempty"`
+	BadgeImage            string     `json:"badge_image,omitempty"`
+	NamecardUrl           string     `json:"namecard_url,omitempty"`
+	IsFursuiter           bool       `json:"is_fursuiter"`
+	IsFursuitStaff        bool       `json:"is_fursuit_staff"`
+	IsCheckedIn           bool       `json:"is_checked_in"`
 	DenialReason          string     `json:"denial_reason,omitempty"`
 	CreatedAt             time.Time  `json:"created_at"`
 	ApprovedAt            *time.Time `json:"approved_at,omitempty"`
@@ -50,13 +50,13 @@ type UserTicketResponse struct {
 
 // UpgradeTicketResponse contains the upgraded ticket plus pricing info for the frontend.
 type UpgradeTicketResponse struct {
-	Ticket               *UserTicketResponse `json:"ticket"`
-	OldTierPrice         decimal.Decimal     `json:"old_tier_price"`
-	NewTierPrice         decimal.Decimal     `json:"new_tier_price"`
-	PriceDifference      decimal.Decimal     `json:"price_difference"`
-	OldTierPriceUsd      decimal.Decimal     `json:"old_tier_price_usd"`
-	NewTierPriceUsd      decimal.Decimal     `json:"new_tier_price_usd"`
-	PriceDifferenceUsd   decimal.Decimal     `json:"price_difference_usd"`
+	Ticket             *UserTicketResponse `json:"ticket"`
+	OldTierPrice       decimal.Decimal     `json:"old_tier_price"`
+	NewTierPrice       decimal.Decimal     `json:"new_tier_price"`
+	PriceDifference    decimal.Decimal     `json:"price_difference"`
+	OldTierPriceUsd    decimal.Decimal     `json:"old_tier_price_usd"`
+	NewTierPriceUsd    decimal.Decimal     `json:"new_tier_price_usd"`
+	PriceDifferenceUsd decimal.Decimal     `json:"price_difference_usd"`
 }
 
 // TicketUserResponse represents user info in ticket context (minimal PII for admin)
@@ -83,12 +83,12 @@ type TicketUserResponse struct {
 
 // TicketStatisticsResponse represents ticket statistics for admin dashboard
 type TicketStatisticsResponse struct {
-	TotalTickets       int64                   `json:"total_tickets"`
-	PendingCount       int64                   `json:"pending_count"`
-	SelfConfirmedCount int64                   `json:"self_confirmed_count"`
-	ApprovedCount      int64                   `json:"approved_count"`
-	DeniedCount        int64                   `json:"denied_count"`
-	PendingOver24Hours int64                   `json:"pending_over_24_hours"`
+	TotalTickets       int64                    `json:"total_tickets"`
+	PendingCount       int64                    `json:"pending_count"`
+	SelfConfirmedCount int64                    `json:"self_confirmed_count"`
+	ApprovedCount      int64                    `json:"approved_count"`
+	DeniedCount        int64                    `json:"denied_count"`
+	PendingOver24Hours int64                    `json:"pending_over_24_hours"`
 	TierStats          []TierStatisticsResponse `json:"tier_stats"`
 }
 
@@ -110,8 +110,8 @@ type SalesByDayResponse struct {
 
 // RevenueResponse is the admin revenue API response (total + optional by-day)
 type RevenueResponse struct {
-	TotalRevenue float64                 `json:"total_revenue"`
-	ByDay        []RevenueByDayResponse  `json:"by_day,omitempty"`
+	TotalRevenue float64                `json:"total_revenue"`
+	ByDay        []RevenueByDayResponse `json:"by_day,omitempty"`
 }
 
 // RevenueByDayResponse is one day in revenue timeline

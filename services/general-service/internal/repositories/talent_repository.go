@@ -193,4 +193,3 @@ func (r *TalentRepository) CanDeleteTalent(ctx context.Context, userID uuid.UUID
 
 	return true, nil
 }
-

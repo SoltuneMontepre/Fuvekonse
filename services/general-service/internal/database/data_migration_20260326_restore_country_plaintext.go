@@ -74,4 +74,3 @@ func migrateRestoreCountryPlaintext(db *gorm.DB) error {
 	}
 	return nil
 }
-

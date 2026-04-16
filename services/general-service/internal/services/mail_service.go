@@ -252,7 +252,7 @@ func (s *MailService) sendEmailSESRawWithInlineImage(ctx context.Context, fromEm
 	buf.WriteString("--" + boundary + "--\r\n")
 
 	input := &ses.SendRawEmailInput{
-		Source: aws.String(fromEmail),
+		Source:       aws.String(fromEmail),
 		Destinations: []string{toEmail},
 		RawMessage: &types.RawMessage{
 			Data: buf.Bytes(),
@@ -387,10 +387,10 @@ func (s *MailService) SendDealerApprovedEmail(ctx context.Context, fromEmail, to
 		tpl = "dealer_approved_en.html"
 	}
 	data := struct {
-		BoothName    string
+		BoothName   string
 		BoothNumber string
 	}{
-		BoothName:    boothName,
+		BoothName:   boothName,
 		BoothNumber: boothNumber,
 	}
 	body, err := renderMailTemplate(tpl, data)

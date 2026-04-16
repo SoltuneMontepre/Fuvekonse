@@ -13,24 +13,33 @@ func MapPanelToResponse(panel *models.PerformancePanel) responses.PanelResponse 
 		scheduledEnd = &t
 	}
 
+	members := make([]responses.PanelMemberJSON, 0, len(panel.MembersInfo))
+	for i := range panel.MembersInfo {
+		members = append(members, responses.PanelMemberJSON{
+			Name:   panel.MembersInfo[i].Name,
+			Detail: panel.MembersInfo[i].Detail,
+		})
+	}
+
 	return responses.PanelResponse{
-		Id:                        panel.Id,
-		UserId:                    panel.UserId,
-		Title:                     panel.Title,
-		Nickname:                  panel.Nickname,
+		Id:                panel.Id,
+		UserId:            panel.UserId,
+		Title:             panel.Title,
+		Nickname:          panel.Nickname,
 		RepresentativeUrl: panel.RepresentativeUrl,
-		ParticipantCount:          panel.ParticipantCount,
-		PerformanceGenre:          panel.PerformanceGenre,
-		Introduction:              panel.Introduction,
-		DurationMinutes:           panel.DurationMinutes,
-		MaterialsDriveUrl:         panel.MaterialsDriveUrl,
-		EquipmentNotes:            panel.EquipmentNotes,
-		SlotLabel:                 panel.SlotLabel,
-		ScheduledStartAt:          panel.ScheduledStartAt,
-		ScheduledEndAt:            scheduledEnd,
-		Status:                    panel.PanelStatus,
-		CreatedAt:                 panel.CreatedAt,
-		ModifiedAt:                panel.ModifiedAt,
+		ParticipantCount:  panel.ParticipantCount,
+		PerformanceGenre:  panel.PerformanceGenre,
+		Introduction:      panel.Introduction,
+		DurationMinutes:   panel.DurationMinutes,
+		MaterialsDriveUrl: panel.MaterialsDriveUrl,
+		EquipmentNotes:    panel.EquipmentNotes,
+		Members:           members,
+		SlotLabel:         panel.SlotLabel,
+		ScheduledStartAt:  panel.ScheduledStartAt,
+		ScheduledEndAt:    scheduledEnd,
+		Status:            panel.PanelStatus,
+		CreatedAt:         panel.CreatedAt,
+		ModifiedAt:        panel.ModifiedAt,
 	}
 }
 

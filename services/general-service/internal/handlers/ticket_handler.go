@@ -154,10 +154,10 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 
 	if h.queue != nil {
 		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action:       queue.ActionPurchaseTicket,
-			UserID:       userID.(string),
-			TierID:       req.TierID,
-			AdminBypass:  isAdmin,
+			Action:      queue.ActionPurchaseTicket,
+			UserID:      userID.(string),
+			TierID:      req.TierID,
+			AdminBypass: isAdmin,
 		}); err != nil {
 			log.Printf("SQS PublishTicketJob failed: %v", err)
 			utils.RespondInternalServerError(c, "Failed to queue ticket purchase")

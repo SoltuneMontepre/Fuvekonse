@@ -9,6 +9,7 @@ import (
 	"general-service/internal/models"
 	"general-service/internal/repositories"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -46,18 +47,30 @@ func (s *PanelService) CreatePanel(ctx context.Context, userIDStr string, req *r
 		return nil, errors.New("user ticket must be approved to submit a panel application")
 	}
 
+	if len(req.Members) != req.ParticipantCount {
+		return nil, errors.New("members must include exactly one entry per participant")
+	}
+	memberRows := make([]models.PerformanceMemberInfo, len(req.Members))
+	for i := range req.Members {
+		memberRows[i] = models.PerformanceMemberInfo{
+			Name:   strings.TrimSpace(req.Members[i].Name),
+			Detail: strings.TrimSpace(req.Members[i].Detail),
+		}
+	}
+
 	panel := &models.PerformancePanel{
-		UserId:                    userID,
-		Title:                     req.Title,
-		Nickname:                  req.Nickname,
+		UserId:            userID,
+		Title:             req.Title,
+		Nickname:          req.Nickname,
 		RepresentativeUrl: req.RepresentativeUrl,
-		ParticipantCount:          req.ParticipantCount,
-		PerformanceGenre:          req.PerformanceGenre,
-		Introduction:              req.Introduction,
-		DurationMinutes:           req.DurationMinutes,
-		MaterialsDriveUrl:         req.MaterialsDriveUrl,
-		EquipmentNotes:            req.EquipmentNotes,
-		PanelStatus:               models.PanelStatusPending,
+		ParticipantCount:  req.ParticipantCount,
+		PerformanceGenre:  req.PerformanceGenre,
+		Introduction:      req.Introduction,
+		DurationMinutes:   req.DurationMinutes,
+		MaterialsDriveUrl: req.MaterialsDriveUrl,
+		EquipmentNotes:    req.EquipmentNotes,
+		MembersInfo:       memberRows,
+		PanelStatus:       models.PanelStatusPending,
 	}
 
 	created, err := s.repos.Panel.CreatePanel(ctx, panel)
@@ -124,6 +137,8 @@ func (s *PanelService) EditPanel(ctx context.Context, userIDStr string, panelIDS
 		return nil, err
 	}
 
+	oldParticipantCount := existing.ParticipantCount
+
 	if req.Title != nil {
 		existing.Title = *req.Title
 	}
@@ -150,6 +165,24 @@ func (s *PanelService) EditPanel(ctx context.Context, userIDStr string, panelIDS
 	}
 	if req.EquipmentNotes != nil {
 		existing.EquipmentNotes = *req.EquipmentNotes
+	}
+
+	if existing.ParticipantCount != oldParticipantCount && req.Members == nil {
+		return nil, errors.New("members list required when participant count changes")
+	}
+	if req.Members != nil {
+		if len(*req.Members) != existing.ParticipantCount {
+			return nil, errors.New("members must include exactly one entry per participant")
+		}
+		rows := make([]models.PerformanceMemberInfo, len(*req.Members))
+		for i := range *req.Members {
+			m := (*req.Members)[i]
+			rows[i] = models.PerformanceMemberInfo{
+				Name:   strings.TrimSpace(m.Name),
+				Detail: strings.TrimSpace(m.Detail),
+			}
+		}
+		existing.MembersInfo = rows
 	}
 
 	updated, err := s.repos.Panel.UpdatePanel(ctx, panelID, existing)

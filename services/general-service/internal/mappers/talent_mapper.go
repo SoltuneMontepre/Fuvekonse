@@ -13,6 +13,14 @@ func MapTalentToResponse(talent *models.PerformanceTalent) responses.TalentRespo
 		scheduledEnd = &t
 	}
 
+	members := make([]responses.TalentMemberJSON, 0, len(talent.MembersInfo))
+	for i := range talent.MembersInfo {
+		members = append(members, responses.TalentMemberJSON{
+			Name:   talent.MembersInfo[i].Name,
+			Detail: talent.MembersInfo[i].Detail,
+		})
+	}
+
 	return responses.TalentResponse{
 		Id:                talent.Id,
 		UserId:            talent.UserId,
@@ -25,6 +33,7 @@ func MapTalentToResponse(talent *models.PerformanceTalent) responses.TalentRespo
 		DurationMinutes:   talent.DurationMinutes,
 		MaterialsDriveUrl: talent.MaterialsDriveUrl,
 		EquipmentNotes:    talent.EquipmentNotes,
+		Members:           members,
 		SlotLabel:         talent.SlotLabel,
 		ScheduledStartAt:  talent.ScheduledStartAt,
 		ScheduledEndAt:    scheduledEnd,
@@ -41,4 +50,3 @@ func MapTalentsToResponse(talents []models.PerformanceTalent) []responses.Talent
 	}
 	return out
 }
-

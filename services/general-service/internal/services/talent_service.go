@@ -9,6 +9,7 @@ import (
 	"general-service/internal/models"
 	"general-service/internal/repositories"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -46,6 +47,17 @@ func (s *TalentService) CreateTalent(ctx context.Context, userIDStr string, req 
 		return nil, errors.New("user ticket must be approved to submit a talent application")
 	}
 
+	if len(req.Members) != req.ParticipantCount {
+		return nil, errors.New("members must include exactly one entry per participant")
+	}
+	memberRows := make([]models.PerformanceMemberInfo, len(req.Members))
+	for i := range req.Members {
+		memberRows[i] = models.PerformanceMemberInfo{
+			Name:   strings.TrimSpace(req.Members[i].Name),
+			Detail: strings.TrimSpace(req.Members[i].Detail),
+		}
+	}
+
 	talent := &models.PerformanceTalent{
 		UserId:            userID,
 		Title:             req.Title,
@@ -57,6 +69,7 @@ func (s *TalentService) CreateTalent(ctx context.Context, userIDStr string, req 
 		DurationMinutes:   req.DurationMinutes,
 		MaterialsDriveUrl: req.MaterialsDriveUrl,
 		EquipmentNotes:    req.EquipmentNotes,
+		MembersInfo:       memberRows,
 		TalentStatus:      models.TalentStatusPending,
 	}
 
@@ -124,6 +137,8 @@ func (s *TalentService) EditTalent(ctx context.Context, userIDStr string, talent
 		return nil, err
 	}
 
+	oldParticipantCount := existing.ParticipantCount
+
 	if req.Title != nil {
 		existing.Title = *req.Title
 	}
@@ -150,6 +165,24 @@ func (s *TalentService) EditTalent(ctx context.Context, userIDStr string, talent
 	}
 	if req.EquipmentNotes != nil {
 		existing.EquipmentNotes = *req.EquipmentNotes
+	}
+
+	if existing.ParticipantCount != oldParticipantCount && req.Members == nil {
+		return nil, errors.New("members list required when participant count changes")
+	}
+	if req.Members != nil {
+		if len(*req.Members) != existing.ParticipantCount {
+			return nil, errors.New("members must include exactly one entry per participant")
+		}
+		rows := make([]models.PerformanceMemberInfo, len(*req.Members))
+		for i := range *req.Members {
+			m := (*req.Members)[i]
+			rows[i] = models.PerformanceMemberInfo{
+				Name:   strings.TrimSpace(m.Name),
+				Detail: strings.TrimSpace(m.Detail),
+			}
+		}
+		existing.MembersInfo = rows
 	}
 
 	updated, err := s.repos.Talent.UpdateTalent(ctx, talentID, existing)
@@ -284,4 +317,3 @@ func (s *TalentService) AssignTalentSchedule(ctx context.Context, talentIDStr st
 	resp := mappers.MapTalentToResponse(updated)
 	return &resp, nil
 }
-

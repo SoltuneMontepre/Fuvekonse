@@ -102,4 +102,3 @@ func (c *AESCipher) DecryptString(value string) (string, error) {
 	}
 	return string(pt), nil
 }
-

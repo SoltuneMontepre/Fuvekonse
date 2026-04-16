@@ -52,13 +52,13 @@ type CreateTicketTierRequest struct {
 
 // UpdateTicketTierRequest is the request body for admin updating a ticket tier (all optional)
 type UpdateTicketTierRequest struct {
-	TicketName  *string   `json:"ticket_name" binding:"omitempty,min=1,max=255"`
-	Description *string   `json:"description" binding:"omitempty,max=500"`
-	Benefits    []string  `json:"benefits"`
-	Price       *float64  `json:"price" binding:"omitempty,gte=0"`
-	PriceUsd    *float64  `json:"price_usd" binding:"omitempty,gte=0"`
-	Stock       *int      `json:"stock" binding:"omitempty,gte=0"`
-	IsActive    *bool     `json:"is_active"`
+	TicketName  *string  `json:"ticket_name" binding:"omitempty,min=1,max=255"`
+	Description *string  `json:"description" binding:"omitempty,max=500"`
+	Benefits    []string `json:"benefits"`
+	Price       *float64 `json:"price" binding:"omitempty,gte=0"`
+	PriceUsd    *float64 `json:"price_usd" binding:"omitempty,gte=0"`
+	Stock       *int     `json:"stock" binding:"omitempty,gte=0"`
+	IsActive    *bool    `json:"is_active"`
 }
 
 // UpdateTicketForAdminRequest is the request body for admin updating a ticket (back-door, all fields optional).

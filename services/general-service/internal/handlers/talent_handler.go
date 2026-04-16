@@ -348,4 +348,3 @@ func (h *TalentHandler) MarkTalentPending(c *gin.Context) {
 
 	utils.RespondSuccess(c, talent, "Talent status set to pending successfully")
 }
-
