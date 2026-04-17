@@ -446,3 +446,38 @@ func (s *MailService) SendTicketApprovedWithQREmail(ctx context.Context, fromEma
 	}
 	return fmt.Errorf("no mail provider configured")
 }
+
+// SendTicketDeniedEmail sends an email to the ticket holder when their ticket is denied. lang: "vi" for Vietnamese, else English.
+func (s *MailService) SendTicketDeniedEmail(ctx context.Context, fromEmail, toEmail, referenceCode, tierName, reason, lang string) error {
+	var subject, tpl string
+	tierBlock := htemplate.HTML("")
+	if tierName != "" {
+		if lang == "vi" {
+			tierBlock = htemplate.HTML(fmt.Sprintf(`<p style="margin:0 0 16px 0;font-size:14px;color:#4a4238;"><span style="display:inline-block;background:#fff;padding:8px 14px;border-radius:10px;border:1px solid #dfd5c4;"><strong style="color:#1a1410;">Hạng vé:</strong> %s</span></p>`, htemplate.HTMLEscapeString(tierName)))
+		} else {
+			tierBlock = htemplate.HTML(fmt.Sprintf(`<p style="margin:0 0 16px 0;font-size:14px;color:#4a4238;"><span style="display:inline-block;background:#fff;padding:8px 14px;border-radius:10px;border:1px solid #dfd5c4;"><strong style="color:#1a1410;">Ticket tier:</strong> %s</span></p>`, htemplate.HTMLEscapeString(tierName)))
+		}
+	}
+
+	if lang == "vi" {
+		subject = "Vé FUVE của bạn đã bị từ chối"
+		tpl = "ticket_denied_vi.html"
+	} else {
+		subject = "Your FUVE ticket has been denied"
+		tpl = "ticket_denied_en.html"
+	}
+
+	body, err := renderMailTemplate(tpl, struct {
+		ReferenceCode string
+		TierBlock     htemplate.HTML
+		Reason        string
+	}{
+		ReferenceCode: referenceCode,
+		TierBlock:     tierBlock,
+		Reason:        strings.TrimSpace(reason),
+	})
+	if err != nil {
+		return fmt.Errorf("render ticket denied email: %w", err)
+	}
+	return s.SendEmail(ctx, fromEmail, toEmail, subject, body, nil, nil)
+}

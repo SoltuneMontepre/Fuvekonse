@@ -491,6 +491,28 @@ func (s *TicketService) DenyTicket(ctx context.Context, ticketID string, staffID
 		return nil, err
 	}
 
+	// Send ticket denied email to the user (best-effort)
+	if s.mail != nil && ticket.User.Email != "" && ticket.Status == models.TicketStatusDenied {
+		fromEmail := os.Getenv("SES_EMAIL_IDENTITY")
+		if fromEmail != "" {
+			tierName := ""
+			if ticket.Ticket.TicketName != "" {
+				tierName = ticket.Ticket.TicketName
+			}
+			if err := s.mail.SendTicketDeniedEmail(
+				ctx,
+				fromEmail,
+				ticket.User.Email,
+				ticket.ReferenceCode,
+				tierName,
+				req.Reason,
+				LangFromCountry(ticket.User.Country),
+			); err != nil {
+				log.Printf("Failed to send ticket denied email to %s: %v", ticket.User.Email, err)
+			}
+		}
+	}
+
 	return mappers.MapUserTicketToResponse(ticket, true), nil
 }
 
