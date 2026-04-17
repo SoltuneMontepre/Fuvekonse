@@ -244,6 +244,19 @@ func (r *TicketRepo) ApproveTicket(ctx context.Context, ticketID, staffID uuid.U
 		if t.Status != models.TicketStatusPending && t.Status != models.TicketStatusSelfConfirmed {
 			return ErrInvalidTicketStatus
 		}
+		// If this is an upgrade, free the old tier seat now that admin has confirmed.
+		if t.UpgradedFromTierID != nil {
+			var oldTier models.TicketTier
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("id = ?", *t.UpgradedFromTierID).
+				First(&oldTier).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
+				return err
+			}
+		}
+
 		now := time.Now()
 		t.Status = models.TicketStatusApproved
 		t.ApprovedAt = &now
@@ -356,9 +369,7 @@ func (r *TicketRepo) UpgradeTicketTier(ctx context.Context, userID, newTierID uu
 		if !adminBypass && newTier.Price.LessThanOrEqual(oldTier.Price) {
 			return ErrCannotDowngrade
 		}
-		if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
-			return err
-		}
+		// Old tier stock is NOT incremented here — deferred to ApproveTicket.
 		if adminBypass {
 			if newTier.Stock > 0 {
 				if err := tx.Model(&newTier).Update("stock", newTier.Stock-1).Error; err != nil {
@@ -413,15 +424,8 @@ func rollbackUpgrade(tx *gorm.DB, ticket *models.UserTicket, staffID uuid.UUID, 
 		return err
 	}
 
-	var oldTier models.TicketTier
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("id = ?", oldTierID).
-		First(&oldTier).Error; err != nil {
-		return err
-	}
-	if err := tx.Model(&oldTier).Update("stock", oldTier.Stock-1).Error; err != nil {
-		return err
-	}
+	// Old tier stock is untouched — it was never incremented at upgrade-request
+	// time, so there is nothing to reverse here.
 
 	oldTicketNumber := 0
 	if previousRefCode != "" {
