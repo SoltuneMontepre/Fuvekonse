@@ -526,6 +526,21 @@ func (r *TicketRepository) ApproveTicket(ctx context.Context, ticketID, staffID 
 			return ErrInvalidTicketStatus
 		}
 
+		// If this is an upgrade, free the old tier seat now that admin has confirmed.
+		// (UpgradeTicketTier reserved the new tier seat at request time but deferred
+		// releasing the old tier seat until approval.)
+		if ticket.UpgradedFromTierID != nil {
+			var oldTier models.TicketTier
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("id = ?", *ticket.UpgradedFromTierID).
+				First(&oldTier).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
+				return err
+			}
+		}
+
 		// Update ticket
 		now := time.Now()
 		ticket.Status = models.TicketStatusApproved
@@ -601,7 +616,7 @@ func (r *TicketRepository) rollbackUpgrade(tx *gorm.DB, ticket *models.UserTicke
 	oldTierID := *ticket.UpgradedFromTierID
 	previousRefCode := ticket.PreviousReferenceCode
 
-	// 1. Re-increment the NEW (upgraded) tier stock
+	// 1. Re-increment the NEW (upgraded) tier stock (release the reserved seat)
 	var newTier models.TicketTier
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("id = ?", ticket.TicketId).
@@ -612,18 +627,11 @@ func (r *TicketRepository) rollbackUpgrade(tx *gorm.DB, ticket *models.UserTicke
 		return err
 	}
 
-	// 2. Decrement the OLD tier stock (restoring the old ticket consumes one)
-	var oldTier models.TicketTier
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("id = ?", oldTierID).
-		First(&oldTier).Error; err != nil {
-		return err
-	}
-	if err := tx.Model(&oldTier).Update("stock", oldTier.Stock-1).Error; err != nil {
-		return err
-	}
+	// Old tier stock is untouched — it was never incremented at upgrade-request
+	// time, so there is nothing to reverse here. The user simply keeps the seat
+	// they already held on the old tier.
 
-	// 3. Parse old ticket number from previous reference code (format: "T1-0042")
+	// 2. Parse old ticket number from previous reference code (format: "T1-0042")
 	oldTicketNumber := 0
 	if previousRefCode != "" {
 		parts := splitReferenceCode(previousRefCode)
@@ -1321,12 +1329,9 @@ func (r *TicketRepository) UpgradeTicketTier(ctx context.Context, userID, newTie
 			return ErrCannotDowngrade
 		}
 
-		// 7. Increment old tier stock (+1 returned)
-		if err := tx.Model(&oldTier).Update("stock", oldTier.Stock+1).Error; err != nil {
-			return err
-		}
-
-		// 8. Decrement new tier stock (-1 consumed).
+		// 7. Decrement new tier stock (-1 consumed, reserves the seat).
+		// Old tier stock is NOT incremented here — it stays reserved until
+		// an admin approves the upgrade, at which point ApproveTicket frees it.
 		// For admin bypass, allow upgrades even when stock is 0 (only decrement if > 0).
 		if adminBypass {
 			if newTier.Stock > 0 {
