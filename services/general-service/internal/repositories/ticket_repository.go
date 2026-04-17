@@ -973,12 +973,23 @@ func (r *TicketRepository) GetTicketStatistics(ctx context.Context) (*TicketStat
 			Where("ticket_id = ? AND is_deleted = ? AND status != ?", tier.Id, false, models.TicketStatusDenied).
 			Count(&sold)
 
+		// Count tickets that upgraded FROM this tier but haven't been approved yet.
+		// These tickets moved to a new tier (so they're not in `sold` above), but
+		// the old tier's stock hasn't been incremented yet (deferred to approval).
+		// Without this, TotalStock would drop during the pending window.
+		var pendingUpgradeOut int64
+		r.db.WithContext(ctx).Model(&models.UserTicket{}).
+			Where("upgraded_from_tier_id = ? AND is_deleted = ? AND status IN (?, ?)",
+				tier.Id, false, models.TicketStatusPending, models.TicketStatusSelfConfirmed).
+			Count(&pendingUpgradeOut)
+
+		totalSold := sold + pendingUpgradeOut
 		stats.TierStats = append(stats.TierStats, TierStatistics{
 			TierID:     tier.Id,
 			TierCode:   tier.TierCode,
 			TierName:   tier.TicketName,
-			TotalStock: tier.Stock + int(sold), // Original stock = current + sold
-			Sold:       sold,
+			TotalStock: tier.Stock + int(totalSold),
+			Sold:       totalSold,
 			Available:  tier.Stock,
 		})
 	}
