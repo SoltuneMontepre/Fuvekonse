@@ -5,18 +5,18 @@ import "errors"
 // Sentinel errors for consistent error handling
 var (
 	// Auth errors
-	ErrAccountLocked            = errors.New("account temporarily locked due to too many failed login attempts")
-	ErrInvalidCredentials       = errors.New("invalid email or password")
-	ErrUserNotVerified          = errors.New("user is not verified")
-	ErrAccountBanned             = errors.New("account is banned")
-	ErrUserNotFound             = errors.New("user not found")
-	ErrCurrentPasswordIncorrect = errors.New("current password is incorrect")
-	ErrPasswordMismatch         = errors.New("new password and confirm password do not match")
-	ErrSamePassword                    = errors.New("new password cannot be the same as the old password")
+	ErrAccountLocked                     = errors.New("account temporarily locked due to too many failed login attempts")
+	ErrInvalidCredentials                = errors.New("invalid email or password")
+	ErrUserNotVerified                   = errors.New("user is not verified")
+	ErrAccountBanned                     = errors.New("account is banned")
+	ErrUserNotFound                      = errors.New("user not found")
+	ErrCurrentPasswordIncorrect          = errors.New("current password is incorrect")
+	ErrPasswordMismatch                  = errors.New("new password and confirm password do not match")
+	ErrSamePassword                      = errors.New("new password cannot be the same as the old password")
 	ErrGoogleRegistrationDetailsRequired = errors.New("fullName, nickname, dateOfBirth, and country are required to complete Google sign-up")
-	ErrAgeRequirement                   = errors.New("must be at least 16 years old")
-	ErrInvalidDateOfBirth               = errors.New("invalid date of birth format")
-	ErrInternalServer                   = errors.New("internal server error")
+	ErrAgeRequirement                    = errors.New("must be at least 16 years old")
+	ErrInvalidDateOfBirth                = errors.New("invalid date of birth format")
+	ErrInternalServer                    = errors.New("internal server error")
 
 	// Ticket errors
 	ErrInvalidTierID       = errors.New("invalid tier ID format")

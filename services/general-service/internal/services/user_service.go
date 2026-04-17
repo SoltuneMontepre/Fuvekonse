@@ -78,7 +78,7 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 	if err != nil {
 		ticket = nil
 	}
-	isHasTicket := ticket != nil && ticket.Status == models.TicketStatusApproved
+	isHasTicket := ticket != nil && (ticket.Status == models.TicketStatusApproved || ticket.Status == models.TicketStatusAdminGranted)
 
 	return mappers.MapUserToDetailedResponseWithDealer(user, isDealer, isHasTicket), nil
 }

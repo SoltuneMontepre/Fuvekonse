@@ -129,4 +129,3 @@ func walkValue(v reflect.Value, fn func(*models.User) error) error {
 		return nil
 	}
 }
-

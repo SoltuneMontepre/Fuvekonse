@@ -22,10 +22,10 @@ type User struct {
 	DateOfBirth     *time.Time    `gorm:"type:date" json:"date_of_birth,omitempty"`
 	GoogleId        *string       `gorm:"type:varchar(255);uniqueIndex" json:"-"` // Google OAuth subject ID; unique when set
 	IsVerified      bool          `gorm:"default:false" json:"is_verified"`
-	DenialCount     int           `gorm:"type:int;default:0" json:"denial_count"`                   // Ticket denial count (0-3)
-	IsBlacklisted   bool          `gorm:"default:false;index" json:"is_blacklisted"`                // User cannot purchase tickets
+	DenialCount     int           `gorm:"type:int;default:0" json:"denial_count"`    // Ticket denial count (0-3)
+	IsBlacklisted   bool          `gorm:"default:false;index" json:"is_blacklisted"` // User cannot purchase tickets
 	BlacklistedAt   *time.Time    `gorm:"index" json:"blacklisted_at,omitempty"`
-	BlacklistReason string        `gorm:"type:varchar(500)" json:"blacklist_reason,omitempty"`      // Reason for blacklist
+	BlacklistReason string        `gorm:"type:varchar(500)" json:"blacklist_reason,omitempty"` // Reason for blacklist
 	CreatedAt       time.Time     `gorm:"autoCreateTime" json:"created_at"`
 	ModifiedAt      time.Time     `gorm:"autoUpdateTime" json:"modified_at"`
 	DeletedAt       *time.Time    `gorm:"index" json:"deleted_at,omitempty"`

@@ -4,4 +4,3 @@ package responses
 type UserListResponse struct {
 	Users []UserDetailedResponse `json:"users"`
 }
-

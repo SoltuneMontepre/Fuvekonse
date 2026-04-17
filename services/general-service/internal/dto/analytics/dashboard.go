@@ -8,9 +8,9 @@ import (
 // DashboardResponse is the consolidated admin dashboard analytics (single-query response).
 type DashboardResponse struct {
 	TicketStats    *ticketresponses.TicketStatisticsResponse `json:"ticket_stats"`
-	SalesTimeline  []ticketresponses.SalesByDayResponse       `json:"sales_timeline"`
+	SalesTimeline  []ticketresponses.SalesByDayResponse      `json:"sales_timeline"`
 	Revenue        *ticketresponses.RevenueResponse          `json:"revenue"`
-	UserCount      int64                                      `json:"user_count"`
-	DealerCount    int64                                      `json:"dealer_count"`
-	UsersByCountry []userresponses.CountByCountryItem         `json:"users_by_country"`
+	UserCount      int64                                     `json:"user_count"`
+	DealerCount    int64                                     `json:"dealer_count"`
+	UsersByCountry []userresponses.CountByCountryItem        `json:"users_by_country"`
 }

@@ -51,4 +51,3 @@ func migrateCleanupExampleDotComUsersAndCountry(db *gorm.DB) error {
 
 	return nil
 }
-

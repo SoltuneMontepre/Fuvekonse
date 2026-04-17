@@ -37,7 +37,7 @@ func (s *AnalyticsService) GetDashboard(ctx context.Context, timelineDays, reven
 	out := &analytics.DashboardResponse{}
 	var (
 		statsErr, timelineErr, revenueErr, userErr, dealerErr, countryErr error
-		mu                                                                 sync.Mutex
+		mu                                                                sync.Mutex
 	)
 	var wg sync.WaitGroup
 

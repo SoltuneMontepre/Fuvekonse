@@ -17,15 +17,15 @@ import (
 )
 
 var (
-	ErrTicketTierNotFound     = errors.New("ticket tier not found")
-	ErrTicketNotFound         = errors.New("ticket not found")
-	ErrOutOfStock             = errors.New("ticket tier is out of stock")
-	ErrUserAlreadyHasTicket   = errors.New("user already has a ticket")
-	ErrUserBlacklisted        = errors.New("user is blacklisted from purchasing tickets")
-	ErrInvalidTicketStatus    = errors.New("invalid ticket status for this operation")
-	ErrUserNotFound           = errors.New("user not found")
-	ErrCannotDowngrade        = errors.New("cannot downgrade: new tier price must be higher than current tier price")
-	ErrTicketNotApproved      = errors.New("only approved tickets can be upgraded")
+	ErrTicketTierNotFound   = errors.New("ticket tier not found")
+	ErrTicketNotFound       = errors.New("ticket not found")
+	ErrOutOfStock           = errors.New("ticket tier is out of stock")
+	ErrUserAlreadyHasTicket = errors.New("user already has a ticket")
+	ErrUserBlacklisted      = errors.New("user is blacklisted from purchasing tickets")
+	ErrInvalidTicketStatus  = errors.New("invalid ticket status for this operation")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrCannotDowngrade      = errors.New("cannot downgrade: new tier price must be higher than current tier price")
+	ErrTicketNotApproved    = errors.New("only approved tickets can be upgraded")
 )
 
 type TicketRepository struct {
@@ -736,9 +736,9 @@ func splitReferenceCode(refCode string) int {
 }
 
 // CancelTicket cancels a ticket.
-// - If the ticket is an in-progress upgrade (upgraded_from_tier_id set), it rolls back to the
-//   previous tier instead of deleting — the user keeps their original approved ticket.
-// - Otherwise, the ticket is permanently deleted and stock is re-incremented (skipped for admin_granted).
+//   - If the ticket is an in-progress upgrade (upgraded_from_tier_id set), it rolls back to the
+//     previous tier instead of deleting — the user keeps their original approved ticket.
+//   - Otherwise, the ticket is permanently deleted and stock is re-incremented (skipped for admin_granted).
 func (r *TicketRepository) CancelTicket(ctx context.Context, ticketID, userID uuid.UUID) error {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Find and lock the ticket
@@ -909,22 +909,22 @@ func (r *TicketRepository) GetTicketsForAdmin(ctx context.Context, filter AdminT
 
 // GetTicketStatistics returns ticket statistics for admin dashboard
 type TicketStatistics struct {
-	TotalTickets        int64
-	PendingCount        int64
-	SelfConfirmedCount  int64
-	ApprovedCount       int64
-	DeniedCount         int64
-	PendingOver24Hours  int64
-	TierStats           []TierStatistics
+	TotalTickets       int64
+	PendingCount       int64
+	SelfConfirmedCount int64
+	ApprovedCount      int64
+	DeniedCount        int64
+	PendingOver24Hours int64
+	TierStats          []TierStatistics
 }
 
 type TierStatistics struct {
-	TierID      uuid.UUID
-	TierCode    string
-	TierName    string
-	TotalStock  int
-	Sold        int64
-	Available   int
+	TierID     uuid.UUID
+	TierCode   string
+	TierName   string
+	TotalStock int
+	Sold       int64
+	Available  int
 }
 
 func (r *TicketRepository) GetTicketStatistics(ctx context.Context) (*TicketStatistics, error) {
@@ -1260,13 +1260,13 @@ func (r *TicketRepository) DeleteTicketForAdmin(ctx context.Context, ticketID uu
 
 // UpgradeResult contains the upgraded ticket and pricing info for the API response.
 type UpgradeResult struct {
-	Ticket               *models.UserTicket
-	OldTierPrice         decimal.Decimal
-	NewTierPrice         decimal.Decimal
-	PriceDifference      decimal.Decimal
-	OldTierPriceUsd      decimal.Decimal
-	NewTierPriceUsd      decimal.Decimal
-	PriceDifferenceUsd   decimal.Decimal
+	Ticket             *models.UserTicket
+	OldTierPrice       decimal.Decimal
+	NewTierPrice       decimal.Decimal
+	PriceDifference    decimal.Decimal
+	OldTierPriceUsd    decimal.Decimal
+	NewTierPriceUsd    decimal.Decimal
+	PriceDifferenceUsd decimal.Decimal
 }
 
 // UpgradeTicketTier atomically upgrades a user's ticket to a higher-priced tier.

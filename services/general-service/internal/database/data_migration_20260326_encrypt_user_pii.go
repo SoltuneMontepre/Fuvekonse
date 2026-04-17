@@ -105,4 +105,3 @@ func encryptIfPlain(c *security.AESCipher, value string) (string, bool, error) {
 	}
 	return encrypted, true, nil
 }
-

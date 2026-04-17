@@ -21,7 +21,7 @@ func GetLoginFailedAttempts(ctx context.Context, redisClient *redis.Client, emai
 		// Redis not available, return 0 attempts (allow login)
 		return 0, nil
 	}
-	
+
 	key := fmt.Sprintf(loginFailedKeyPrefix, email)
 	val, err := redisClient.Get(ctx, key).Result()
 	if err != nil {
@@ -45,7 +45,7 @@ func IncrementLoginFailedAttempts(ctx context.Context, redisClient *redis.Client
 		// Redis not available, skip rate limiting
 		return nil
 	}
-	
+
 	key := fmt.Sprintf(loginFailedKeyPrefix, email)
 	expiration := time.Duration(blockMinutes) * time.Minute
 
@@ -70,7 +70,7 @@ func ResetLoginFailedAttempts(ctx context.Context, redisClient *redis.Client, em
 		// Redis not available, skip reset
 		return nil
 	}
-	
+
 	key := fmt.Sprintf(loginFailedKeyPrefix, email)
 	return redisClient.Del(ctx, key).Err()
 }
@@ -82,7 +82,7 @@ func IsLoginBlocked(ctx context.Context, redisClient *redis.Client, email string
 		// Redis not available, allow login (no rate limiting)
 		return false, 0, nil
 	}
-	
+
 	attempts, err := GetLoginFailedAttempts(ctx, redisClient, email)
 	if err != nil {
 		return false, 0, err
@@ -108,7 +108,7 @@ func StoreOTP(ctx context.Context, redisClient *redis.Client, email, otp string,
 	if redisClient == nil {
 		return fmt.Errorf("redis client not available: cannot store OTP")
 	}
-	
+
 	key := fmt.Sprintf(otpKeyPrefix, email)
 	return redisClient.Set(ctx, key, otp, expiration).Err()
 }
@@ -119,7 +119,7 @@ func GetOTP(ctx context.Context, redisClient *redis.Client, email string) (strin
 	if redisClient == nil {
 		return "", fmt.Errorf("redis client not available: cannot retrieve OTP")
 	}
-	
+
 	key := fmt.Sprintf(otpKeyPrefix, email)
 	val, err := redisClient.Get(ctx, key).Result()
 	if err != nil {
@@ -137,7 +137,7 @@ func VerifyAndDeleteOTP(ctx context.Context, redisClient *redis.Client, email, p
 	if redisClient == nil {
 		return false, fmt.Errorf("redis client not available: cannot verify OTP")
 	}
-	
+
 	storedOTP, err := GetOTP(ctx, redisClient, email)
 	if err != nil {
 		return false, err
@@ -163,7 +163,7 @@ func DeleteOTP(ctx context.Context, redisClient *redis.Client, email string) err
 		// Redis not available, skip deletion
 		return nil
 	}
-	
+
 	key := fmt.Sprintf(otpKeyPrefix, email)
 	return redisClient.Del(ctx, key).Err()
 }

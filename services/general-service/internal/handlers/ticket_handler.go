@@ -154,10 +154,10 @@ func (h *TicketHandler) PurchaseTicket(c *gin.Context) {
 
 	if h.queue != nil {
 		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action:       queue.ActionPurchaseTicket,
-			UserID:       userID.(string),
-			TierID:       req.TierID,
-			AdminBypass:  isAdmin,
+			Action:      queue.ActionPurchaseTicket,
+			UserID:      userID.(string),
+			TierID:      req.TierID,
+			AdminBypass: isAdmin,
 		}); err != nil {
 			log.Printf("SQS PublishTicketJob failed: %v", err)
 			utils.RespondInternalServerError(c, "Failed to queue ticket purchase")
@@ -619,7 +619,7 @@ func (h *TicketHandler) ConfirmCheckIn(c *gin.Context) {
 
 // DenyTicket godoc
 // @Summary Deny a ticket (admin)
-// @Description Deny a pending or self-confirmed ticket and return stock. When queue is enabled, request is queued (202).
+// @Description Deny a pending or self-confirmed ticket and return stock. Admin denial is processed synchronously to ensure immediate status update and email notification.
 // @Tags admin-tickets
 // @Accept json
 // @Produce json
@@ -627,7 +627,6 @@ func (h *TicketHandler) ConfirmCheckIn(c *gin.Context) {
 // @Param id path string true "Ticket ID" format(uuid)
 // @Param request body requests.DenyTicketRequest true "Denial reason (optional)"
 // @Success 200 "Ticket denied successfully"
-// @Success 202 "Request queued for processing"
 // @Failure 400 "Invalid ticket ID"
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden - admin only"
@@ -652,20 +651,6 @@ func (h *TicketHandler) DenyTicket(c *gin.Context) {
 	var req requests.DenyTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		req = requests.DenyTicketRequest{}
-	}
-
-	if h.queue != nil {
-		if err := h.queue.PublishTicketJob(ctx, &queue.TicketJobMessage{
-			Action:   queue.ActionDenyTicket,
-			StaffID:  staffID.(string),
-			TicketID: ticketID,
-			Reason:   req.Reason,
-		}); err != nil {
-			utils.RespondInternalServerError(c, "Failed to queue ticket denial")
-			return
-		}
-		utils.RespondAccepted(c, "Ticket denial queued for processing.")
-		return
 	}
 
 	ticket, err := h.services.Ticket.DenyTicket(ctx, ticketID, staffID.(string), &req)

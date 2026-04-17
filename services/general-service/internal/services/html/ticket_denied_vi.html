@@ -1,0 +1,188 @@
+<html>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #ebe3d1;
+      -webkit-text-size-adjust: 100%;
+    "
+  >
+    <div
+      style="
+        padding: 32px 16px 40px 16px;
+        font-family: Arial, Helvetica, sans-serif;
+      "
+    >
+      <div style="max-width: 560px; margin: 0 auto">
+        <p
+          style="
+            margin: 0 0 20px 0;
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #7a7166;
+          "
+        >
+          Furry Vietnam Eternity
+        </p>
+        <div
+          style="
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(31, 24, 18, 0.14);
+            border: 1px solid #e2d8c4;
+          "
+        >
+          <div
+            style="
+              background: #1a1410;
+              padding: 24px 24px 0 24px;
+              text-align: center;
+            "
+          >
+            <span
+              style="
+                display: inline-block;
+                color: #e8c547;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                line-height: 1;
+              "
+              >FUVE</span
+            >
+            <div
+              style="
+                height: 3px;
+                width: 48px;
+                background: #c9a227;
+                margin: 16px auto 0 auto;
+                border-radius: 2px;
+              "
+            ></div>
+          </div>
+          <div
+            style="
+              background: #1a1410;
+              padding: 14px 24px 26px 24px;
+              text-align: center;
+            "
+          >
+            <span
+              style="
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.85);
+                letter-spacing: 0.06em;
+              "
+              >Cập nhật kết quả vé</span
+            >
+          </div>
+          <div
+            style="
+              padding: 36px 32px 8px 32px;
+              color: #2d2416;
+              font-size: 16px;
+              line-height: 1.65;
+            "
+          >
+            <p style="margin: 0 0 18px 0; font-size: 17px">
+              <strong>Kính gửi Người tham gia,</strong>
+            </p>
+            <p style="margin: 0 0 18px 0; color: #4a4238">
+              Rất tiếc, vé của bạn đã bị
+              <strong style="color: #1a1410">từ chối</strong>.
+            </p>
+
+            <div
+              style="
+                margin: 8px 0 22px 0;
+                padding: 18px 18px;
+                background: #fff4f4;
+                border-radius: 14px;
+                border: 1px solid #f0c9c9;
+              "
+            >
+              <p
+                style="
+                  margin: 0 0 6px 0;
+                  font-size: 11px;
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  color: #9a3b3b;
+                "
+              >
+                Mã tham chiếu
+              </p>
+              <p style="margin: 0 0 12px 0">
+                <code
+                  style="
+                    display: inline-block;
+                    background: #fff;
+                    padding: 8px 14px;
+                    border-radius: 10px;
+                    border: 1px solid #e7c7c7;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #1a1410;
+                    font-family: &quot;Courier New&quot;, Courier, monospace;
+                  "
+                  >{{.ReferenceCode}}</code
+                >
+              </p>
+              {{.TierBlock}}
+              {{if .Reason}}
+              <p style="margin: 0; color: #6b2a2a; font-size: 14px">
+                <strong>Lý do:</strong> {{.Reason}}
+              </p>
+              {{end}}
+            </div>
+
+            <p style="margin: 0 0 12px 0; color: #4a4238">
+              Nếu bạn cho rằng có nhầm lẫn hoặc cần hỗ trợ, vui lòng liên hệ đội
+              ngũ hỗ trợ và cung cấp mã tham chiếu ở trên.
+            </p>
+            <p style="margin: 0 0 28px 0">
+              Cảm ơn bạn đã thông cảm.
+            </p>
+            <p style="margin: 0">
+              Trân trọng,<br /><strong style="color: #1a1410">FUVE</strong>
+            </p>
+          </div>
+          <div
+            style="
+              padding: 22px 32px;
+              background: #f5f0e6;
+              border-top: 1px solid #e8dfc8;
+            "
+          >
+            <p
+              style="
+                margin: 0;
+                font-size: 12px;
+                line-height: 1.6;
+                color: #6b6358;
+                text-align: center;
+              "
+            >
+              Liên hệ:
+              <a
+                href="https://fuve.vn"
+                style="color: #8a7220; text-decoration: none; font-weight: 600"
+                >fuve.vn</a
+              >
+              &middot; Facebook:
+              <a
+                href="https://www.facebook.com/FUVE.vietnam"
+                style="color: #8a7220; text-decoration: none; font-weight: 600"
+                >FUVE - Furry Vietnam Eternity</a
+              >
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

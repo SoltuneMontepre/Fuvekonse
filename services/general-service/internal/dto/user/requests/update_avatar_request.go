@@ -5,4 +5,3 @@ package requests
 type UpdateAvatarRequest struct {
 	Avatar string `json:"avatar" binding:"omitempty,url,max=500" example:"https://example.com/avatar.jpg"`
 }
-
