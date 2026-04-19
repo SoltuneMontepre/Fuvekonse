@@ -20,8 +20,5 @@ func ParseAndValidateDateOfBirth(s string) (*time.Time, error) {
 	if now.Month() < parsed.Month() || (now.Month() == parsed.Month() && now.Day() < parsed.Day()) {
 		age--
 	}
-	if age < 16 {
-		return nil, constants.ErrAgeRequirement
-	}
 	return &parsed, nil
 }
