@@ -403,10 +403,17 @@ func (s *TicketService) GetTicketsForAdmin(ctx context.Context, req *requests.Ad
 
 // GetTicketByID returns a specific ticket by ID (UUID) or by reference code (admin/staff).
 // If the input parses as a valid UUID, lookup is by ticket id; otherwise by reference code.
+// Reloads the ticket owner via User.FindByID so nested PII (e.g. id_card, names) is decrypted
+// after the GORM preload path.
 func (s *TicketService) GetTicketByID(ctx context.Context, ticketIDOrRef string) (*responses.UserTicketResponse, error) {
 	ticket, err := s.getTicketByIDOrRef(ctx, ticketIDOrRef)
 	if err != nil {
 		return nil, err
+	}
+	if ticket.UserId != uuid.Nil {
+		if u, uerr := s.repos.User.FindByID(ticket.UserId.String()); uerr == nil && u != nil {
+			ticket.User = *u
+		}
 	}
 	return mappers.MapUserTicketToResponse(ticket, true), nil
 }

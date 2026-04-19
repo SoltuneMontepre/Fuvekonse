@@ -31,6 +31,27 @@ func isUserDeleted(user *models.User) bool {
 	return user.IsDeleted || (user.DeletedAt != nil && !user.DeletedAt.IsZero())
 }
 
+// detailedResponseFlags computes is_dealer and is_has_ticket to match GET /users/me.
+func (s *UserService) detailedResponseFlags(ctx context.Context, user *models.User) (isDealer, isHasTicket bool) {
+	userID := user.Id.String()
+	isDealerVerified, err := s.repos.Dealer.CheckUserIsStaffOfVerifiedBooth(userID)
+	if err != nil {
+		isDealerVerified = false
+	}
+	isDealerOwner, err := s.repos.Dealer.CheckUserIsOwnerOfBooth(userID)
+	if err != nil {
+		isDealerOwner = false
+	}
+	isDealer = isDealerVerified || isDealerOwner
+
+	ticket, err := s.repos.Ticket.GetUserTicket(ctx, user.Id)
+	if err != nil {
+		ticket = nil
+	}
+	isHasTicket = ticket != nil && (ticket.Status == models.TicketStatusApproved || ticket.Status == models.TicketStatusAdminGranted)
+	return isDealer, isHasTicket
+}
+
 // GetUserByID retrieves a user by their ID and returns public user data without sensitive PII
 // Use this for public-facing APIs where user information is exposed
 func (s *UserService) GetUserByID(userID string) (*responses.UserResponse, error) {
@@ -62,24 +83,7 @@ func (s *UserService) GetUserDetailedByID(userID string) (*responses.UserDetaile
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	// Check if user is a dealer: staff of a verified booth, or the one who registered (owner) a booth
-	isDealerVerified, err := s.repos.Dealer.CheckUserIsStaffOfVerifiedBooth(userID)
-	if err != nil {
-		isDealerVerified = false
-	}
-	isDealerOwner, err := s.repos.Dealer.CheckUserIsOwnerOfBooth(userID)
-	if err != nil {
-		isDealerOwner = false
-	}
-	isDealer := isDealerVerified || isDealerOwner
-
-	// Check if user has a ticket: true only when the ticket is approved (not pending/self_confirmed/denied).
-	ticket, err := s.repos.Ticket.GetUserTicket(context.Background(), user.Id)
-	if err != nil {
-		ticket = nil
-	}
-	isHasTicket := ticket != nil && (ticket.Status == models.TicketStatusApproved || ticket.Status == models.TicketStatusAdminGranted)
-
+	isDealer, isHasTicket := s.detailedResponseFlags(context.Background(), user)
 	return mappers.MapUserToDetailedResponseWithDealer(user, isDealer, isHasTicket), nil
 }
 
@@ -206,7 +210,8 @@ func (s *UserService) GetUserByIDForAdmin(userID string) (*responses.UserDetaile
 		return nil, err
 	}
 
-	return mappers.MapUserToDetailedResponse(user), nil
+	isDealer, isHasTicket := s.detailedResponseFlags(context.Background(), user)
+	return mappers.MapUserToDetailedResponseWithDealer(user, isDealer, isHasTicket), nil
 }
 
 // UpdateUserByAdmin updates user information by admin
